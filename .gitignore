@@ -10,6 +10,11 @@ Thumbs.db
 # Node modules (if you add any in the future)
 node_modules/
 
+# Environment variables and secrets
+.env
+.env.local
+.env.production
+
 # IDE files
 .vscode/
 .idea/
@@ -18,3 +23,14 @@ node_modules/
 
 # Log files
 *.log
+
+# Generated code files (review before committing)
+codex_*.md
+
+# Database files
+*.db
+*.sqlite
+
+# Build files
+dist/
+build/
