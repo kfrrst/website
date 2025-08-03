@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>[Portfolio] by Kendrick Forrest</title>
+
+  <!-- Link to CSS -->
+  <link rel="stylesheet" href="styles.css" />
+
+  <!-- Example Google Font -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link 
+    href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;700&display=swap"
+    rel="stylesheet"
+  >
+</head>
+<body>
+  <!-- HEADER / NAV -->
+  <header id="site-header">
+    <nav>
+      <div id="hamburger-menu" onclick="toggleMenu()">[MENU]</div>
+      <ul id="nav-links" class="hidden">
+        <li><a href="#home">[Home]</a></li>
+        <li><a href="#projects">[Projects]</a></li>
+        <li><a href="#about">[About]</a></li>
+        <li><a href="#studio">[Studio]</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <!-- HERO SECTION -->
+  <section id="home" class="hero-section">
+    <h1>[Portfolio]</h1>
+    <p class="hero-subtext">Welcome to my creative space. Let's explore and collaborate together</p>
+  </section>
+
+  <!-- PROJECTS SECTION -->
+  <section id="projects" class="projects-section">
+    <div class="grid-container">
+      <!-- PROJECT 1 CARD -->
+      <div class="project-card">
+        <img src="images/project1-thumbnail.jpg" alt="Project 1 Thumbnail" />
+        <div class="card-title">[Project #1]</div>
+      </div>
+
+      <!-- PROJECT 2 CARD -->
+      <div class="project-card">
+        <img src="images/project2-thumbnail.jpg" alt="Project 2 Thumbnail" />
+        <div class="card-title">[Project #2]</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ABOUT SECTION -->
+  <section id="about" class="about-section">
+    <h2>[About]</h2>
+    <p>
+      Welcome to my digital workspace. I create pieces 
+      that blend nostalgia, simplicity and emotion. 
+      Each project has a story, take a look around, and if something 
+      resonates with you, feel free to inquire.
+    </p>
+  </section>
+
+  <!-- STUDIO SECTION -->
+  <section id="studio" class="studio-section">
+    <h2>[Studio]</h2>
+    <img src="images/studio.jpg" alt="Studio Photo" class="studio-image"/>
+    <p>
+      A behind-the-scenes view of my creative space and how new ideas come to life.
+    </p>
+  </section>
+
+  <!-- FOOTER -->
+  <footer id="site-footer">
+    <p>
+      &copy; <span id="year"></span> [Website] created by [Kendrick Forrest].
+    </p>
+  </footer>
+
+  <!-- Link to JS -->
+  <script src="script.js"></script>
+</body>
+</html>
