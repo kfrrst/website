@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CSS Diagnostic</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+    }
+    .test-box {
+      border: 2px solid #333;
+      padding: 20px;
+      margin: 10px 0;
+    }
+    .bg-bone {
+      background-color: #F9F6F1;
+    }
+  </style>
+</head>
+<body>
+  <h1>CSS Diagnostic Page</h1>
+  
+  <div class="test-box">
+    <h2>CSS Files Check:</h2>
+    <p>styles.css: <span id="styles-status">Checking...</span></p>
+    <p>portal.css: <span id="portal-status">Checking...</span></p>
+    <p>admin.css: <span id="admin-status">Checking...</span></p>
+  </div>
+  
+  <div class="test-box bg-bone">
+    <h2>Background Color Test</h2>
+    <p>This box should have bone white background (#F9F6F1)</p>
+    <p>Computed background: <span id="bg-color"></span></p>
+  </div>
+  
+  <div class="test-box">
+    <h2>Font Test</h2>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;700&display=swap" rel="stylesheet">
+    <p style="font-family: 'Montserrat', sans-serif;">This should be in Montserrat font</p>
+    <p>Computed font: <span id="font-family"></span></p>
+  </div>
+  
+  <script>
+    // Check CSS files
+    fetch('/styles.css').then(r => {
+      document.getElementById('styles-status').textContent = r.ok ? '✅ Loaded' : '❌ Failed';
+    });
+    
+    fetch('/portal.css').then(r => {
+      document.getElementById('portal-status').textContent = r.ok ? '✅ Loaded' : '❌ Failed';
+    });
+    
+    fetch('/admin.css').then(r => {
+      document.getElementById('admin-status').textContent = r.ok ? '✅ Loaded' : '❌ Failed';
+    });
+    
+    // Check computed styles
+    window.onload = () => {
+      const bgBox = document.querySelector('.bg-bone');
+      const bgColor = window.getComputedStyle(bgBox).backgroundColor;
+      document.getElementById('bg-color').textContent = bgColor;
+      
+      const fontTest = document.querySelector('[style*="Montserrat"]');
+      const fontFamily = window.getComputedStyle(fontTest).fontFamily;
+      document.getElementById('font-family').textContent = fontFamily;
+    };
+  </script>
+</body>
+</html>

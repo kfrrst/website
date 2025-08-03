@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Progress Tracker Test - [RE]Print Studios</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="portal.css">
+  <style>
+    body {
+      padding: 2rem;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    
+    .test-section {
+      margin: 3rem 0;
+      padding: 2rem;
+      background: var(--white);
+      border-radius: 8px;
+      box-shadow: 0 2px 8px var(--shadow);
+    }
+    
+    .test-section h2 {
+      margin-bottom: 2rem;
+      color: var(--text-primary);
+    }
+    
+    /* Additional progress tracker styling for testing */
+    .progress-notification {
+      position: fixed;
+      top: 2rem;
+      right: 2rem;
+      padding: 1rem 2rem;
+      background: var(--green);
+      color: var(--white);
+      border-radius: 6px;
+      animation: slideInRight 0.3s ease;
+      z-index: 1000;
+    }
+    
+    .progress-notification.error {
+      background: var(--red);
+    }
+    
+    @keyframes slideInRight {
+      from {
+        transform: translateX(100%);
+        opacity: 0;
+      }
+      to {
+        transform: translateX(0);
+        opacity: 1;
+      }
+    }
+    
+    /* Inline progress bar styling */
+    .inline-progress-tracker {
+      margin: 1rem 0;
+    }
+    
+    .inline-progress-bar {
+      height: 8px;
+      background: var(--border-light);
+      border-radius: 4px;
+      overflow: hidden;
+      margin-bottom: 0.5rem;
+    }
+    
+    .inline-progress-fill {
+      height: 100%;
+      background: var(--green);
+      transition: width 0.5s ease;
+    }
+    
+    .inline-progress-info {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.875rem;
+    }
+    
+    .current-phase {
+      color: var(--text-primary);
+      font-weight: var(--font-semibold);
+    }
+    
+    .progress-percentage {
+      color: var(--text-secondary);
+    }
+  </style>
+</head>
+<body>
+  <h1>[RE]Print Studios - Progress Tracker Test</h1>
+  
+  <!-- Horizontal Progress Tracker -->
+  <div class="test-section">
+    <h2>Horizontal Progress Tracker</h2>
+    <div id="horizontal-tracker"></div>
+  </div>
+  
+  <!-- Vertical Progress Tracker -->
+  <div class="test-section">
+    <h2>Vertical Progress Tracker</h2>
+    <div id="vertical-tracker"></div>
+  </div>
+  
+  <!-- Inline Progress Bars -->
+  <div class="test-section">
+    <h2>Inline Progress Bars (for cards)</h2>
+    <div id="inline-examples"></div>
+  </div>
+  
+  <!-- Controls -->
+  <div class="test-section">
+    <h2>Test Controls</h2>
+    <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+      <button class="btn-primary" onclick="advancePhase()">Advance Phase</button>
+      <button class="btn-secondary" onclick="resetPhases()">Reset to Start</button>
+      <button class="btn-yellow" onclick="skipToPhase(3)">Skip to Review</button>
+      <button class="btn-green" onclick="skipToPhase(7)">Skip to Delivery</button>
+    </div>
+  </div>
+  
+  <script type="module">
+    import { ProgressTracker, createInlineProgressBar } from './utils/progressTracker.js';
+    
+    // Mock project data
+    const mockPhases = [
+      { id: '1', phase_key: 'onboarding', name: 'Onboarding', icon: '📋', order_index: 0, requires_client_action: true, status: 'completed', completed_at: '2025-01-15' },
+      { id: '2', phase_key: 'ideation', name: 'Ideation', icon: '💡', order_index: 1, requires_client_action: false, status: 'completed', completed_at: '2025-01-20' },
+      { id: '3', phase_key: 'design', name: 'Design', icon: '🎨', order_index: 2, requires_client_action: false, status: 'current' },
+      { id: '4', phase_key: 'review', name: 'Review & Feedback', icon: '👀', order_index: 3, requires_client_action: true, status: 'upcoming' },
+      { id: '5', phase_key: 'production', name: 'Production/Print', icon: '🖨️', order_index: 4, requires_client_action: false, status: 'upcoming' },
+      { id: '6', phase_key: 'payment', name: 'Payment', icon: '💳', order_index: 5, requires_client_action: true, status: 'upcoming' },
+      { id: '7', phase_key: 'signoff', name: 'Sign-off & Docs', icon: '✍️', order_index: 6, requires_client_action: true, status: 'upcoming' },
+      { id: '8', phase_key: 'delivery', name: 'Delivery', icon: '📦', order_index: 7, requires_client_action: true, status: 'upcoming' }
+    ];
+    
+    const mockActions = [
+      { id: '1', action_key: 'complete_brief', action_description: 'Complete project brief', is_required: true, is_completed: false },
+      { id: '2', action_key: 'sign_agreement', action_description: 'Sign project agreement', is_required: true, is_completed: false },
+      { id: '3', action_key: 'submit_deposit', action_description: 'Submit initial deposit', is_required: true, is_completed: false }
+    ];
+    
+    let currentPhaseIndex = 2; // Start at Design phase
+    
+    // Initialize horizontal tracker
+    const horizontalTracker = new ProgressTracker('#horizontal-tracker', {
+      orientation: 'horizontal',
+      interactive: true,
+      showActions: true,
+      onPhaseClick: (phaseKey, index) => {
+        console.log('Phase clicked:', phaseKey, index);
+        alert(`Clicked on ${phaseKey} phase`);
+      },
+      onActionComplete: (actionId, isCompleted) => {
+        console.log('Action updated:', actionId, isCompleted);
+      }
+    });
+    
+    // Initialize vertical tracker
+    const verticalTracker = new ProgressTracker('#vertical-tracker', {
+      orientation: 'vertical',
+      interactive: false,
+      showActions: false
+    });
+    
+    // Mock the init method for testing
+    ProgressTracker.prototype.init = async function(projectId) {
+      this.phases = mockPhases;
+      this.currentPhaseIndex = currentPhaseIndex;
+      this.phaseActions = currentPhaseIndex === 3 ? mockActions : []; // Show actions only for Review phase
+      this.tracking = { project_id: 'test-project' };
+      this.render();
+    };
+    
+    // Initialize trackers
+    horizontalTracker.init('test-project');
+    verticalTracker.init('test-project');
+    
+    // Create inline examples
+    const inlineContainer = document.getElementById('inline-examples');
+    inlineContainer.innerHTML = `
+      <div style="display: grid; gap: 1rem;">
+        <div class="project-card" style="padding: 1.5rem; background: var(--base-bg); border-radius: 6px;">
+          <h4>Project Alpha - Logo Design</h4>
+          ${createInlineProgressBar(1, 'ideation')}
+        </div>
+        <div class="project-card" style="padding: 1.5rem; background: var(--base-bg); border-radius: 6px;">
+          <h4>Project Beta - Website Redesign</h4>
+          ${createInlineProgressBar(4, 'production')}
+        </div>
+        <div class="project-card" style="padding: 1.5rem; background: var(--base-bg); border-radius: 6px;">
+          <h4>Project Gamma - Brand Identity</h4>
+          ${createInlineProgressBar(7, 'delivery')}
+        </div>
+      </div>
+    `;
+    
+    // Test control functions
+    window.advancePhase = () => {
+      if (currentPhaseIndex < 7) {
+        currentPhaseIndex++;
+        horizontalTracker.updateProgress(currentPhaseIndex);
+        verticalTracker.updateProgress(currentPhaseIndex);
+      }
+    };
+    
+    window.resetPhases = () => {
+      currentPhaseIndex = 0;
+      horizontalTracker.updateProgress(currentPhaseIndex);
+      verticalTracker.updateProgress(currentPhaseIndex);
+    };
+    
+    window.skipToPhase = (index) => {
+      currentPhaseIndex = index;
+      horizontalTracker.updateProgress(currentPhaseIndex);
+      verticalTracker.updateProgress(currentPhaseIndex);
+    };
+  </script>
+</body>
+</html>

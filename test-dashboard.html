@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Phase System Test Dashboard</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="portal.css">
+  <style>
+    body {
+      padding: 20px;
+      background: var(--base);
+    }
+    .test-section {
+      margin: 20px 0;
+      padding: 20px;
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    .test-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 15px;
+    }
+    .test-status {
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .test-status.pass {
+      background: var(--green);
+      color: white;
+    }
+    .test-status.fail {
+      background: var(--red);
+      color: white;
+    }
+    .test-status.pending {
+      background: var(--yellow);
+      color: var(--text);
+    }
+    .test-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 20px;
+    }
+    .endpoint-test {
+      padding: 15px;
+      background: var(--base);
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 12px;
+    }
+    .progress-demo {
+      padding: 20px;
+      background: var(--base);
+      border-radius: 8px;
+      margin: 20px 0;
+    }
+    #test-results {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      max-width: 300px;
+      z-index: 1000;
+    }
+    .result-item {
+      padding: 5px 0;
+      font-size: 14px;
+    }
+    .result-item.pass { color: var(--green); }
+    .result-item.fail { color: var(--red); }
+  </style>
+</head>
+<body>
+  <h1>[RE]Print Studios - Phase System Test Dashboard</h1>
+  
+  <div id="test-results">
+    <h3>Test Results</h3>
+    <div id="results-list"></div>
+    <button onclick="runAllTests()" class="btn" style="margin-top: 15px;">Run All Tests</button>
+  </div>
+
+  <!-- Authentication Test -->
+  <div class="test-section">
+    <div class="test-header">
+      <h2>Authentication Test</h2>
+      <span class="test-status pending" id="auth-status">Pending</span>
+    </div>
+    <div id="auth-test-content">
+      <button onclick="testAuth()" class="btn">Test Authentication</button>
+      <div id="auth-result" class="endpoint-test" style="margin-top: 10px; display: none;"></div>
+    </div>
+  </div>
+
+  <!-- API Endpoints Test -->
+  <div class="test-section">
+    <div class="test-header">
+      <h2>API Endpoints Test</h2>
+      <span class="test-status pending" id="api-status">Pending</span>
+    </div>
+    <div class="test-grid" id="api-tests"></div>
+  </div>
+
+  <!-- Phase Tracker Component Test -->
+  <div class="test-section">
+    <div class="test-header">
+      <h2>Phase Tracker Component</h2>
+      <span class="test-status pending" id="tracker-status">Pending</span>
+    </div>
+    <div class="progress-demo">
+      <h3>Live Progress Tracker Demo</h3>
+      <div id="progress-tracker-demo"></div>
+    </div>
+    <button onclick="testProgressTracker()" class="btn">Load Progress Tracker</button>
+  </div>
+
+  <!-- Database Connection Test -->
+  <div class="test-section">
+    <div class="test-header">
+      <h2>Database Status</h2>
+      <span class="test-status pending" id="db-status">Pending</span>
+    </div>
+    <div id="db-test-content">
+      <button onclick="testDatabase()" class="btn">Test Database</button>
+      <div id="db-result" class="endpoint-test" style="margin-top: 10px; display: none;"></div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { ProgressTracker } from './components/ProgressTracker.js';
+    import { BRAND } from './config/brand.js';
+
+    window.ProgressTracker = ProgressTracker;
+    window.BRAND = BRAND;
+
+    // Test configuration
+    const TEST_TOKEN = localStorage.getItem('authToken') || 'test-token';
+    const BASE_URL = 'http://localhost:3000';
+    
+    // Test results tracking
+    const results = {
+      passed: [],
+      failed: []
+    };
+
+    // Helper to update test status
+    function updateStatus(testId, status, message) {
+      const statusEl = document.getElementById(`${testId}-status`);
+      if (statusEl) {
+        statusEl.textContent = status === 'pass' ? 'Passed' : status === 'fail' ? 'Failed' : 'Pending';
+        statusEl.className = `test-status ${status}`;
+      }
+      
+      // Update results
+      if (status === 'pass') {
+        results.passed.push({ test: testId, message });
+      } else if (status === 'fail') {
+        results.failed.push({ test: testId, message });
+      }
+      
+      updateResultsSummary();
+    }
+
+    // Update results summary
+    function updateResultsSummary() {
+      const resultsList = document.getElementById('results-list');
+      resultsList.innerHTML = `
+        <div class="result-item pass">✓ Passed: ${results.passed.length}</div>
+        <div class="result-item fail">✗ Failed: ${results.failed.length}</div>
+        <hr style="margin: 10px 0;">
+        ${results.failed.map(r => `<div class="result-item fail">✗ ${r.test}: ${r.message}</div>`).join('')}
+      `;
+    }
+
+    // Test authentication
+    window.testAuth = async function() {
+      try {
+        const response = await fetch(`${BASE_URL}/api/projects`, {
+          headers: {
+            'Authorization': `Bearer ${TEST_TOKEN}`
+          }
+        });
+        
+        const authResult = document.getElementById('auth-result');
+        authResult.style.display = 'block';
+        
+        if (response.ok) {
+          updateStatus('auth', 'pass', 'Authentication working');
+          authResult.innerHTML = `<span style="color: var(--green)">✓ Authentication successful</span>`;
+        } else {
+          updateStatus('auth', 'fail', `Status ${response.status}`);
+          authResult.innerHTML = `<span style="color: var(--red)">✗ Authentication failed: ${response.status}</span>`;
+        }
+      } catch (error) {
+        updateStatus('auth', 'fail', error.message);
+      }
+    };
+
+    // Test API endpoints
+    window.testEndpoints = async function() {
+      const endpoints = [
+        { path: '/api/projects', name: 'Projects List' },
+        { path: '/api/phases/phases', name: 'All Phases' },
+        { path: '/api/dashboard/stats', name: 'Dashboard Stats' },
+        { path: '/api/messages', name: 'Messages' },
+        { path: '/api/invoices', name: 'Invoices' }
+      ];
+      
+      const container = document.getElementById('api-tests');
+      container.innerHTML = '';
+      
+      let allPassed = true;
+      
+      for (const endpoint of endpoints) {
+        const div = document.createElement('div');
+        div.className = 'endpoint-test';
+        
+        try {
+          const response = await fetch(`${BASE_URL}${endpoint.path}`, {
+            headers: {
+              'Authorization': `Bearer ${TEST_TOKEN}`
+            }
+          });
+          
+          if (response.ok) {
+            div.innerHTML = `<span style="color: var(--green)">✓ ${endpoint.name}: OK (${response.status})</span>`;
+          } else {
+            div.innerHTML = `<span style="color: var(--red)">✗ ${endpoint.name}: Failed (${response.status})</span>`;
+            allPassed = false;
+          }
+        } catch (error) {
+          div.innerHTML = `<span style="color: var(--red)">✗ ${endpoint.name}: ${error.message}</span>`;
+          allPassed = false;
+        }
+        
+        container.appendChild(div);
+      }
+      
+      updateStatus('api', allPassed ? 'pass' : 'fail', allPassed ? 'All endpoints OK' : 'Some endpoints failed');
+    };
+
+    // Test Progress Tracker
+    window.testProgressTracker = async function() {
+      try {
+        // First get a project ID
+        const projectsResponse = await fetch(`${BASE_URL}/api/projects`, {
+          headers: {
+            'Authorization': `Bearer ${TEST_TOKEN}`
+          }
+        });
+        
+        if (!projectsResponse.ok) {
+          throw new Error('Failed to fetch projects');
+        }
+        
+        const projectsData = await projectsResponse.json();
+        if (!projectsData.projects || projectsData.projects.length === 0) {
+          throw new Error('No projects found');
+        }
+        
+        const projectId = projectsData.projects[0].id;
+        
+        // Create progress tracker
+        const container = document.getElementById('progress-tracker-demo');
+        const tracker = new ProgressTracker({
+          container: container,
+          projectId: projectId,
+          authToken: TEST_TOKEN,
+          phases: BRAND.phaseDefinitions,
+          interactive: true,
+          showActions: true,
+          onPhaseClick: (phase) => {
+            console.log('Phase clicked:', phase);
+          },
+          onActionComplete: (actionId, isCompleted) => {
+            console.log('Action completed:', actionId, isCompleted);
+          }
+        });
+        
+        await tracker.init(projectId);
+        updateStatus('tracker', 'pass', 'Component loaded successfully');
+        
+      } catch (error) {
+        updateStatus('tracker', 'fail', error.message);
+        console.error('Progress tracker error:', error);
+      }
+    };
+
+    // Test database
+    window.testDatabase = async function() {
+      try {
+        const response = await fetch(`${BASE_URL}/api/dashboard/phase-summary`, {
+          headers: {
+            'Authorization': `Bearer ${TEST_TOKEN}`
+          }
+        });
+        
+        const dbResult = document.getElementById('db-result');
+        dbResult.style.display = 'block';
+        
+        if (response.ok) {
+          const data = await response.json();
+          updateStatus('db', 'pass', 'Database queries working');
+          dbResult.innerHTML = `
+            <span style="color: var(--green)">✓ Database Connected</span><br>
+            <span>Phases loaded: ${data.phases ? data.phases.length : 0}</span>
+          `;
+        } else {
+          updateStatus('db', 'fail', `Status ${response.status}`);
+          dbResult.innerHTML = `<span style="color: var(--red)">✗ Database query failed</span>`;
+        }
+      } catch (error) {
+        updateStatus('db', 'fail', error.message);
+      }
+    };
+
+    // Run all tests
+    window.runAllTests = async function() {
+      results.passed = [];
+      results.failed = [];
+      
+      await testAuth();
+      await testEndpoints();
+      await testDatabase();
+      await testProgressTracker();
+    };
+  </script>
+</body>
+</html>

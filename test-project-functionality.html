@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project Management Test</title>
+    <link rel="stylesheet" href="portal.css">
+</head>
+<body>
+    <div id="test-container">
+        <h2>Project Management Functionality Test</h2>
+        
+        <div class="projects-list">
+            <!-- This will be populated by loadProjectsContent() -->
+        </div>
+    </div>
+
+    <script src="portal.js"></script>
+    <script>
+        // Test the project management functionality
+        window.addEventListener('DOMContentLoaded', function() {
+            console.log('Testing project management functionality...');
+            
+            // Create a test dashboard instance
+            const dashboard = new PortalDashboard();
+            dashboard.authToken = 'test-token';
+            window.portalDashboard = dashboard;
+            
+            // Test project data
+            const testProjects = [
+                {
+                    id: 1,
+                    name: "Brand Identity Redesign",
+                    description: "Complete brand identity redesign including logo, color palette, typography, and brand guidelines.",
+                    status: "In Progress",
+                    progress: 65,
+                    start_date: "2025-01-15",
+                    end_date: "2025-02-15",
+                    budget: 15000,
+                    milestones: [
+                        {
+                            id: 1,
+                            title: "Research Phase",
+                            description: "Market research and competitor analysis",
+                            completed: true,
+                            due_date: "2025-01-20"
+                        },
+                        {
+                            id: 2,
+                            title: "Design Concepts",
+                            description: "Initial design concepts and mood boards",
+                            completed: true,
+                            due_date: "2025-01-30"
+                        },
+                        {
+                            id: 3,
+                            title: "Final Design",
+                            description: "Finalized brand identity design",
+                            completed: false,
+                            due_date: "2025-02-10"
+                        }
+                    ],
+                    files: [
+                        {
+                            id: 1,
+                            name: "brand-guidelines.pdf",
+                            size: 2048576
+                        },
+                        {
+                            id: 2,
+                            name: "logo-concepts.png",
+                            size: 1024000
+                        }
+                    ]
+                },
+                {
+                    id: 2,
+                    name: "Website Development",
+                    description: "Modern, responsive website with client portal integration and e-commerce functionality.",
+                    status: "Planning",
+                    progress: 25,
+                    start_date: "2025-02-01",
+                    end_date: "2025-03-01",
+                    budget: 8500,
+                    milestones: [
+                        {
+                            id: 4,
+                            title: "Requirements Gathering",
+                            description: "Collect and document all project requirements",
+                            completed: true,
+                            due_date: "2025-02-05"
+                        },
+                        {
+                            id: 5,
+                            title: "Wireframes",
+                            description: "Create wireframes and user flow diagrams",
+                            completed: false,
+                            due_date: "2025-02-15"
+                        }
+                    ],
+                    files: []
+                }
+            ];
+            
+            // Test the render function directly
+            try {
+                dashboard.renderProjectsList(testProjects);
+                console.log('✓ Projects rendered successfully');
+                
+                // Test clicking on a project
+                setTimeout(() => {
+                    const viewButtons = document.querySelectorAll('[onclick*="viewProject"]');
+                    if (viewButtons.length > 0) {
+                        console.log('✓ View project buttons found:', viewButtons.length);
+                        
+                        // Test project modal generation
+                        const testProject = testProjects[0];
+                        const modalHTML = dashboard.generateProjectDetailsHTML(testProject);
+                        
+                        if (modalHTML.includes('Brand Identity Redesign')) {
+                            console.log('✓ Project modal HTML generated successfully');
+                        } else {
+                            console.error('✗ Project modal HTML generation failed');
+                        }
+                        
+                        // Test helper functions
+                        const fileIcon = dashboard.getFileIcon('test.pdf');
+                        const activityIcon = dashboard.getActivityIcon('update');
+                        const fileSize = dashboard.formatFileSize(1024000);
+                        
+                        console.log('✓ Helper functions working:', { fileIcon, activityIcon, fileSize });
+                        
+                    } else {
+                        console.error('✗ No view project buttons found');
+                    }
+                }, 100);
+                
+            } catch (error) {
+                console.error('✗ Error testing project functionality:', error);
+            }
+        });
+    </script>
+</body>
+</html>

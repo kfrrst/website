@@ -1,0 +1,443 @@
+/* Progress Tracker - Seamless Integration Styles */
+.progress-tracker-container {
+  padding: 0;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  margin: 1rem 0;
+}
+
+/* When used in tabs mode, remove all styling */
+.project-phase-tabs .progress-tracker-container {
+  margin: 0;
+  padding: 0;
+}
+
+/* Phase nodes - simplified */
+.phase-nodes {
+  display: flex;
+  justify-content: space-between;
+  position: relative;
+  padding: 1rem 0;
+  margin-bottom: 1.5rem;
+}
+
+.phase-node {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: default;
+  transition: all 0.3s ease;
+  opacity: 0.6;
+  z-index: 2;
+}
+
+.phase-node.completed {
+  opacity: 1;
+}
+
+.phase-node.current {
+  opacity: 1;
+}
+
+.phase-node.next {
+  opacity: 0.8;
+}
+
+.phase-node.clickable {
+  cursor: pointer;
+}
+
+.phase-node.clickable:hover {
+  transform: translateY(-2px);
+  opacity: 1;
+}
+
+.phase-node.viewing {
+  transform: scale(1.1);
+  opacity: 1;
+}
+
+/* Node icon - simple numbered circles */
+.node-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 2px solid var(--border-light);
+  background: var(--white);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 1rem;
+  color: var(--text-secondary);
+  transition: all 0.3s ease;
+}
+
+.phase-node.completed .node-icon {
+  background: var(--green);
+  border-color: var(--green);
+  color: var(--white);
+}
+
+.phase-node.current .node-icon {
+  background: var(--blue);
+  border-color: var(--blue);
+  color: var(--white);
+  box-shadow: 0 0 0 4px rgba(0, 87, 255, 0.1);
+}
+
+.phase-node.clickable:hover .node-icon {
+  border-color: var(--blue);
+  color: var(--blue);
+}
+
+.phase-node.viewing .node-icon {
+  background: var(--yellow);
+  border-color: var(--yellow);
+  color: var(--text-primary);
+}
+
+/* Node label */
+.node-label {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  text-align: center;
+  max-width: 80px;
+  transition: color 0.3s ease;
+}
+
+.phase-node.current .node-label,
+.phase-node.completed .node-label {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.phase-node.viewing .node-label {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+/* Progress line - connecting phases */
+.phase-nodes::before {
+  content: '';
+  position: absolute;
+  top: 2.5rem;
+  left: 40px;
+  right: 40px;
+  height: 2px;
+  background: var(--border-light);
+  z-index: 1;
+}
+
+.phase-nodes::after {
+  content: '';
+  position: absolute;
+  top: 2.5rem;
+  left: 40px;
+  height: 2px;
+  background: var(--blue);
+  transition: width 0.5s ease;
+  z-index: 1;
+  width: var(--progress-width, 0);
+}
+
+/* Phase details display */
+.phase-details-display {
+  background: var(--base-bg);
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-top: 1rem;
+  border: 1px solid var(--border-light);
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Current phase info */
+.current-phase-info {
+  width: 100%;
+}
+
+.phase-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.phase-title {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.phase-title h4 {
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.phase-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--blue);
+  color: var(--white);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 0.875rem;
+}
+
+.phase-progress {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+}
+
+.phase-description {
+  color: var(--text-secondary);
+  margin: 0.75rem 0;
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+/* Phase actions */
+.phase-actions {
+  margin-top: 1.5rem;
+}
+
+.phase-actions h5 {
+  margin: 0 0 0.75rem 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.actions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.action-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  background: var(--white);
+  border-radius: 6px;
+  border: 1px solid var(--border-light);
+  transition: all 0.2s ease;
+}
+
+.action-item:hover {
+  border-color: var(--blue);
+  background: rgba(0, 87, 255, 0.02);
+}
+
+.action-item.completed {
+  opacity: 0.7;
+  background: rgba(39, 174, 96, 0.05);
+}
+
+.action-checkbox {
+  position: relative;
+  display: inline-block;
+  margin-top: 2px;
+}
+
+.action-checkbox input[type="checkbox"] {
+  position: absolute;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.checkbox-custom {
+  display: block;
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--border-light);
+  border-radius: 4px;
+  position: relative;
+  transition: all 0.2s ease;
+}
+
+.action-checkbox input:checked ~ .checkbox-custom {
+  background: var(--green);
+  border-color: var(--green);
+}
+
+.action-checkbox input:checked ~ .checkbox-custom::after {
+  content: '✓';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: white;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.action-content {
+  flex: 1;
+}
+
+.action-title {
+  font-weight: 500;
+  color: var(--text-primary);
+  font-size: 0.875rem;
+  line-height: 1.4;
+}
+
+.action-item.completed .action-title {
+  text-decoration: line-through;
+  color: var(--text-secondary);
+}
+
+.action-description {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  margin: 0.25rem 0 0 0;
+  line-height: 1.4;
+}
+
+/* Advance button */
+.advance-phase-btn {
+  margin-top: 1.5rem;
+  background: var(--blue);
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 6px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 0.875rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.advance-phase-btn:hover {
+  background: var(--blue-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 87, 255, 0.2);
+}
+
+.advance-phase-btn:disabled {
+  background: var(--text-light);
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* Phase documents */
+.phase-documents {
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border-light);
+}
+
+.phase-documents h5 {
+  margin: 0 0 0.75rem 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.documents-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.document-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem;
+  background: var(--white);
+  border-radius: 4px;
+  border: 1px solid var(--border-light);
+}
+
+.doc-icon {
+  color: var(--text-secondary);
+  font-size: 1.25rem;
+}
+
+.doc-name {
+  flex: 1;
+  font-size: 0.875rem;
+  color: var(--text-primary);
+}
+
+.btn-sm {
+  padding: 0.25rem 0.75rem;
+  font-size: 0.75rem;
+  background: transparent;
+  border: 1px solid var(--blue);
+  color: var(--blue);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-sm:hover {
+  background: var(--blue);
+  color: white;
+}
+
+/* Remove default component styles */
+.node-check,
+.node-pulse {
+  display: none;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .phase-nodes {
+    overflow-x: auto;
+    padding-bottom: 1rem;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  .phase-node {
+    min-width: 60px;
+  }
+  
+  .node-icon {
+    width: 32px;
+    height: 32px;
+    font-size: 0.875rem;
+  }
+  
+  .node-label {
+    font-size: 0.625rem;
+    max-width: 60px;
+  }
+  
+  .phase-details-display {
+    padding: 1rem;
+  }
+}

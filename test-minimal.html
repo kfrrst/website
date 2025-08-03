@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Minimal CSS Test</title>
+    <style>
+        body {
+            background-color: #F9F6F1;
+            font-family: 'Montserrat', sans-serif;
+            padding: 50px;
+        }
+        h1 {
+            color: #333;
+        }
+        .test-box {
+            border: 2px solid #333;
+            padding: 20px;
+            margin: 20px 0;
+            background: #F9F6F1;
+        }
+    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <h1>Minimal CSS Test</h1>
+    <div class="test-box">
+        <p>This page has inline styles. Background should be bone white (#F9F6F1)</p>
+        <p>Font should be Montserrat</p>
+    </div>
+    
+    <hr style="margin: 40px 0;">
+    
+    <h2>External CSS Test</h2>
+    <p>Now loading external stylesheet...</p>
+    <link rel="stylesheet" href="styles.css?v=2">
+    
+    <div class="hero-section">
+        <h1>[External CSS Test]</h1>
+        <p>If external CSS loads, this should be styled like the main page</p>
+        <button class="btn-primary">Test Button</button>
+    </div>
+</body>
+</html>

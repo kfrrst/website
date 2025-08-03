@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>[RE]Print Studios - Admin Portal</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="admin.css">
+</head>
+<body>
+  <!-- Login Section (shown by default) -->
+  <div id="login-section" class="login-container">
+    <div class="login-card">
+      <h1>[Admin Access]</h1>
+      <p class="subtitle">Secure portal for system management</p>
+      
+      <form id="admin-login-form">
+        <div class="form-group">
+          <label for="email">Email</label>
+          <input 
+            type="email" 
+            id="email" 
+            name="email" 
+            required 
+            placeholder="admin@kendrickforrest.com"
+            autocomplete="email"
+          >
+        </div>
+        
+        <div class="form-group">
+          <label for="password">Password</label>
+          <input 
+            type="password" 
+            id="password" 
+            name="password" 
+            required 
+            placeholder="••••••••"
+            autocomplete="current-password"
+          >
+        </div>
+        
+        <div class="form-group remember-me">
+          <label>
+            <input type="checkbox" name="remember" id="remember">
+            <span>Remember me for 30 days</span>
+          </label>
+        </div>
+        
+        <button type="submit" class="btn-primary">
+          <span id="button-text">Access Admin Portal</span>
+        </button>
+      </form>
+      
+      <div class="login-footer">
+        <a href="/" class="back-link">← Back to main site</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Admin Dashboard (hidden by default) -->
+  <div id="admin-dashboard" class="admin-dashboard hidden">
+    <!-- Header -->
+    <header class="admin-header">
+      <div class="header-content">
+        <h1>[Admin Dashboard]</h1>
+        <nav class="admin-nav">
+          <a href="#overview" class="nav-link active">Overview</a>
+          <a href="#clients" class="nav-link">Clients</a>
+          <a href="#projects" class="nav-link">Projects</a>
+          <a href="#invoices" class="nav-link">Invoices</a>
+          <a href="#files" class="nav-link">Files</a>
+          <a href="#messages" class="nav-link">Messages</a>
+          <a href="#inquiries" class="nav-link">Inquiries</a>
+          <a href="#phases" class="nav-link">Phase Management</a>
+          <a href="#settings" class="nav-link">Settings</a>
+        </nav>
+        <button id="logout-btn" class="btn-secondary">Logout</button>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="admin-content">
+      <!-- Overview Section -->
+      <section id="overview" class="admin-section active">
+        <h2>[System Overview]</h2>
+        
+        <div class="stats-grid">
+          <div class="stat-card">
+            <h3>12</h3>
+            <p>Active Clients</p>
+          </div>
+          <div class="stat-card">
+            <h3>8</h3>
+            <p>Active Projects</p>
+          </div>
+          <div class="stat-card">
+            <h3>$45,250</h3>
+            <p>Revenue This Month</p>
+          </div>
+          <div class="stat-card">
+            <h3>3</h3>
+            <p>Pending Invoices</p>
+          </div>
+        </div>
+
+        <div class="recent-activity">
+          <h3>[Recent Activity]</h3>
+          <div class="activity-list">
+            <div class="activity-item">
+              <span class="activity-time">2 hours ago</span>
+              <span class="activity-text">New client registered: Tech Startup Inc.</span>
+            </div>
+            <div class="activity-item">
+              <span class="activity-time">5 hours ago</span>
+              <span class="activity-text">Invoice #1024 paid by Creative Agency</span>
+            </div>
+            <div class="activity-item">
+              <span class="activity-time">1 day ago</span>
+              <span class="activity-text">Project "Brand Redesign" updated to 75% complete</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Clients Section -->
+      <section id="clients" class="admin-section">
+        <div class="section-header">
+          <h2>[Client Management]</h2>
+          <div class="section-controls">
+            <input type="text" class="search-input" data-section="clients" placeholder="Search clients...">
+            <select class="status-filter" data-section="clients">
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+              <option value="all">All</option>
+            </select>
+            <button class="btn-primary" onclick="showNewClientForm()">+ New Client</button>
+          </div>
+        </div>
+        
+        <div class="clients-table">
+          <table>
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Projects</th>
+                <th>Total Spent</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="clients-list">
+              <!-- Clients will be loaded here -->
+            </tbody>
+          </table>
+        </div>
+        <div id="clients-pagination"></div>
+      </section>
+
+      <!-- Projects Section -->
+      <section id="projects" class="admin-section">
+        <div class="section-header">
+          <h2>[Project Management]</h2>
+          <div class="section-controls">
+            <input type="text" class="search-input" data-section="projects" placeholder="Search projects...">
+            <select class="status-filter" data-section="projects">
+              <option value="all">All Status</option>
+              <option value="planning">Planning</option>
+              <option value="in_progress">In Progress</option>
+              <option value="review">Review</option>
+              <option value="completed">Completed</option>
+              <option value="on_hold">On Hold</option>
+            </select>
+            <button class="btn-primary" onclick="showNewProjectForm()">+ New Project</button>
+          </div>
+        </div>
+        
+        <div class="projects-grid" id="projects-list">
+          <!-- Projects will be loaded here -->
+        </div>
+        <div id="projects-pagination"></div>
+      </section>
+
+      <!-- Invoices Section -->
+      <section id="invoices" class="admin-section">
+        <div class="section-header">
+          <h2>[Invoice Management]</h2>
+          <div class="section-controls">
+            <select class="status-filter" data-section="invoices">
+              <option value="all">All Status</option>
+              <option value="draft">Draft</option>
+              <option value="sent">Sent</option>
+              <option value="paid">Paid</option>
+              <option value="overdue">Overdue</option>
+              <option value="cancelled">Cancelled</option>
+            </select>
+            <button class="btn-primary" onclick="showNewInvoiceForm()">+ Create Invoice</button>
+          </div>
+        </div>
+        
+        <div class="invoices-table">
+          <table>
+            <thead>
+              <tr>
+                <th>Invoice #</th>
+                <th>Client</th>
+                <th>Amount</th>
+                <th>Date</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="invoices-list">
+              <!-- Invoices will be loaded here -->
+            </tbody>
+          </table>
+        </div>
+        <div id="invoices-pagination"></div>
+      </section>
+
+      <!-- Files Section -->
+      <section id="files" class="admin-section">
+        <div class="section-header">
+          <h2>[File Management]</h2>
+          <button class="btn-primary" onclick="uploadFiles()">+ Upload Files</button>
+        </div>
+        
+        <div class="files-grid" id="files-list">
+          <!-- Files will be loaded here -->
+        </div>
+        <div id="files-pagination"></div>
+      </section>
+
+      <!-- Messages Section -->
+      <section id="messages" class="admin-section">
+        <div class="section-header">
+          <h2>[Message System]</h2>
+          <button class="btn-primary" onclick="window.adminPortal.showComposeMessageModal()">+ New Message</button>
+        </div>
+        
+        <div class="messages-container" id="messages-list">
+          <!-- Messages will be loaded here -->
+        </div>
+        <div id="messages-pagination"></div>
+      </section>
+
+      <!-- Inquiries Section -->
+      <section id="inquiries" class="admin-section">
+        <div class="section-header">
+          <h2>[Client Inquiries]</h2>
+          <div class="section-filters">
+            <select class="status-filter" data-section="inquiries">
+              <option value="all">All Status</option>
+              <option value="new">New</option>
+              <option value="in-progress">In Progress</option>
+              <option value="contacted">Contacted</option>
+              <option value="converted">Converted</option>
+              <option value="closed">Closed</option>
+            </select>
+          </div>
+        </div>
+        
+        <div class="inquiries-table">
+          <table>
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Company</th>
+                <th>Project Type</th>
+                <th>Budget</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="inquiries-list">
+              <!-- Inquiries will be loaded here -->
+            </tbody>
+          </table>
+        </div>
+        <div id="inquiries-pagination"></div>
+      </section>
+
+      <!-- Phase Management Section -->
+      <section id="phases" class="admin-section">
+        <div class="section-header">
+          <h2>[Phase Management]</h2>
+          <div class="section-controls">
+            <select class="status-filter" data-section="phases" id="phase-filter">
+              <option value="all">All Phases</option>
+              <option value="onboarding">Onboarding</option>
+              <option value="ideation">Ideation</option>
+              <option value="design">Design</option>
+              <option value="review">Review & Feedback</option>
+              <option value="production">Production/Print</option>
+              <option value="payment">Payment</option>
+              <option value="signoff">Sign-off & Docs</option>
+              <option value="delivery">Delivery</option>
+            </select>
+            <button class="btn-primary" onclick="window.adminPortal.showBulkPhaseUpdateModal()">Bulk Update</button>
+            <button class="btn-secondary" onclick="window.adminPortal.exportPhaseReport()">Export Report</button>
+          </div>
+        </div>
+        
+        <!-- Phase Analytics Overview -->
+        <div class="phase-analytics-overview">
+          <div class="analytics-grid">
+            <div class="analytic-card">
+              <div class="metric-value" id="stuck-projects-count">-</div>
+              <div class="metric-label">Stuck Projects</div>
+              <div class="metric-subtitle">Over 7 days in phase</div>
+            </div>
+            <div class="analytic-card">
+              <div class="metric-value" id="avg-phase-time">-</div>
+              <div class="metric-label">Avg Phase Time</div>
+              <div class="metric-subtitle">Days per phase</div>
+            </div>
+            <div class="analytic-card">
+              <div class="metric-value" id="bottleneck-phase">-</div>
+              <div class="metric-label">Bottleneck Phase</div>
+              <div class="metric-subtitle">Most delayed phase</div>
+            </div>
+            <div class="analytic-card">
+              <div class="metric-value" id="completion-rate">-</div>
+              <div class="metric-label">Completion Rate</div>
+              <div class="metric-subtitle">Projects completed on time</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Phase Distribution Chart -->
+        <div class="phase-distribution">
+          <h3>[Projects by Phase]</h3>
+          <div class="phase-chart" id="phase-distribution-chart">
+            <!-- Chart will be populated by JavaScript -->
+          </div>
+        </div>
+
+        <!-- Projects by Phase List -->
+        <div class="phase-projects-container">
+          <div class="phase-projects-grid" id="phase-projects-list">
+            <!-- Projects grouped by phase will be loaded here -->
+          </div>
+        </div>
+        
+        <!-- Phase Automation Rules -->
+        <div class="phase-automation-section">
+          <div class="section-sub-header">
+            <h3>[Automation Rules]</h3>
+            <button class="btn-secondary" onclick="window.adminPortal.showPhaseRuleModal()">+ Add Rule</button>
+          </div>
+          <div class="automation-rules-list" id="automation-rules-list">
+            <!-- Automation rules will be loaded here -->
+          </div>
+        </div>
+      </section>
+
+      <!-- Settings Section -->
+      <section id="settings" class="admin-section">
+        <h2>[System Settings]</h2>
+        
+        <div class="settings-grid">
+          <div class="setting-card">
+            <h3>Profile Settings</h3>
+            <p>Update admin profile and credentials</p>
+            <button class="btn-secondary">Edit Profile</button>
+          </div>
+          
+          <div class="setting-card">
+            <h3>Email Templates</h3>
+            <p>Customize automated email messages</p>
+            <button class="btn-secondary">Manage Templates</button>
+          </div>
+          
+          <div class="setting-card">
+            <h3>Payment Settings</h3>
+            <p>Configure Stripe and payment options</p>
+            <button class="btn-secondary">Payment Config</button>
+          </div>
+          
+          <div class="setting-card">
+            <h3>Backup & Export</h3>
+            <p>Backup data and export reports</p>
+            <button class="btn-secondary">Backup Now</button>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Modals and Forms will be added here -->
+
+  <script type="module" src="utils/progressTracker.js"></script>
+  <script src="admin.js"></script>
+</body>
+</html>

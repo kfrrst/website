@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Portal Login</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { border: 1px solid #ccc; padding: 20px; margin: 20px 0; }
+        .success { color: green; }
+        .error { color: red; }
+        button { padding: 10px 20px; margin: 10px; }
+    </style>
+</head>
+<body>
+    <h1>Portal Login Test</h1>
+    
+    <div class="test-section">
+        <h2>Test Client Login API</h2>
+        <button onclick="testLogin()">Test Login API</button>
+        <div id="login-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Test Portal Access</h2>
+        <button onclick="testPortalAccess()">Test Portal Page</button>
+        <div id="portal-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Debug Info</h2>
+        <div id="debug-info"></div>
+    </div>
+
+    <script>
+        async function testLogin() {
+            const resultDiv = document.getElementById('login-result');
+            resultDiv.innerHTML = 'Testing login...';
+            
+            try {
+                const response = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        email: 'client@example.com',
+                        password: 'client123'
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.accessToken) {
+                    resultDiv.innerHTML = `
+                        <div class="success">✅ Login Successful!</div>
+                        <div>User: ${data.user.name} (${data.user.email})</div>
+                        <div>Role: ${data.user.role}</div>
+                        <div>Token: ${data.accessToken.substring(0, 20)}...</div>
+                    `;
+                    
+                    // Store token for portal test
+                    localStorage.setItem('authToken', data.accessToken);
+                    localStorage.setItem('userData', JSON.stringify(data.user));
+                } else {
+                    resultDiv.innerHTML = `<div class="error">❌ Login Failed: ${data.error || 'Unknown error'}</div>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">❌ Network Error: ${error.message}</div>`;
+            }
+        }
+        
+        function testPortalAccess() {
+            const resultDiv = document.getElementById('portal-result');
+            const token = localStorage.getItem('authToken');
+            
+            if (!token) {
+                resultDiv.innerHTML = '<div class="error">❌ No auth token found. Please test login first.</div>';
+                return;
+            }
+            
+            resultDiv.innerHTML = 'Opening portal in new window...';
+            const portalWindow = window.open('/portal.html', '_blank');
+            
+            setTimeout(() => {
+                resultDiv.innerHTML = `
+                    <div class="success">✅ Portal window opened</div>
+                    <div>Auth token is stored: ${token.substring(0, 20)}...</div>
+                    <div>Check the new window for the portal interface</div>
+                `;
+            }, 1000);
+        }
+        
+        // Show debug info
+        document.getElementById('debug-info').innerHTML = `
+            <div><strong>Current URL:</strong> ${window.location.href}</div>
+            <div><strong>Stored Auth Token:</strong> ${localStorage.getItem('authToken') ? 'Present' : 'None'}</div>
+            <div><strong>Stored User Data:</strong> ${localStorage.getItem('userData') ? 'Present' : 'None'}</div>
+        `;
+    </script>
+</body>
+</html>

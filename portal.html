@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>[RE]Print Studios - Client Portal Dashboard</title>
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="portal.css" />
+  <link rel="stylesheet" href="styles/progress-tracker-seamless.css" />
+  <link rel="stylesheet" href="styles/progress-tracker-tabs.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="https://js.stripe.com/v3/"></script>
+</head>
+<body class="portal-body">
+
+  <!-- LOGIN SCREEN -->
+  <div id="login-screen" class="login-container">
+    <div class="login-form">
+      <div class="login-header">
+        <h1>[RE]Print Studios</h1>
+        <p>Client Portal</p>
+      </div>
+      <form id="login-form">
+        <div class="form-group">
+          <label for="email">Email Address</label>
+          <input type="email" id="email" name="email" required>
+        </div>
+        <div class="form-group">
+          <label for="password">Password</label>
+          <input type="password" id="password" name="password" required>
+        </div>
+        <button type="submit" class="btn-login">
+          <span class="btn-text">Sign In</span>
+          <span class="btn-loading hidden">Signing In...</span>
+        </button>
+      </form>
+      <div class="login-footer">
+        <p>Need help? <a href="mailto:hello@kendrickforrest.com">Contact Support</a></p>
+      </div>
+    </div>
+  </div>
+  <!-- PORTAL CONTENT (Hidden initially) -->
+  <div id="portal-content" class="portal-content hidden">
+  
+  <!-- PORTAL HEADER -->
+  <header class="portal-header">
+    <div class="portal-nav">
+      <div class="logo">
+        <h1>[RE]Print Studios <span class="portal-tag">Portal</span></h1>
+      </div>
+      <nav class="main-nav">
+        <a href="#dashboard" class="nav-link active">
+          <i class="fas fa-tachometer-alt"></i>
+          <span>Dashboard</span>
+        </a>
+        <a href="#projects" class="nav-link">
+          <i class="fas fa-project-diagram"></i>
+          <span>Projects</span>
+        </a>
+        <a href="#files" class="nav-link">
+          <i class="fas fa-folder"></i>
+          <span>Files</span>
+        </a>
+        <a href="#messages" class="nav-link">
+          <i class="fas fa-comments"></i>
+          <span>Messages</span>
+          <span class="nav-badge">8</span>
+        </a>
+        <a href="#invoices" class="nav-link">
+          <i class="fas fa-file-invoice"></i>
+          <span>Invoices</span>
+        </a>
+      </nav>
+      <div class="user-menu">
+        <div class="user-info">
+          <div class="user-avatar">JD</div>
+          <span class="user-name">John Doe</span>
+        </div>
+        <div class="header-actions">
+          <button class="btn-icon notification-btn" onclick="toggleNotifications()">
+            <i class="fas fa-bell"></i>
+            <span class="notification-badge">3</span>
+          </button>
+          <button class="btn-logout" onclick="logout()">
+            <i class="fas fa-sign-out-alt"></i>
+            <span>Logout</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN PORTAL CONTENT -->
+  <main class="portal-main">
+    
+    <!-- DASHBOARD SECTION -->
+    <section id="dashboard" class="portal-section active">
+      <div class="section-header">
+        <h2>[Dashboard Overview]</h2>
+        <p>Your projects, updates, and important information at a glance.</p>
+      </div>
+
+      <!-- STATS GRID -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-content">
+            <h3>2</h3>
+            <p>Active Projects</p>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-content">
+            <h3>24</h3>
+            <p>Files Shared</p>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-content">
+            <h3>8</h3>
+            <p>New Messages</p>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-content">
+            <h3>$2,450</h3>
+            <p>Pending Invoice</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- RECENT ACTIVITY -->
+      <div class="dashboard-grid">
+        <div class="activity-panel">
+          <h3>[Recent Activity]</h3>
+          <div class="activity-list">
+            <div class="activity-item">
+              <div class="activity-content">
+                <p><strong>Logo concepts v2</strong> uploaded</p>
+                <span class="activity-time">2 hours ago</span>
+              </div>
+            </div>
+            <div class="activity-item">
+              <div class="activity-content">
+                <p><strong>Kendrick</strong> sent a message</p>
+                <span class="activity-time">4 hours ago</span>
+              </div>
+            </div>
+            <div class="activity-item">
+              <div class="activity-content">
+                <p><strong>Website wireframes</strong> approved</p>
+                <span class="activity-time">1 day ago</span>
+              </div>
+            </div>
+            <div class="activity-item">
+              <div class="activity-content">
+                <p><strong>Invoice #1024</strong> generated</p>
+                <span class="activity-time">2 days ago</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- PROJECT STATUS -->
+        <div class="projects-panel">
+          <h3>[Active Projects]</h3>
+          <div class="project-cards">
+            <div class="project-card">
+              <div class="project-header">
+                <h4>Brand Identity Redesign</h4>
+                <span class="project-status in-progress">In Progress</span>
+              </div>
+              <div class="progress-bar">
+                <div class="progress-fill" style="width: 65%"></div>
+              </div>
+              <p class="progress-text">65% Complete</p>
+              <div class="project-meta">
+                <span>Due: Feb 15, 2025</span>
+                <span>•</span>
+                <span>12 files</span>
+              </div>
+            </div>
+
+            <div class="project-card">
+              <div class="project-header">
+                <h4>Website Development</h4>
+                <span class="project-status planning">Planning</span>
+              </div>
+              <div class="progress-bar">
+                <div class="progress-fill" style="width: 25%"></div>
+              </div>
+              <p class="progress-text">25% Complete</p>
+              <div class="project-meta">
+                <span>Due: Mar 1, 2025</span>
+                <span>•</span>
+                <span>8 files</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- PROJECTS SECTION -->
+    <section id="projects" class="portal-section">
+      <div class="section-header">
+        <h2>[Your Projects]</h2>
+        <p>Track progress, view deliverables, and manage project details.</p>
+      </div>
+      <div class="projects-list">
+        <!-- Projects will be loaded here -->
+        <p class="loading-message">Loading projects...</p>
+      </div>
+    </section>
+
+    <!-- FILES SECTION -->
+    <section id="files" class="portal-section">
+      <div class="section-header">
+        <h2>[File Management]</h2>
+        <p>Access your project files, downloads, and shared resources.</p>
+      </div>
+      <div class="file-manager">
+        <!-- File manager will be loaded here -->
+        <p class="loading-message">Loading files...</p>
+      </div>
+    </section>
+
+    <!-- MESSAGES SECTION -->
+    <section id="messages" class="portal-section">
+      <div class="section-header">
+        <h2>[Messages]</h2>
+        <p>Direct communication with Kendrick about your projects.</p>
+      </div>
+      <div class="messaging-interface">
+        <!-- Messages will be loaded here -->
+        <p class="loading-message">Loading messages...</p>
+      </div>
+    </section>
+
+    <!-- INVOICES SECTION -->
+    <section id="invoices" class="portal-section">
+      <div class="section-header">
+        <h2>[Invoices & Billing]</h2>
+        <p>View invoices, payment history, and manage billing information.</p>
+      </div>
+      <div class="invoices-list">
+        <!-- Invoices will be loaded here -->
+        <p class="loading-message">Loading invoices...</p>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- QUICK ACTIONS FLOATING BUTTON -->
+  <div class="floating-actions">
+    <button class="fab-main" onclick="toggleQuickActions()">
+      <span class="fab-icon">+</span>
+    </button>
+    <div class="fab-menu hidden">
+      <button class="fab-item" onclick="startNewMessage()">
+        <span class="fab-icon">[MSG]</span>
+        <span class="fab-label">New Message</span>
+      </button>
+      <button class="fab-item" onclick="uploadFile()">
+        <span class="fab-icon">[FILE]</span>
+        <span class="fab-label">Upload File</span>
+      </button>
+    </div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script type="module" src="/components/ProgressTracker.js?v=1.4"></script>
+  <script type="module" src="/portal.js?v=1.4"></script>
+  <!-- Test button to verify JavaScript is working -->
+  <button onclick="testFunction()" style="position: fixed; top: 10px; right: 10px; z-index: 9999; background: #333; color: white; border: none; padding: 5px 10px; border-radius: 3px; font-size: 12px;">Test JS</button>
+</body>
+</html>

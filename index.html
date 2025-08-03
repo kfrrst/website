@@ -3,12 +3,12 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>[Portfolio] by Kendrick Forrest</title>
+  <title>[RE]Print Studios - Empowering Creative Journeys</title>
 
   <!-- Link to CSS -->
-  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="styles.css?v=1.1" />
 
-  <!-- Example Google Font -->
+  <!-- Google Font -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link 
@@ -23,60 +23,151 @@
       <div id="hamburger-menu" onclick="toggleMenu()">[MENU]</div>
       <ul id="nav-links" class="hidden">
         <li><a href="#home">[Home]</a></li>
-        <li><a href="#projects">[Projects]</a></li>
         <li><a href="#about">[About]</a></li>
-        <li><a href="#studio">[Studio]</a></li>
+        <li><a href="#login">[Login]</a></li>
       </ul>
     </nav>
   </header>
 
   <!-- HERO SECTION -->
   <section id="home" class="hero-section">
-    <h1>[Portfolio]</h1>
-    <p class="hero-subtext">Welcome to my creative space. Let's explore and collaborate together</p>
+    <div class="hero-content">
+      <h1>[RE]Print Studios</h1>
+      <p class="hero-subtext">Empowering Creative Journeys</p>
+      <p class="hero-description">
+        Welcome to your dedicated client portal. Here we collaborate, share ideas, 
+        and bring your vision to life through streamlined project management.
+      </p>
+      <div class="cta-buttons">
+        <button class="btn-primary" onclick="showInquiryForm()">[Start a Project]</button>
+        <button class="btn-secondary" onclick="showClientLogin()">[Client Login]</button>
+      </div>
+    </div>
+    <div class="hero-features">
+      <div class="feature-item">
+        <h3>[File Sharing]</h3>
+        <p>Secure file exchange and version control</p>
+      </div>
+      <div class="feature-item">
+        <h3>[Real-time Chat]</h3>
+        <p>Direct communication throughout your project</p>
+      </div>
+      <div class="feature-item">
+        <h3>[Project Tracking]</h3>
+        <p>Live updates and milestone progress</p>
+      </div>
+      <div class="feature-item">
+        <h3>[Invoice Management]</h3>
+        <p>Transparent billing and online payments</p>
+      </div>
+    </div>
   </section>
 
-  <!-- PROJECTS SECTION -->
-  <section id="projects" class="projects-section">
-    <div class="grid-container">
-      <!-- PROJECT 1 CARD -->
-      <div class="project-card">
-        <img src="images/project1-thumbnail.jpg" alt="Project 1 Thumbnail" />
-        <div class="card-title">[Project #1]</div>
-      </div>
-
-      <!-- PROJECT 2 CARD -->
-      <div class="project-card">
-        <img src="images/project2-thumbnail.jpg" alt="Project 2 Thumbnail" />
-        <div class="card-title">[Project #2]</div>
-      </div>
+  <!-- INQUIRY FORM -->
+  <section id="inquiry" class="inquiry-section hidden">
+    <div class="form-container">
+      <h2>[Project Inquiry]</h2>
+      <p class="form-subtitle">Tell me about your vision and let's create something amazing together.</p>
+      <form id="inquiry-form" class="inquiry-form">
+        <div class="form-group">
+          <label for="name">Full Name</label>
+          <input type="text" id="name" name="name" placeholder="Your Name" required>
+        </div>
+        <div class="form-group">
+          <label for="email">Email Address</label>
+          <input type="email" id="email" name="email" placeholder="your@email.com" required>
+        </div>
+        <div class="form-group">
+          <label for="company">Company (Optional)</label>
+          <input type="text" id="company" name="company" placeholder="Your Company">
+        </div>
+        <div class="form-group">
+          <label for="project-type">Project Type</label>
+          <select id="project-type" name="project-type" required>
+            <option value="">Select a project type</option>
+            <option value="branding">Branding & Identity</option>
+            <option value="web-design">Web Design</option>
+            <option value="print">Print Design</option>
+            <option value="packaging">Packaging Design</option>
+            <option value="consultation">Design Consultation</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="budget">Budget Range</label>
+          <select id="budget" name="budget" required>
+            <option value="">Select budget range</option>
+            <option value="under-5k">Under $5,000</option>
+            <option value="5k-10k">$5,000 - $10,000</option>
+            <option value="10k-25k">$10,000 - $25,000</option>
+            <option value="25k-50k">$25,000 - $50,000</option>
+            <option value="over-50k">$50,000+</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="timeline">Project Timeline</label>
+          <select id="timeline" name="timeline" required>
+            <option value="">Select timeline</option>
+            <option value="rush">Rush (1-2 weeks)</option>
+            <option value="standard">Standard (3-6 weeks)</option>
+            <option value="extended">Extended (2-3 months)</option>
+            <option value="ongoing">Ongoing Project</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="message">Project Description</label>
+          <textarea id="message" name="message" placeholder="Tell me about your project, goals, and vision..." required rows="5"></textarea>
+        </div>
+        <button type="submit" class="btn-primary btn-full">[Send Inquiry]</button>
+      </form>
     </div>
   </section>
 
   <!-- ABOUT SECTION -->
   <section id="about" class="about-section">
     <h2>[About]</h2>
-    <p>
-      Welcome to my digital workspace. I create pieces 
-      that blend nostalgia, simplicity and emotion. 
-      Each project has a story, take a look around, and if something 
-      resonates with you, feel free to inquire.
-    </p>
+    <p>Welcome to my creative space. I create pieces that blend nostalgia, simplicity and emotion. Every project has a story – let's collaborate and bring yours to life.</p>
   </section>
 
-  <!-- STUDIO SECTION -->
-  <section id="studio" class="studio-section">
-    <h2>[Studio]</h2>
-    <img src="images/studio.jpg" alt="Studio Photo" class="studio-image"/>
-    <p>
-      A behind-the-scenes view of my creative space and how new ideas come to life.
-    </p>
-  </section>
+  <!-- LOGIN MODAL -->
+  <div id="login-modal" class="modal hidden">
+    <div class="modal-content">
+      <span class="close-modal" onclick="hideClientLogin()">&times;</span>
+      <h2>[Client Portal Access]</h2>
+      <p class="modal-subtitle">Access your project dashboard, files, and communication hub.</p>
+      <form id="login-form" class="login-form">
+        <div class="form-group">
+          <label for="login-email">Email Address</label>
+          <input type="email" id="login-email" name="email" placeholder="your@email.com" required>
+        </div>
+        <div class="form-group">
+          <label for="login-password">Password</label>
+          <input type="password" id="login-password" name="password" placeholder="Enter your password" required>
+        </div>
+        <div class="form-options">
+          <label class="checkbox-label">
+            <input type="checkbox" name="remember"> Remember me
+          </label>
+          <a href="#" class="forgot-password">Forgot password?</a>
+        </div>
+        <button type="submit" class="btn-primary btn-full">[Access Portal]</button>
+      </form>
+      <div class="login-help">
+        <p>New client? Your login credentials will be provided after project kickoff.</p>
+        <p>Need help? <a href="mailto:hello@kendrickforrest.com">Contact support</a></p>
+        <!-- DEV MODE: Show dev credentials -->
+        <div style="margin-top: 1rem; padding: 1rem; border: 1px solid #999; background: rgba(153, 153, 153, 0.05);">
+          <p style="font-size: 0.8rem; color: #666; margin: 0;"><strong>DEV CREDENTIALS:</strong></p>
+          <p style="font-size: 0.8rem; color: #666; margin: 0.25rem 0 0 0;">Email: dev@test.com | Password: dev123</p>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <!-- FOOTER -->
   <footer id="site-footer">
     <p>
-      &copy; <span id="year"></span> [Website] created by [Kendrick Forrest].
+      &copy; <span id="year"></span> [RE]Print Studios. All rights reserved.
     </p>
   </footer>
 

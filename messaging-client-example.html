@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Messaging System Example</title>
+    <script src="/socket.io/socket.io.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .container {
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            gap: 20px;
+            height: 600px;
+        }
+        .sidebar {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 15px;
+            overflow-y: auto;
+        }
+        .main-chat {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+        }
+        .chat-header {
+            padding: 15px;
+            border-bottom: 1px solid #ddd;
+            background: #f5f5f5;
+        }
+        .messages {
+            flex: 1;
+            padding: 15px;
+            overflow-y: auto;
+            background: #fafafa;
+        }
+        .message-input {
+            padding: 15px;
+            border-top: 1px solid #ddd;
+            display: flex;
+            gap: 10px;
+        }
+        .conversation-item {
+            padding: 10px;
+            border: 1px solid #eee;
+            border-radius: 5px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .conversation-item:hover {
+            background: #f0f0f0;
+        }
+        .conversation-item.active {
+            background: #e3f2fd;
+            border-color: #2196f3;
+        }
+        .message {
+            margin-bottom: 15px;
+            padding: 8px 12px;
+            border-radius: 8px;
+            max-width: 70%;
+        }
+        .message.sent {
+            background: #2196f3;
+            color: white;
+            margin-left: auto;
+        }
+        .message.received {
+            background: #e0e0e0;
+        }
+        .message-meta {
+            font-size: 0.8em;
+            opacity: 0.7;
+            margin-top: 5px;
+        }
+        .typing-indicator {
+            font-style: italic;
+            color: #666;
+            padding: 5px 0;
+        }
+        .presence-indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 5px;
+        }
+        .presence-indicator.online { background: #4caf50; }
+        .presence-indicator.away { background: #ff9800; }
+        .presence-indicator.busy { background: #f44336; }
+        .presence-indicator.offline { background: #ccc; }
+        .unread-badge {
+            background: #f44336;
+            color: white;
+            border-radius: 10px;
+            padding: 2px 6px;
+            font-size: 0.8em;
+            margin-left: auto;
+        }
+        input[type="text"], textarea {
+            flex: 1;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        button {
+            padding: 8px 16px;
+            background: #2196f3;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #1976d2;
+        }
+        .login-form {
+            background: #f5f5f5;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .status-bar {
+            padding: 10px;
+            background: #e8f5e8;
+            border-radius: 4px;
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Kendrick Forrest Client Portal - Messaging System</h1>
+    
+    <div id="loginForm" class="login-form">
+        <h3>Login</h3>
+        <input type="email" id="emailInput" placeholder="Email" value="client@example.com">
+        <input type="password" id="passwordInput" placeholder="Password" value="client123">
+        <button onclick="login()">Login</button>
+    </div>
+
+    <div id="messagingApp" style="display: none;">
+        <div class="status-bar">
+            <span id="connectionStatus">Disconnected</span>
+            <span id="unreadCount" style="margin-left: 20px;">Unread: 0</span>
+        </div>
+
+        <div class="container">
+            <div class="sidebar">
+                <h3>Conversations</h3>
+                <div id="conversationsList">
+                    <!-- Conversations will be populated here -->
+                </div>
+                
+                <h4>Online Users</h4>
+                <div id="onlineUsersList">
+                    <!-- Online users will be populated here -->
+                </div>
+            </div>
+
+            <div class="main-chat">
+                <div class="chat-header">
+                    <div id="chatTitle">Select a conversation</div>
+                    <div id="presenceStatus"></div>
+                </div>
+                
+                <div class="messages" id="messagesContainer">
+                    <!-- Messages will be populated here -->
+                </div>
+                
+                <div id="typingIndicator" class="typing-indicator" style="display: none;">
+                    Someone is typing...
+                </div>
+                
+                <div class="message-input">
+                    <input type="text" id="messageInput" placeholder="Type a message..." onkeypress="handleKeyPress(event)">
+                    <button onclick="sendMessage()">Send</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let socket = null;
+        let currentUser = null;
+        let currentConversation = null;
+        let typingTimeout = null;
+
+        // Login function
+        async function login() {
+            const email = document.getElementById('emailInput').value;
+            const password = document.getElementById('passwordInput').value;
+
+            try {
+                const response = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    currentUser = data.user;
+                    localStorage.setItem('token', data.token);
+                    
+                    document.getElementById('loginForm').style.display = 'none';
+                    document.getElementById('messagingApp').style.display = 'block';
+                    
+                    initializeMessaging(data.token);
+                } else {
+                    alert('Login failed: ' + data.error);
+                }
+            } catch (error) {
+                alert('Login error: ' + error.message);
+            }
+        }
+
+        // Initialize messaging system
+        function initializeMessaging(token) {
+            // Connect to Socket.io
+            socket = io({
+                auth: { token: token }
+            });
+
+            setupSocketListeners();
+            loadConversations();
+            loadOnlineUsers();
+        }
+
+        // Setup Socket.io event listeners
+        function setupSocketListeners() {
+            socket.on('connect', () => {
+                document.getElementById('connectionStatus').textContent = 'Connected';
+                document.getElementById('connectionStatus').style.color = 'green';
+            });
+
+            socket.on('disconnect', () => {
+                document.getElementById('connectionStatus').textContent = 'Disconnected';
+                document.getElementById('connectionStatus').style.color = 'red';
+            });
+
+            socket.on('new_message', (message) => {
+                if (currentConversation && 
+                    (message.sender_id === currentConversation.id || message.recipient_id === currentConversation.id)) {
+                    addMessageToChat(message);
+                }
+                loadConversations(); // Refresh conversations list
+            });
+
+            socket.on('unread_count_updated', (data) => {
+                document.getElementById('unreadCount').textContent = `Unread: ${data.count}`;
+            });
+
+            socket.on('user_typing', (data) => {
+                if (currentConversation && data.userId === currentConversation.id) {
+                    const indicator = document.getElementById('typingIndicator');
+                    if (data.isTyping) {
+                        indicator.textContent = `${data.userName} is typing...`;
+                        indicator.style.display = 'block';
+                    } else {
+                        indicator.style.display = 'none';
+                    }
+                }
+            });
+
+            socket.on('presence_update', (data) => {
+                updateUserPresence(data.userId, data.status);
+            });
+
+            socket.on('message_read', (data) => {
+                // Mark message as read in UI
+                const messageEl = document.querySelector(`[data-message-id="${data.messageId}"]`);
+                if (messageEl) {
+                    messageEl.classList.add('read');
+                }
+            });
+        }
+
+        // Load conversations
+        async function loadConversations() {
+            try {
+                const response = await fetch('/api/messages/conversations', {
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+                });
+                const data = await response.json();
+                
+                displayConversations(data.conversations);
+            } catch (error) {
+                console.error('Error loading conversations:', error);
+            }
+        }
+
+        // Display conversations in sidebar
+        function displayConversations(conversations) {
+            const container = document.getElementById('conversationsList');
+            container.innerHTML = '';
+
+            conversations.forEach(conv => {
+                const div = document.createElement('div');
+                div.className = 'conversation-item';
+                div.onclick = () => selectConversation(conv);
+                
+                div.innerHTML = `
+                    <div style="display: flex; align-items: center;">
+                        <span class="presence-indicator ${getPresenceStatus(conv.id)}"></span>
+                        <strong>${conv.first_name} ${conv.last_name}</strong>
+                        ${conv.unread_count > 0 ? `<span class="unread-badge">${conv.unread_count}</span>` : ''}
+                    </div>
+                    <div style="font-size: 0.9em; color: #666; margin-top: 5px;">
+                        ${conv.last_message ? conv.last_message.substring(0, 50) + '...' : 'No messages'}
+                    </div>
+                `;
+                
+                container.appendChild(div);
+            });
+        }
+
+        // Select a conversation
+        async function selectConversation(user) {
+            currentConversation = user;
+            
+            // Update UI
+            document.querySelectorAll('.conversation-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            event.currentTarget.classList.add('active');
+            
+            document.getElementById('chatTitle').textContent = `${user.first_name} ${user.last_name}`;
+            
+            // Join conversation room
+            socket.emit('join_conversation', { conversationUserId: user.id });
+            
+            // Load conversation messages
+            await loadConversationMessages(user.id);
+            
+            // Mark messages as read
+            socket.emit('mark_messages_read', { conversationUserId: user.id });
+        }
+
+        // Load conversation messages
+        async function loadConversationMessages(userId) {
+            try {
+                const response = await fetch(`/api/messages/conversation/${userId}`, {
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+                });
+                const data = await response.json();
+                
+                displayMessages(data.messages);
+            } catch (error) {
+                console.error('Error loading messages:', error);
+            }
+        }
+
+        // Display messages
+        function displayMessages(messages) {
+            const container = document.getElementById('messagesContainer');
+            container.innerHTML = '';
+
+            messages.forEach(message => {
+                addMessageToChat(message);
+            });
+            
+            container.scrollTop = container.scrollHeight;
+        }
+
+        // Add a single message to chat
+        function addMessageToChat(message) {
+            const container = document.getElementById('messagesContainer');
+            const div = document.createElement('div');
+            
+            const isSent = message.sender_id === currentUser.id;
+            div.className = `message ${isSent ? 'sent' : 'received'}`;
+            div.setAttribute('data-message-id', message.id);
+            
+            div.innerHTML = `
+                <div>${message.content}</div>
+                <div class="message-meta">
+                    ${new Date(message.created_at).toLocaleString()}
+                    ${message.is_read && isSent ? ' ✓✓' : isSent ? ' ✓' : ''}
+                </div>
+            `;
+            
+            container.appendChild(div);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        // Send message
+        async function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const content = input.value.trim();
+            
+            if (!content || !currentConversation) return;
+
+            try {
+                const response = await fetch('/api/messages/send', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    },
+                    body: JSON.stringify({
+                        recipient_id: currentConversation.id,
+                        content: content
+                    })
+                });
+
+                if (response.ok) {
+                    input.value = '';
+                    // Message will be added via socket event
+                } else {
+                    const data = await response.json();
+                    alert('Failed to send message: ' + data.error);
+                }
+            } catch (error) {
+                alert('Error sending message: ' + error.message);
+            }
+        }
+
+        // Handle enter key in message input
+        function handleKeyPress(event) {
+            if (event.key === 'Enter') {
+                sendMessage();
+                return;
+            }
+
+            // Handle typing indicators
+            if (currentConversation) {
+                socket.emit('typing_start', { conversationUserId: currentConversation.id });
+                
+                clearTimeout(typingTimeout);
+                typingTimeout = setTimeout(() => {
+                    socket.emit('typing_stop', { conversationUserId: currentConversation.id });
+                }, 1000);
+            }
+        }
+
+        // Load online users
+        async function loadOnlineUsers() {
+            try {
+                const response = await fetch('/api/messages/presence/online', {
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+                });
+                const data = await response.json();
+                
+                displayOnlineUsers(data.online_users);
+            } catch (error) {
+                console.error('Error loading online users:', error);
+            }
+        }
+
+        // Display online users
+        function displayOnlineUsers(users) {
+            const container = document.getElementById('onlineUsersList');
+            container.innerHTML = '';
+
+            users.forEach(user => {
+                if (user.id === currentUser.id) return; // Skip current user
+                
+                const div = document.createElement('div');
+                div.style.cssText = 'padding: 5px; display: flex; align-items: center;';
+                div.innerHTML = `
+                    <span class="presence-indicator ${user.status}"></span>
+                    ${user.first_name} ${user.last_name}
+                `;
+                
+                container.appendChild(div);
+            });
+        }
+
+        // Get presence status (placeholder)
+        function getPresenceStatus(userId) {
+            // This would normally be retrieved from API or socket data
+            return 'online';
+        }
+
+        // Update user presence
+        function updateUserPresence(userId, status) {
+            // Update presence indicators in UI
+            document.querySelectorAll(`[data-user-id="${userId}"] .presence-indicator`).forEach(indicator => {
+                indicator.className = `presence-indicator ${status}`;
+            });
+        }
+
+        // Refresh data periodically
+        setInterval(() => {
+            if (socket && socket.connected) {
+                loadOnlineUsers();
+            }
+        }, 30000); // Refresh every 30 seconds
+    </script>
+</body>
+</html>

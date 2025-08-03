@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Function Test</title>
+</head>
+<body>
+  <h1>Button Test</h1>
+  
+  <!-- Direct function test -->
+  <button onclick="alert('Direct onclick works!')">Direct onclick</button>
+  
+  <!-- Test our functions -->
+  <button onclick="testSimpleFunction()">Test Simple Function</button>
+  <button onclick="viewProject('test-project')">Test View Project</button>
+  <button onclick="downloadFile('test-file.pdf')">Test Download File</button>
+  
+  <script>
+    // Simple test function
+    function testSimpleFunction() {
+      alert('Simple function works!');
+    }
+    
+    // Copy the problematic functions directly
+    function viewProject(projectId) {
+      alert(`View project called with: ${projectId}`);
+    }
+    
+    function downloadFile(fileName) {
+      alert(`Download file called with: ${fileName}`);
+    }
+    
+    console.log('Test page loaded');
+    console.log('testSimpleFunction:', typeof testSimpleFunction);
+    console.log('viewProject:', typeof viewProject);
+    console.log('downloadFile:', typeof downloadFile);
+  </script>
+</body>
+</html>

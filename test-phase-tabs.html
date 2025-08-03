@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test Phase Tabs</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="portal.css">
+  <link rel="stylesheet" href="styles/progress-tracker-tabs.css">
+  <style>
+    body {
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    .test-container {
+      max-width: 800px;
+      margin: 0 auto;
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    h2 {
+      margin-bottom: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="test-container">
+    <h2>Phase Tabs Progress Tracker Test</h2>
+    
+    <div class="project-phase-tabs" id="test-tracker">
+      <div class="phase-tabs-container">
+        <div class="phase-tabs-nav">
+          <button class="phase-tab completed clickable" data-phase="onboarding" data-phase-index="0">
+            <span class="tab-icon">1</span>
+            <span class="tab-label">Onboarding</span>
+            <span class="tab-check">✓</span>
+          </button>
+          <button class="phase-tab completed clickable" data-phase="ideation" data-phase-index="1">
+            <span class="tab-icon">2</span>
+            <span class="tab-label">Ideation</span>
+            <span class="tab-check">✓</span>
+          </button>
+          <button class="phase-tab current active clickable" data-phase="design" data-phase-index="2">
+            <span class="tab-icon">3</span>
+            <span class="tab-label">Design</span>
+          </button>
+          <button class="phase-tab next clickable" data-phase="review" data-phase-index="3">
+            <span class="tab-icon">4</span>
+            <span class="tab-label">Review</span>
+          </button>
+          <button class="phase-tab locked" data-phase="production" data-phase-index="4" disabled>
+            <span class="tab-icon">5</span>
+            <span class="tab-label">Production</span>
+          </button>
+          <button class="phase-tab locked" data-phase="payment" data-phase-index="5" disabled>
+            <span class="tab-icon">6</span>
+            <span class="tab-label">Payment</span>
+          </button>
+          <button class="phase-tab locked" data-phase="signoff" data-phase-index="6" disabled>
+            <span class="tab-icon">7</span>
+            <span class="tab-label">Sign-off</span>
+          </button>
+          <button class="phase-tab locked" data-phase="delivery" data-phase-index="7" disabled>
+            <span class="tab-icon">8</span>
+            <span class="tab-label">Delivery</span>
+          </button>
+        </div>
+        <div class="phase-tabs-content">
+          <div class="current-phase-info">
+            <div class="phase-header">
+              <div class="phase-title">
+                <span class="phase-icon">3</span>
+                <h4>Design</h4>
+              </div>
+              <div class="phase-progress">
+                <span>1 of 3 tasks complete</span>
+              </div>
+            </div>
+            
+            <p class="phase-description">Creation of designs and prototypes</p>
+            
+            <div class="phase-actions">
+              <h5>Required Actions:</h5>
+              <div class="actions-list">
+                <div class="action-item completed" data-action-id="1">
+                  <label class="action-checkbox">
+                    <input type="checkbox" checked>
+                    <span class="checkbox-custom"></span>
+                  </label>
+                  <div class="action-content">
+                    <span class="action-title">Initial concept sketches</span>
+                    <p class="action-description">Create rough sketches for initial ideas</p>
+                  </div>
+                </div>
+                <div class="action-item" data-action-id="2">
+                  <label class="action-checkbox">
+                    <input type="checkbox">
+                    <span class="checkbox-custom"></span>
+                  </label>
+                  <div class="action-content">
+                    <span class="action-title">Digital mockups</span>
+                    <p class="action-description">Create high-fidelity digital versions</p>
+                  </div>
+                </div>
+                <div class="action-item" data-action-id="3">
+                  <label class="action-checkbox">
+                    <input type="checkbox">
+                    <span class="checkbox-custom"></span>
+                  </label>
+                  <div class="action-content">
+                    <span class="action-title">Prototype development</span>
+                    <p class="action-description">Build working prototype for testing</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Add click functionality
+    document.querySelectorAll('.phase-tab.clickable').forEach(tab => {
+      tab.addEventListener('click', (e) => {
+        // Remove active from all tabs
+        document.querySelectorAll('.phase-tab').forEach(t => t.classList.remove('active'));
+        // Add active to clicked tab
+        tab.classList.add('active');
+        
+        // Log the click
+        console.log('Clicked phase:', tab.dataset.phase, 'Index:', tab.dataset.phaseIndex);
+      });
+    });
+  </script>
+</body>
+</html>
