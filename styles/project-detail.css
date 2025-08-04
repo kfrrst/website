@@ -1,0 +1,293 @@
+/* Project Detail View Styles */
+
+.project-detail-view {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+/* Header */
+.project-detail-header {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  margin-bottom: 30px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.btn-back {
+  background: var(--bone-light);
+  border: 1px solid var(--border-light);
+  border-radius: 6px;
+  padding: 8px 16px;
+  font-size: 0.875rem;
+  color: var(--text);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+}
+
+.btn-back:hover {
+  background: var(--bone);
+  transform: translateX(-2px);
+}
+
+.project-detail-title {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.project-detail-title h1 {
+  margin: 0;
+  font-size: 1.75rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+/* Overview Section */
+.project-overview-section {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  margin-bottom: 30px;
+}
+
+.project-info-card,
+.project-description-card {
+  background: var(--bone-light);
+  border: 1px solid var(--border-light);
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 1px 3px var(--shadow);
+}
+
+.project-info-card h3,
+.project-description-card h3 {
+  margin: 0 0 16px 0;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+.info-item label {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 4px;
+}
+
+.info-item span {
+  font-size: 0.875rem;
+  color: var(--text);
+  font-weight: 500;
+}
+
+.project-description-card p {
+  margin: 0;
+  line-height: 1.6;
+  color: var(--text);
+}
+
+/* Progress Tracker Container */
+.progress-tracker-container {
+  margin-bottom: 30px;
+}
+
+/* Phase Tabs */
+.phase-tabs-container {
+  background: var(--bone-light);
+  border-radius: 8px;
+  box-shadow: 0 1px 3px var(--shadow);
+  overflow: hidden;
+}
+
+.phase-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  border-bottom: 1px solid var(--border-light);
+  background: var(--bone);
+}
+
+.phase-tab {
+  flex: 1;
+  min-width: 120px;
+  padding: 16px 20px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  position: relative;
+  color: var(--text-secondary);
+}
+
+.phase-tab:hover:not(.locked):not(.active) {
+  background: var(--bone-light);
+  color: var(--text);
+}
+
+.phase-tab.active {
+  background: var(--bone-light);
+  color: var(--blue);
+  font-weight: 600;
+}
+
+.phase-tab.active::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--blue);
+}
+
+.phase-tab.completed {
+  color: var(--green);
+}
+
+.phase-tab.locked {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.phase-tab-number {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--border-light);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.phase-tab.active .phase-tab-number {
+  background: var(--blue);
+  color: white;
+}
+
+.phase-tab.completed .phase-tab-number {
+  background: var(--green);
+  color: white;
+}
+
+.phase-tab-name {
+  font-size: 0.875rem;
+  text-align: center;
+}
+
+.phase-tab-check {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  color: var(--green);
+  font-size: 0.875rem;
+}
+
+/* Phase Tab Content */
+.phase-tab-content {
+  padding: 30px;
+  min-height: 400px;
+}
+
+.phase-card-wrapper {
+  margin-bottom: 30px;
+}
+
+.phase-deliverables-wrapper {
+  margin-top: 30px;
+}
+
+/* Loading State */
+.loading {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--text-secondary);
+}
+
+/* Error State */
+.error-state {
+  text-align: center;
+  padding: 60px 20px;
+}
+
+.error-state .error-icon {
+  display: block;
+  font-size: 2.5rem;
+  color: var(--red);
+  margin-bottom: 16px;
+}
+
+.error-state p {
+  margin: 0;
+  color: var(--text-secondary);
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+  .project-detail-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .project-overview-section {
+    grid-template-columns: 1fr;
+  }
+  
+  .phase-tabs {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  .phase-tab {
+    min-width: 100px;
+    padding: 12px 16px;
+  }
+  
+  .phase-tab-content {
+    padding: 20px;
+  }
+}
+
+/* Dark Mode Support */
+@media (prefers-color-scheme: dark) {
+  .project-detail-view {
+    color: #f0f0f0;
+  }
+  
+  .project-info-card,
+  .project-description-card,
+  .phase-tabs-container {
+    background: #2a2a2a;
+    border-color: #444;
+  }
+  
+  .phase-tabs {
+    background: #333;
+  }
+  
+  .phase-tab:hover:not(.locked):not(.active) {
+    background: #3a3a3a;
+  }
+  
+  .phase-tab.active {
+    background: #2a2a2a;
+  }
+}

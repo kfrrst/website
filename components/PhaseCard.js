@@ -217,6 +217,18 @@ export class PhaseCard {
    * Render action buttons based on phase status
    */
   renderActions(phase) {
+    // Show different actions based on status
+    if (phase.status === 'changes_requested' && !this.options.isAdmin) {
+      return `
+        <div class="phase-actions">
+          <div class="changes-requested-info">
+            <span class="warning-icon">⚠</span>
+            <p>Changes were requested. Once updates are made, this phase will be ready for approval again.</p>
+          </div>
+        </div>
+      `;
+    }
+    
     // Only show actions if phase requires approval and is awaiting it
     if (!phase.requires_approval || phase.status !== 'awaiting_approval') {
       return this.renderApprovalInfo(phase);
@@ -227,11 +239,25 @@ export class PhaseCard {
       return '<div class="phase-actions"><p class="admin-note">Client approval required</p></div>';
     }
     
+    // Check if all required actions are complete
+    const { clientActions } = this.options;
+    const requiredActions = clientActions.filter(a => !a.completed);
+    if (requiredActions.length > 0) {
+      return `
+        <div class="phase-actions">
+          <div class="actions-required-info">
+            <span class="info-icon">ℹ</span>
+            <p>Complete all required actions above before approving this phase.</p>
+          </div>
+        </div>
+      `;
+    }
+    
     return `
       <div class="phase-actions">
         <button class="btn-primary btn-approve" data-phase-id="${phase.id}">
           <span class="btn-icon">✓</span>
-          Approve
+          Approve Phase
         </button>
         <button class="btn-secondary btn-request-changes" data-phase-id="${phase.id}">
           <span class="btn-icon">✏</span>
@@ -247,13 +273,27 @@ export class PhaseCard {
   renderApprovalInfo(phase) {
     if (phase.status === 'completed' && phase.approved_by && phase.approved_at) {
       const approvedDate = new Date(phase.approved_at).toLocaleDateString();
+      const approvalText = this.options.isAdmin ? 
+        `Approved by client on ${approvedDate}` : 
+        `Approved by you on ${approvedDate}`;
+      
       return `
         <div class="phase-approval-info">
           <span class="approval-icon">✓</span>
-          Approved by you on ${approvedDate}
+          ${approvalText}
         </div>
       `;
     }
+    
+    if (phase.status === 'in_progress' && !phase.requires_approval) {
+      return `
+        <div class="phase-info">
+          <span class="info-icon">ℹ</span>
+          This phase does not require client approval
+        </div>
+      `;
+    }
+    
     return '';
   }
 
@@ -450,22 +490,33 @@ export class PhaseCard {
             'Authorization': `Bearer ${this.options.authToken}`,
             'Content-Type': 'application/json'
           },
-          body: JSON.stringify({ approved: true })
+          body: JSON.stringify({ 
+            notes: 'Phase approved by client'
+          })
         });
         
-        if (!response.ok) {
-          const error = await response.json();
-          throw new Error(error.message || 'Failed to approve phase');
+        const result = await response.json();
+        
+        if (!response.ok || !result.success) {
+          throw new Error(result.error || 'Failed to approve phase');
         }
         
         // Update phase status locally
         this.options.phase.status = 'completed';
-        this.options.phase.approved_at = new Date().toISOString();
-        this.render();
+        this.options.phase.approved_at = result.phase.approved_at;
+        this.options.phase.approved_by = result.phase.approved_by;
+        
+        // Show success notification
+        this.showSuccessNotification('Phase approved successfully! Moving to next phase...');
+        
+        // Reload after 2 seconds to show new phase
+        setTimeout(() => {
+          window.location.reload();
+        }, 2000);
       }
     } catch (error) {
       console.error('Phase approval error:', error);
-      this.setError('Unable to approve phase. Please try again.');
+      this.setError(error.message || 'Unable to approve phase. Please try again.');
     } finally {
       this.setLoading(false);
     }
@@ -499,13 +550,22 @@ export class PhaseCard {
               body: JSON.stringify({ changes_requested: feedback })
             });
             
-            if (!response.ok) {
-              const error = await response.json();
-              throw new Error(error.message || 'Failed to submit change request');
+            const result = await response.json();
+            
+            if (!response.ok || !result.success) {
+              throw new Error(result.error || 'Failed to submit change request');
             }
             
+            // Update phase status locally
+            this.options.phase.status = 'changes_requested';
+            this.options.phase.last_feedback = feedback;
+            this.options.phase.last_feedback_at = result.phase.last_feedback_at;
+            
             // Show success notification
-            this.showSuccessNotification('Change request submitted successfully');
+            this.showSuccessNotification('Change request submitted successfully!');
+            
+            // Re-render the card
+            this.render();
           }
         } catch (error) {
           console.error('Change request error:', error);
