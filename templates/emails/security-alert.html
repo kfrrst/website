@@ -1,0 +1,53 @@
+<h2 class="mt-0">Security Alert: New Login Detected</h2>
+
+<p>Hi {{userName}},</p>
+
+<p>We detected a new login to your [RE]Print Studios account from a location or device we haven't seen before.</p>
+
+<div class="warning-box">
+  <h3 class="mt-0">Login Details</h3>
+  <p><strong>Time:</strong> {{formatDate loginTime}}</p>
+  <p><strong>Location:</strong> {{location}}</p>
+  <p><strong>Device:</strong> {{deviceInfo}}</p>
+  <p><strong>Browser:</strong> {{browserInfo}}</p>
+  <p class="mb-0"><strong>IP Address:</strong> {{ipAddress}}</p>
+</div>
+
+<h3>Was This You?</h3>
+
+<div style="background-color: #FCFAF7; border: 2px solid #2E2E2E; border-radius: 4px; padding: 20px; margin: 20px 0; text-align: center;">
+  <p style="margin: 0 0 20px 0;"><strong>If this was you</strong>, no action is needed. You can safely ignore this email.</p>
+  <p style="margin: 0;"><strong>If this wasn't you</strong>, please secure your account immediately:</p>
+</div>
+
+<h3>Secure Your Account</h3>
+<p>If you don't recognize this login, take these steps immediately:</p>
+
+<ol>
+  <li><strong>Change Your Password:</strong> Log in from a trusted device and update your password</li>
+  <li><strong>Review Recent Activity:</strong> Check your account for any unauthorized changes</li>
+  <li><strong>Contact Support:</strong> Let us know at <a href="mailto:security@reprintstudios.com">security@reprintstudios.com</a></li>
+</ol>
+
+<div class="text-center mt-40 mb-40">
+  <a href="{{changePasswordUrl}}" class="button">Change Password Now</a>
+</div>
+
+<h3>Security Tips</h3>
+<ul>
+  <li>Use a strong, unique password for your account</li>
+  <li>Don't share your login credentials with anyone</li>
+  <li>Always log out when using shared computers</li>
+  <li>Be cautious of phishing emails asking for your password</li>
+</ul>
+
+<p>If you have any concerns about your account security, please don't hesitate to contact us.</p>
+
+<p>Stay secure,<br>
+The [RE]Print Studios Security Team</p>
+
+<hr style="margin: 40px 0; border: none; border-top: 1px solid #F2EDE6;">
+
+<p style="text-align: center; font-size: 12px; color: #999999;">
+  <em>This is an automated security alert. [RE]Print Studios will never ask for your password via email.</em>
+</p>

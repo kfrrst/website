@@ -1,0 +1,48 @@
+<h2 class="mt-0">Overdue Invoice Notice</h2>
+
+<p>Hi {{clientName}},</p>{{projectName}}
+
+<p>We wanted to bring to your attention that your invoice is now <strong>{{daysOverdue}} days overdue</strong>.</p>
+
+<div class="error-box">
+  <h3 class="mt-0">Overdue Invoice Details</h3>
+  <p><strong>Invoice Number:</strong> {{invoiceNumber}}</p>
+  <p><strong>Project:</strong> {{projectName}}</p>
+  <p><strong>Original Due Date:</strong> {{formatDate dueDate}}</p>
+  <p><strong>Days Overdue:</strong> {{daysOverdue}} days</p>
+  <p class="mb-0" style="font-size: 20px; color: #E63946;"><strong>Amount Due:</strong> {{formatCurrency amountDue}}</p>
+</div>
+
+<h3>Immediate Action Required</h3>
+<p>To avoid any further late fees or potential service interruptions, please make your payment as soon as possible.</p>
+
+<div class="text-center mt-40 mb-40">
+  <a href="{{paymentUrl}}" class="button">Pay Now</a>
+</div>
+
+{{#if lateFee}}
+<p><strong>Late Fee Applied:</strong> A late fee of {{formatCurrency lateFee}} has been added to your account.</p>
+{{/if}}
+
+<h3>Need Help?</h3>
+<p>We understand that sometimes circumstances can affect payment timing. If you're experiencing difficulties or need to arrange a payment plan, please contact us immediately:</p>
+
+<ul>
+  <li>Email: <a href="mailto:billing@reprintstudios.com">billing@reprintstudios.com</a></li>
+  <li>Phone: (555) 123-4567</li>
+</ul>
+
+<p>We value our relationship and want to work with you to resolve this matter.</p>
+
+<p><strong>Please note:</strong> Continued non-payment may result in suspension of services and referral to our collections department.</p>
+
+<p>We appreciate your immediate attention to this matter.</p>
+
+<p>Sincerely,<br>
+The [RE]Print Studios Billing Department</p>
+
+<hr style="margin: 40px 0; border: none; border-top: 1px solid #F2EDE6;">
+
+<p style="text-align: center; font-size: 12px; color: #999999;">
+  <em>If you've already made payment, please contact us so we can update our records.</em>
+</p>

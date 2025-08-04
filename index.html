@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="description" content="[RE]Print Studios is a vibrant and energetic design studio empowering creative journeys. We offer branding, web design, print design, and creative consultations.">
   <title>[RE]Print Studios - Empowering Creative Journeys</title>
 
   <!-- Link to CSS -->
@@ -20,7 +21,7 @@
   <!-- HEADER / NAV -->
   <header id="site-header">
     <nav>
-      <div id="hamburger-menu" onclick="toggleMenu()">[MENU]</div>
+      <div id="hamburger-menu" data-action="toggle-menu">[MENU]</div>
       <ul id="nav-links" class="hidden">
         <li><a href="#home">[Home]</a></li>
         <li><a href="#about">[About]</a></li>
@@ -30,6 +31,7 @@
   </header>
 
   <!-- HERO SECTION -->
+  <main>
   <section id="home" class="hero-section">
     <div class="hero-content">
       <h1>[RE]Print Studios</h1>
@@ -39,25 +41,25 @@
         and bring your vision to life through streamlined project management.
       </p>
       <div class="cta-buttons">
-        <button class="btn-primary" onclick="showInquiryForm()">[Start a Project]</button>
-        <button class="btn-secondary" onclick="showClientLogin()">[Client Login]</button>
+        <button class="btn-primary" data-action="show-inquiry-form">[Start a Project]</button>
+        <button class="btn-secondary" data-action="show-client-login">[Client Login]</button>
       </div>
     </div>
     <div class="hero-features">
       <div class="feature-item">
-        <h3>[File Sharing]</h3>
+        <h2>[File Sharing]</h2>
         <p>Secure file exchange and version control</p>
       </div>
       <div class="feature-item">
-        <h3>[Real-time Chat]</h3>
+        <h2>[Real-time Chat]</h2>
         <p>Direct communication throughout your project</p>
       </div>
       <div class="feature-item">
-        <h3>[Project Tracking]</h3>
+        <h2>[Project Tracking]</h2>
         <p>Live updates and milestone progress</p>
       </div>
       <div class="feature-item">
-        <h3>[Invoice Management]</h3>
+        <h2>[Invoice Management]</h2>
         <p>Transparent billing and online payments</p>
       </div>
     </div>
@@ -132,7 +134,7 @@
   <!-- LOGIN MODAL -->
   <div id="login-modal" class="modal hidden">
     <div class="modal-content">
-      <span class="close-modal" onclick="hideClientLogin()">&times;</span>
+      <span class="close-modal" data-action="hide-client-login">&times;</span>
       <h2>[Client Portal Access]</h2>
       <p class="modal-subtitle">Access your project dashboard, files, and communication hub.</p>
       <form id="login-form" class="login-form">
@@ -156,14 +158,16 @@
         <p>New client? Your login credentials will be provided after project kickoff.</p>
         <p>Need help? <a href="mailto:hello@kendrickforrest.com">Contact support</a></p>
         <!-- DEV MODE: Show dev credentials -->
-        <div style="margin-top: 1rem; padding: 1rem; border: 1px solid #999; background: rgba(153, 153, 153, 0.05);">
-          <p style="font-size: 0.8rem; color: #666; margin: 0;"><strong>DEV CREDENTIALS:</strong></p>
-          <p style="font-size: 0.8rem; color: #666; margin: 0.25rem 0 0 0;">Email: dev@test.com | Password: dev123</p>
+        <div class="dev-credentials">
+          <p class="dev-credentials-title"><strong>DEV CREDENTIALS:</strong></p>
+          <p class="dev-credentials-info">Email: dev@test.com | Password: dev123</p>
         </div>
       </div>
     </div>
   </div>
 
+  </main>
+  
   <!-- FOOTER -->
   <footer id="site-footer">
     <p>

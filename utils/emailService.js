@@ -1,60 +1,316 @@
 import { createTransport } from 'nodemailer';
 import dotenv from 'dotenv';
 import { EMAIL_HANDLES, EMAIL_SENDER_NAMES, MAILJET_CONFIG, EMAIL_TEMPLATES } from '../config/email.js';
+import { query as dbQuery } from '../config/database.js';
+import { v4 as uuidv4 } from 'uuid';
+import { renderEmailTemplate, getTemplateSubject, EMAIL_TEMPLATES as TEMPLATE_DEFINITIONS } from './emailTemplates.js';
 
 dotenv.config();
 
 /**
  * Email Service for [RE]Print Studios
- * Handles sending emails using Mailjet
+ * Production-ready email service with queue system and retry logic
  */
 
-// Create transporter based on environment configuration
-const createTransporter = () => {
-  if (process.env.EMAIL_SERVICE === 'mailjet' || MAILJET_CONFIG.API_KEY) {
-    // Use Mailjet SMTP
-    return createTransport({
-      host: 'in-v3.mailjet.com',
-      port: 587,
-      secure: false,
-      auth: {
-        user: MAILJET_CONFIG.API_KEY,
-        pass: MAILJET_CONFIG.API_SECRET
-      },
-      // Mailjet specific settings
-      tls: {
-        rejectUnauthorized: false
+class EmailService {
+  constructor() {
+    this.transporter = null;
+    this.queue = [];
+    this.processing = false;
+    this.initializeTransporter();
+  }
+
+  /**
+   * Initialize Nodemailer transporter based on environment
+   */
+  initializeTransporter() {
+    if (process.env.EMAIL_SERVICE === 'mailjet' || MAILJET_CONFIG.API_KEY) {
+      // Use Mailjet SMTP
+      this.transporter = createTransport({
+        host: 'in-v3.mailjet.com',
+        port: 587,
+        secure: false,
+        auth: {
+          user: MAILJET_CONFIG.API_KEY,
+          pass: MAILJET_CONFIG.API_SECRET
+        },
+        pool: true,
+        maxConnections: 5,
+        maxMessages: 100,
+        rateLimit: 10, // 10 messages per second
+        tls: {
+          rejectUnauthorized: false
+        }
+      });
+    } else if (process.env.EMAIL_SERVICE === 'gmail') {
+      this.transporter = createTransport({
+        service: 'gmail',
+        auth: {
+          user: process.env.EMAIL_USER,
+          pass: process.env.EMAIL_PASSWORD
+        }
+      });
+    } else if (process.env.SMTP_HOST) {
+      this.transporter = createTransport({
+        host: process.env.SMTP_HOST,
+        port: process.env.SMTP_PORT || 587,
+        secure: process.env.SMTP_SECURE === 'true',
+        auth: {
+          user: process.env.SMTP_USER,
+          pass: process.env.SMTP_PASSWORD
+        }
+      });
+    } else {
+      // Development fallback
+      this.transporter = createTransport({
+        streamTransport: true,
+        newline: 'unix',
+        buffer: true
+      });
+    }
+
+    // Verify connection
+    this.transporter.verify((error, success) => {
+      if (error) {
+        console.error('Email transporter verification failed:', error);
+      } else {
+        console.log('Email service ready');
       }
-    });
-  } else if (process.env.EMAIL_SERVICE === 'gmail') {
-    return createTransport({
-      service: 'gmail',
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASSWORD // Use app-specific password for Gmail
-      }
-    });
-  } else if (process.env.SMTP_HOST) {
-    return createTransport({
-      host: process.env.SMTP_HOST,
-      port: process.env.SMTP_PORT || 587,
-      secure: process.env.SMTP_SECURE === 'true', // true for 465, false for other ports
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASSWORD
-      }
-    });
-  } else {
-    // Fallback to console logging in development
-    return createTransport({
-      streamTransport: true,
-      newline: 'unix',
-      buffer: true
     });
   }
-};
 
-const transporter = createTransporter();
+  /**
+   * Add email to queue with retry logic
+   */
+  async queueEmail(emailData) {
+    const emailId = uuidv4();
+    
+    try {
+      // Check user preferences if userId provided
+      if (emailData.userId) {
+        const preferences = await this.getUserPreferences(emailData.userId);
+        if (!this.shouldSendEmail(emailData.type, preferences)) {
+          console.log(`Email skipped due to user preferences: ${emailData.type}`);
+          return null;
+        }
+      }
+
+      // Log to database
+      await dbQuery(
+        `INSERT INTO email_log (id, to_email, from_email, subject, template_name, status, metadata)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+        [
+          emailId,
+          emailData.to,
+          emailData.from || EMAIL_HANDLES.SYSTEM,
+          emailData.subject,
+          emailData.template || 'custom',
+          'queued',
+          JSON.stringify(emailData.metadata || {})
+        ]
+      );
+
+      // Add to queue
+      this.queue.push({
+        id: emailId,
+        data: emailData,
+        attempts: 0,
+        maxAttempts: 3
+      });
+
+      // Process queue if not already processing
+      if (!this.processing) {
+        this.processQueue();
+      }
+
+      return emailId;
+    } catch (error) {
+      console.error('Error queueing email:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Process email queue with exponential backoff
+   */
+  async processQueue() {
+    if (this.processing || this.queue.length === 0) return;
+    
+    this.processing = true;
+
+    while (this.queue.length > 0) {
+      const emailJob = this.queue.shift();
+      
+      try {
+        await this.sendEmailJob(emailJob);
+        
+        // Update status to sent
+        await dbQuery(
+          `UPDATE email_log SET status = 'sent', sent_at = CURRENT_TIMESTAMP WHERE id = $1`,
+          [emailJob.id]
+        );
+      } catch (error) {
+        emailJob.attempts++;
+        
+        if (emailJob.attempts < emailJob.maxAttempts) {
+          // Exponential backoff retry
+          const delay = Math.pow(2, emailJob.attempts) * 1000;
+          setTimeout(() => {
+            this.queue.push(emailJob);
+            if (!this.processing) this.processQueue();
+          }, delay);
+        } else {
+          // Max attempts reached
+          await dbQuery(
+            `UPDATE email_log 
+             SET status = 'failed', 
+                 error_message = $2
+             WHERE id = $1`,
+            [emailJob.id, error.message]
+          );
+        }
+      }
+    }
+
+    this.processing = false;
+  }
+
+  /**
+   * Send individual email job
+   */
+  async sendEmailJob(emailJob) {
+    const { data } = emailJob;
+    const sender = data.from || MAILJET_CONFIG.getDefaultSender(data.context || 'default');
+    
+    const mailOptions = {
+      from: `"${sender.Name}" <${sender.Email}>`,
+      to: data.to,
+      subject: data.subject,
+      html: data.html,
+      text: data.text || this.htmlToText(data.html),
+      headers: {
+        'X-Email-Id': emailJob.id,
+        'X-Template': data.template || 'custom'
+      }
+    };
+
+    if (data.attachments) {
+      mailOptions.attachments = data.attachments;
+    }
+
+    const info = await this.transporter.sendMail(mailOptions);
+    console.log(`Email sent: ${info.messageId}`);
+    return info;
+  }
+
+  /**
+   * Get user email preferences
+   */
+  async getUserPreferences(userId) {
+    const result = await dbQuery(
+      `SELECT * FROM user_email_preferences WHERE user_id = $1`,
+      [userId]
+    );
+    
+    return result.rows[0] || {
+      phase_notifications: true,
+      project_notifications: true,
+      file_notifications: true,
+      marketing_emails: false,
+      weekly_summary: true
+    };
+  }
+
+  /**
+   * Check if email should be sent based on preferences
+   */
+  shouldSendEmail(type, preferences) {
+    if (!preferences) return true;
+    
+    const typeMap = {
+      'phase_update': 'phase_notifications',
+      'phase_approval': 'phase_notifications',
+      'project_update': 'project_notifications',
+      'file_upload': 'file_notifications',
+      'weekly_summary': 'weekly_summary',
+      'marketing': 'marketing_emails'
+    };
+
+    const prefKey = typeMap[type];
+    return prefKey ? preferences[prefKey] !== false : true;
+  }
+
+  /**
+   * Convert HTML to plain text
+   */
+  htmlToText(html) {
+    return html
+      .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+      .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  /**
+   * Generate unsubscribe token
+   */
+  async generateUnsubscribeToken(userId) {
+    const token = uuidv4();
+    
+    await dbQuery(
+      `INSERT INTO unsubscribe_tokens (token, user_id) VALUES ($1, $2)
+       ON CONFLICT (token) DO NOTHING`,
+      [token, userId]
+    );
+    
+    return token;
+  }
+
+  /**
+   * Get email statistics
+   */
+  async getStatistics(filters = {}) {
+    const { startDate, endDate, template } = filters;
+    
+    let query = `
+      SELECT 
+        COUNT(*) as total,
+        COUNT(CASE WHEN status = 'sent' THEN 1 END) as sent,
+        COUNT(CASE WHEN status = 'failed' THEN 1 END) as failed,
+        COUNT(CASE WHEN status = 'bounced' THEN 1 END) as bounced,
+        COUNT(CASE WHEN status = 'queued' THEN 1 END) as queued
+      FROM email_log
+      WHERE 1=1
+    `;
+    
+    const params = [];
+    
+    if (startDate) {
+      params.push(startDate);
+      query += ` AND created_at >= $${params.length}`;
+    }
+    
+    if (endDate) {
+      params.push(endDate);
+      query += ` AND created_at <= $${params.length}`;
+    }
+    
+    if (template) {
+      params.push(template);
+      query += ` AND template_name = $${params.length}`;
+    }
+    
+    const result = await dbQuery(query, params);
+    return result.rows[0];
+  }
+}
+
+// Create singleton instance
+const emailService = new EmailService();
+
+// Keep existing transporter for backward compatibility
+const transporter = emailService.transporter;
 
 /**
  * Send invoice to client
@@ -706,12 +962,92 @@ export const sendInvoiceReminder = async (invoice, client) => {
   }
 };
 
-// Export all functions
+/**
+ * Send template-based email with queue system
+ */
+export const sendTemplateEmail = async (templateDef, data) => {
+  try {
+    // Generate unsubscribe token if user ID provided
+    const unsubscribeToken = data.userId ? await emailService.generateUnsubscribeToken(data.userId) : null;
+    
+    // Add unsubscribe token to data
+    const emailData = {
+      ...data,
+      unsubscribeToken
+    };
+    
+    // Get subject with variables replaced
+    const subject = getTemplateSubject(templateDef, emailData);
+    
+    // Render HTML using template system
+    const html = await renderEmailTemplate(templateDef.name, emailData);
+    
+    return await emailService.queueEmail({
+      to: data.to,
+      subject,
+      html,
+      template: templateDef.name,
+      userId: data.userId,
+      type: data.type || templateDef.name,
+      context: data.context,
+      unsubscribeToken,
+      metadata: data.metadata
+    });
+  } catch (error) {
+    console.error('Error sending template email:', error);
+    throw error;
+  }
+};
+
+/**
+ * Get email statistics
+ */
+export const getEmailStatistics = async (filters = {}) => {
+  return await emailService.getStatistics(filters);
+};
+
+/**
+ * Handle email bounce webhook
+ */
+export const handleEmailBounce = async (emailId, bounceData) => {
+  await dbQuery(
+    `UPDATE email_log 
+     SET status = 'bounced', 
+         metadata = metadata || $2
+     WHERE id = $1`,
+    [emailId, JSON.stringify(bounceData)]
+  );
+};
+
+/**
+ * Handle email complaint webhook
+ */
+export const handleEmailComplaint = async (emailId, complaintData) => {
+  await dbQuery(
+    `UPDATE email_log 
+     SET status = 'complained', 
+         metadata = metadata || $2
+     WHERE id = $1`,
+    [emailId, JSON.stringify(complaintData)]
+  );
+  
+  // Add to suppression list if needed
+  if (complaintData.email) {
+    // Implementation depends on suppression strategy
+  }
+};
+
+// Export all functions and the service instance
 export default {
   sendInvoiceEmail,
   sendPaymentConfirmationEmail,
   sendPhaseNotificationEmail,
   sendInquiryConfirmationEmail,
   sendOverdueReminderEmail,
-  sendInvoiceReminder
+  sendInvoiceReminder,
+  sendTemplateEmail,
+  getEmailStatistics,
+  handleEmailBounce,
+  handleEmailComplaint,
+  emailService
 };

@@ -1,0 +1,44 @@
+<h2 class="mt-0">Payment Received - Thank You!</h2>
+
+<p>Hi {{clientName}},</p>
+
+<p>We've successfully received your payment. Thank you for your prompt payment!</p>
+
+<div class="success-box">
+  <h3 class="mt-0">Payment Confirmation</h3>
+  <p><strong>Invoice Number:</strong> {{invoiceNumber}}</p>
+  <p><strong>Amount Paid:</strong> {{formatCurrency amountPaid}}</p>
+  <p><strong>Payment Date:</strong> {{formatDate paymentDate}}</p>
+  <p><strong>Payment Method:</strong> {{paymentMethod}}</p>
+  {{#if transactionId}}
+  <p class="mb-0"><strong>Transaction ID:</strong> {{transactionId}}</p>
+  {{/if}}
+</div>
+
+{{#if projectName}}
+<p>This payment was for your project: <strong>{{projectName}}</strong></p>
+{{/if}}
+
+<h3>What's Next?</h3>
+{{#if isProjectComplete}}
+<p>Your project is complete and all payments have been received. Thank you for choosing [RE]Print Studios!</p>
+{{else}}
+<p>Your project is progressing smoothly. We'll continue working on the next phases and keep you updated.</p>
+{{/if}}
+
+<div class="text-center mt-40 mb-40">
+  <a href="{{portalUrl}}" class="button">View Project Status</a>
+</div>
+
+<p>A receipt for this payment has been generated and is available in your client portal. If you need a formal receipt or have any questions about this payment, please contact our billing team.</p>
+
+<p>Thank you for your business!</p>
+
+<p>Best regards,<br>
+The [RE]Print Studios Team</p>
+
+<hr style="margin: 40px 0; border: none; border-top: 1px solid #F2EDE6;">
+
+<p style="text-align: center; font-size: 12px; color: #999999;">
+  This is an automated payment confirmation. Please keep this email for your records.
+</p>

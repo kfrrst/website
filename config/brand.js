@@ -51,24 +51,49 @@ export const BRAND = {
     'REPB': 'Republish'
   },
   
-  // Color Palette
+  // Monochromatic Color Palette - Bone White Theme
   colors: {
-    // Base colors (existing)
-    base: '#F9F6F1',      // Bone white background
-    text: '#333333',      // Charcoal text
-    textSecondary: '#666666', // Graphite 60%
+    // Primary bone white system
+    bone: '#F9F6F1',           // Primary bone white
+    boneLight: '#FCFAF7',      // Lighter bone white for cards/modals
+    boneDark: '#F2EDE6',       // Darker bone white for subtle borders
+    boneSubtle: '#EDE8E0',     // Subtle contrast elements
     
-    // Primary accent colors (new)
-    blue: '#0057FF',      // Primary actions, links
-    yellow: '#F7C600',    // Hover states, highlights
-    red: '#E63946',       // Errors, warnings
-    green: '#27AE60',     // Success, completed
+    // Monochromatic grays
+    text: '#2C2C2C',           // Primary text - warm charcoal
+    textSecondary: '#4A4A4A',  // Secondary text - medium gray
+    textTertiary: '#6A6A6A',   // Tertiary text - light gray
+    textMuted: '#8A8A8A',      // Muted text - very light gray
     
-    // Additional shades
-    blueHover: '#0045CC',
-    yellowHover: '#E6B700',
-    redHover: '#D62839',
-    greenHover: '#229A4E'
+    // Subtle borders and dividers
+    border: '#E8E3DB',         // Light bone border
+    borderLight: '#EFEBE4',    // Lighter bone border
+    borderSubtle: '#F4F0EA',   // Very subtle border
+    
+    // Accent hints (very subtle primary colors)
+    accentBlue: '#E8F0FF',     // Subtle blue hint
+    accentGreen: '#E8F5ED',    // Subtle green hint
+    accentYellow: '#FEF9E8',   // Subtle yellow hint
+    accentRed: '#FEE8E8',      // Subtle red hint
+    
+    // Primary colors (reserved for critical actions only)
+    blue: '#0057FF',           // Primary blue for actions
+    green: '#27AE60',          // Success green
+    yellow: '#F7C600',         // Warning yellow  
+    red: '#E63946',            // Error red
+    
+    // Interactive states
+    hover: '#F0EBE3',          // Subtle hover state
+    active: '#E8E2D8',         // Subtle active state
+    focus: '#0057FF',          // Blue focus outline
+    
+    // Shadows and overlays
+    shadow: 'rgba(44, 44, 44, 0.06)',    // Warm shadow
+    overlay: 'rgba(44, 44, 44, 0.15)',   // Modal overlay
+    
+    // White and black
+    white: '#FFFFFF',
+    black: '#000000'
   },
   
   // Typography

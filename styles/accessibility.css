@@ -1,0 +1,735 @@
+/**
+ * Accessibility Styles
+ * WCAG 2.1 AA compliant styles for enhanced accessibility
+ */
+
+/* ===== SCREEN READER UTILITIES ===== */
+
+/* Screen reader only content */
+.sr-only,
+.screen-reader-only,
+.visually-hidden {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+/* Screen reader content that becomes visible on focus */
+.sr-only-focusable:focus,
+.screen-reader-only:focus {
+  position: static !important;
+  width: auto !important;
+  height: auto !important;
+  padding: inherit !important;
+  margin: inherit !important;
+  overflow: visible !important;
+  clip: auto !important;
+  white-space: normal !important;
+}
+
+/* ===== FOCUS MANAGEMENT ===== */
+
+/* Enhanced focus indicators */
+:focus {
+  outline: 3px solid #005fcc;
+  outline-offset: 2px;
+}
+
+/* Focus visible polyfill support */
+.js-focus-visible :focus:not(.focus-visible) {
+  outline: none;
+}
+
+.focus-visible {
+  outline: 3px solid #005fcc;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 5px rgba(0, 95, 204, 0.3);
+}
+
+/* High contrast focus indicators */
+@media (prefers-contrast: high) {
+  :focus,
+  .focus-visible {
+    outline: 3px solid currentColor;
+    outline-offset: 2px;
+    background-color: yellow;
+    color: black;
+  }
+}
+
+/* Focus indicators for different element types */
+button:focus,
+.btn:focus,
+[role="button"]:focus {
+  outline: 3px solid #005fcc;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 5px rgba(0, 95, 204, 0.3);
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  outline: 3px solid #005fcc;
+  outline-offset: 2px;
+  border-color: #005fcc;
+  box-shadow: 0 0 0 3px rgba(0, 95, 204, 0.3);
+}
+
+a:focus {
+  outline: 3px solid #005fcc;
+  outline-offset: 2px;
+  background-color: rgba(0, 95, 204, 0.1);
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+}
+
+/* Focus trap styling */
+.focus-trap {
+  position: relative;
+}
+
+.focus-trap::before {
+  content: '';
+  position: absolute;
+  top: -4px;
+  left: -4px;
+  right: -4px;
+  bottom: -4px;
+  border: 2px dashed #005fcc;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.focus-trap.active::before {
+  opacity: 1;
+}
+
+/* ===== SKIP LINKS ===== */
+
+.skip-links {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 10000;
+}
+
+.skip-link {
+  position: absolute;
+  top: -100px;
+  left: 8px;
+  background: #000;
+  color: #fff;
+  padding: 12px 16px;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 600;
+  border-radius: 4px;
+  border: 2px solid #fff;
+  transition: top 0.3s ease;
+  z-index: 10001;
+}
+
+.skip-link:focus {
+  top: 8px;
+  outline: 3px solid #ffff00;
+  outline-offset: 2px;
+}
+
+.skip-link:hover,
+.skip-link:active {
+  background: #333;
+  text-decoration: underline;
+}
+
+/* ===== TOUCH TARGETS ===== */
+
+/* Minimum touch target size (44x44px) */
+.touch-target,
+button,
+.btn,
+a,
+input[type="button"],
+input[type="submit"],
+input[type="reset"],
+input[type="checkbox"],
+input[type="radio"],
+select,
+[role="button"],
+[role="link"],
+[tabindex="0"],
+[tabindex]:not([tabindex="-1"]) {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+/* Exception for inline links */
+p a,
+span a,
+li a:not(.btn) {
+  min-height: auto;
+  min-width: auto;
+}
+
+/* Touch spacing */
+.touch-spacing > * + * {
+  margin-top: 8px;
+}
+
+.touch-spacing-horizontal > * + * {
+  margin-left: 8px;
+}
+
+/* ===== HIGH CONTRAST MODE ===== */
+
+/* Windows High Contrast Mode */
+@media (-ms-high-contrast: active) {
+  .btn,
+  button {
+    border: 2px solid ButtonText;
+  }
+  
+  .btn:focus,
+  button:focus {
+    outline: 3px solid Highlight;
+  }
+  
+  .disabled,
+  :disabled {
+    opacity: 1;
+    color: GrayText;
+  }
+}
+
+/* Prefers high contrast */
+@media (prefers-contrast: high) {
+  :root {
+    --text-color: #000;
+    --bg-color: #fff;
+    --border-color: #000;
+    --link-color: #0000ee;
+    --focus-color: #000;
+  }
+  
+  * {
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    border-color: var(--border-color);
+  }
+  
+  a {
+    color: var(--link-color);
+    text-decoration: underline;
+    text-decoration-thickness: 2px;
+  }
+  
+  button,
+  .btn,
+  input,
+  select,
+  textarea {
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    border: 2px solid var(--border-color);
+  }
+  
+  :focus {
+    outline: 3px solid var(--focus-color);
+    background-color: yellow;
+    color: black;
+  }
+}
+
+/* ===== REDUCED MOTION ===== */
+
+/* Respect user's motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  
+  /* Allow essential animations */
+  .motion-essential,
+  .loading-spinner,
+  [aria-live] {
+    animation-duration: initial !important;
+    transition-duration: initial !important;
+  }
+}
+
+/* Provide alternative to motion-based content */
+.motion-alternative {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .motion-only {
+    display: none;
+  }
+  
+  .motion-alternative {
+    display: block;
+  }
+}
+
+/* ===== FONT SIZE AND SCALING ===== */
+
+/* Ensure text can scale up to 200% */
+html {
+  font-size: 100%;
+  line-height: 1.5;
+}
+
+body {
+  line-height: 1.5;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  hyphens: auto;
+}
+
+/* Prevent text from being too small */
+small,
+.small,
+.text-sm {
+  font-size: max(0.875em, 14px);
+}
+
+.text-xs {
+  font-size: max(0.75em, 12px);
+}
+
+/* Large text support */
+.large-text {
+  font-size: 1.25em;
+  line-height: 1.4;
+}
+
+.extra-large-text {
+  font-size: 1.5em;
+  line-height: 1.3;
+}
+
+/* ===== COLOR AND CONTRAST ===== */
+
+/* Ensure sufficient color contrast */
+.high-contrast {
+  background-color: #000;
+  color: #fff;
+}
+
+.high-contrast a {
+  color: #ffff00;
+}
+
+.high-contrast button,
+.high-contrast .btn {
+  background-color: #fff;
+  color: #000;
+  border: 2px solid #000;
+}
+
+/* Error states with sufficient contrast */
+.error,
+.invalid,
+.danger {
+  color: #d63031;
+  border-color: #d63031;
+}
+
+@media (prefers-contrast: high) {
+  .error,
+  .invalid,
+  .danger {
+    color: #000;
+    background-color: #ffcccc;
+    border-color: #000;
+  }
+}
+
+/* Success states */
+.success,
+.valid {
+  color: #00b894;
+  border-color: #00b894;
+}
+
+@media (prefers-contrast: high) {
+  .success,
+  .valid {
+    color: #000;
+    background-color: #ccffcc;
+    border-color: #000;
+  }
+}
+
+/* Warning states */
+.warning {
+  color: #fdcb6e;
+  border-color: #fdcb6e;
+}
+
+@media (prefers-contrast: high) {
+  .warning {
+    color: #000;
+    background-color: #ffffcc;
+    border-color: #000;
+  }
+}
+
+/* ===== FORM ACCESSIBILITY ===== */
+
+/* Required field indicators */
+.required::after,
+.required-field::after {
+  content: ' *';
+  color: #d63031;
+  font-weight: bold;
+}
+
+/* Form error styling */
+.form-error,
+.field-error {
+  display: flex;
+  align-items: center;
+  color: #d63031;
+  font-size: 0.875em;
+  margin-top: 4px;
+}
+
+.form-error::before,
+.field-error::before {
+  content: '⚠ ';
+  margin-right: 4px;
+}
+
+/* Form help text */
+.form-help,
+.field-help {
+  font-size: 0.875em;
+  color: #666;
+  margin-top: 4px;
+}
+
+/* Invalid form controls */
+input:invalid,
+textarea:invalid,
+select:invalid {
+  outline: 2px solid #d63031;
+  outline-offset: 2px;
+}
+
+/* Valid form controls */
+input:valid,
+textarea:valid,
+select:valid {
+  outline: 2px solid #00b894;
+  outline-offset: 2px;
+}
+
+/* ===== LIVE REGIONS ===== */
+
+/* ARIA live regions positioning */
+[aria-live],
+[role="status"],
+[role="alert"],
+[role="log"] {
+  position: relative;
+}
+
+/* Alert styling */
+[role="alert"],
+.alert {
+  padding: 12px 16px;
+  border-radius: 4px;
+  border: 2px solid;
+  margin-bottom: 16px;
+}
+
+[role="alert"].error,
+.alert-error {
+  background-color: #ffeaea;
+  border-color: #d63031;
+  color: #d63031;
+}
+
+[role="alert"].success,
+.alert-success {
+  background-color: #eaffea;
+  border-color: #00b894;
+  color: #00b894;
+}
+
+[role="alert"].warning,
+.alert-warning {
+  background-color: #fff9ea;
+  border-color: #fdcb6e;
+  color: #fdcb6e;
+}
+
+[role="alert"].info,
+.alert-info {
+  background-color: #eaf4ff;
+  border-color: #0984e3;
+  color: #0984e3;
+}
+
+/* ===== KEYBOARD NAVIGATION ===== */
+
+/* Skip link indicators */
+.skip-indicator {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 8px 16px;
+  border-radius: 4px;
+  font-size: 14px;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.2s ease;
+  z-index: 10000;
+}
+
+.skip-indicator.show {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* Keyboard navigation helpers */
+.keyboard-navigation [tabindex="0"]:focus,
+.keyboard-navigation [tabindex]:not([tabindex="-1"]):focus {
+  position: relative;
+  z-index: 1;
+}
+
+/* Focus ring for grid/table navigation */
+[role="grid"] [role="gridcell"]:focus,
+[role="table"] [role="cell"]:focus {
+  outline: 3px solid #005fcc;
+  outline-offset: -3px;
+  background-color: rgba(0, 95, 204, 0.1);
+}
+
+/* ===== RESPONSIVE ACCESSIBILITY ===== */
+
+/* Mobile accessibility adjustments */
+@media (max-width: 767px) {
+  /* Larger touch targets on mobile */
+  button,
+  .btn,
+  a,
+  input,
+  select {
+    min-height: 48px;
+    min-width: 48px;
+  }
+  
+  /* Increased spacing */
+  .touch-spacing > * + * {
+    margin-top: 12px;
+  }
+  
+  /* Mobile skip links */
+  .skip-link {
+    left: 16px;
+    right: 16px;
+    top: -100px;
+  }
+  
+  .skip-link:focus {
+    top: 16px;
+  }
+}
+
+/* Tablet accessibility adjustments */
+@media (min-width: 768px) and (max-width: 1023px) {
+  /* Medium touch targets */
+  button,
+  .btn,
+  a,
+  input,
+  select {
+    min-height: 46px;
+    min-width: 46px;
+  }
+}
+
+/* ===== DARK MODE ACCESSIBILITY ===== */
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --focus-color: #66b3ff;
+    --link-color: #66b3ff;
+    --error-color: #ff6b6b;
+    --success-color: #51cf66;
+    --warning-color: #ffd43b;
+  }
+  
+  .focus-visible,
+  :focus {
+    outline-color: var(--focus-color);
+    box-shadow: 0 0 0 5px rgba(102, 179, 255, 0.3);
+  }
+  
+  .skip-link {
+    background: #fff;
+    color: #000;
+    border-color: #000;
+  }
+  
+  .skip-link:focus {
+    outline-color: var(--focus-color);
+  }
+  
+  [role="alert"].error,
+  .alert-error {
+    background-color: rgba(255, 107, 107, 0.2);
+    border-color: var(--error-color);
+    color: var(--error-color);
+  }
+  
+  [role="alert"].success,
+  .alert-success {
+    background-color: rgba(81, 207, 102, 0.2);
+    border-color: var(--success-color);
+    color: var(--success-color);
+  }
+}
+
+/* ===== PRINT ACCESSIBILITY ===== */
+
+@media print {
+  /* Hide skip links in print */
+  .skip-link,
+  .skip-links {
+    display: none !important;
+  }
+  
+  /* Ensure focus indicators don't print */
+  :focus {
+    outline: none !important;
+    box-shadow: none !important;
+  }
+  
+  /* Print-friendly link styling */
+  a::after {
+    content: ' (' attr(href) ')';
+    font-size: 0.8em;
+    color: #666;
+  }
+  
+  /* Hide decorative elements */
+  .decorative,
+  [aria-hidden="true"] {
+    display: none !important;
+  }
+}
+
+/* ===== ASSISTIVE TECHNOLOGY UTILITIES ===== */
+
+/* Announce changes to screen readers */
+.sr-announce {
+  position: absolute;
+  left: -10000px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+
+/* Loading states for screen readers */
+.loading[aria-busy="true"]::after {
+  content: ', loading';
+  clip: rect(1px, 1px, 1px, 1px);
+  position: absolute;
+}
+
+/* Progress indicators */
+[role="progressbar"] {
+  position: relative;
+}
+
+[role="progressbar"]::after {
+  content: attr(aria-valuenow) '% complete';
+  position: absolute;
+  left: -10000px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+
+/* ===== UTILITY CLASSES ===== */
+
+/* Hide from everyone */
+.hidden {
+  display: none !important;
+}
+
+/* Hide visually but keep for screen readers */
+.invisible {
+  visibility: hidden !important;
+}
+
+/* Focus trap active state */
+.focus-trap-active {
+  position: relative;
+}
+
+/* Disable interaction */
+.disabled,
+[disabled] {
+  opacity: 0.6;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* Loading state */
+.loading {
+  position: relative;
+  pointer-events: none;
+}
+
+.loading::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 20px;
+  height: 20px;
+  border: 2px solid #ccc;
+  border-top-color: #007bff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  transform: translate(-50%, -50%);
+}
+
+@keyframes spin {
+  to {
+    transform: translate(-50%, -50%) rotate(360deg);
+  }
+}
+
+/* Respect reduced motion for loading spinner */
+@media (prefers-reduced-motion: reduce) {
+  .loading::before {
+    animation: none;
+    content: 'Loading...';
+    border: none;
+    background: transparent;
+    font-size: 14px;
+    width: auto;
+    height: auto;
+  }
+}

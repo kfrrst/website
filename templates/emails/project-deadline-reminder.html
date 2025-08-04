@@ -1,0 +1,58 @@
+<h2 class="mt-0">Project Deadline Approaching</h2>
+
+<p>Hi {{clientName}},</p>
+
+<p>This is a reminder that your project "{{projectName}}" has an important deadline approaching.</p>
+
+<div class="warning-box">
+  <h3 class="mt-0">Deadline Information</h3>
+  <p><strong>Project:</strong> {{projectName}}</p>
+  <p><strong>Current Phase:</strong> {{currentPhase}}</p>
+  <p><strong>Deadline:</strong> {{formatDate deadline}}</p>
+  <p class="mb-0"><strong>Time Remaining:</strong> {{daysRemaining}} days</p>
+</div>
+
+{{#if actionRequired}}
+<h3>Action Required</h3>
+<p>To keep your project on schedule, please complete the following:</p>
+<ul>
+  {{#each requiredActions}}
+  <li>{{this}}</li>
+  {{/each}}
+</ul>
+{{/if}}
+
+{{#if awaitingApproval}}
+<div class="info-box">
+  <p class="mb-0"><strong>Awaiting Your Approval:</strong> The current phase is ready for your review. Your approval is needed to proceed to the next phase.</p>
+</div>
+{{/if}}
+
+<h3>Project Status</h3>
+<p>Overall project progress: <strong>{{projectProgress}}% complete</strong></p>
+
+{{#if upcomingMilestones}}
+<h4>Upcoming Milestones:</h4>
+<ul>
+  {{#each upcomingMilestones}}
+  <li>{{this.name}} - {{formatDate this.date}}</li>
+  {{/each}}
+</ul>
+{{/if}}
+
+<div class="text-center mt-40 mb-40">
+  <a href="{{projectUrl}}" class="button">View Project</a>
+</div>
+
+<p>Meeting deadlines ensures your project stays on track and avoids any delays. If you have concerns about meeting this deadline, please contact our project team immediately.</p>
+
+<p>Thank you for your attention to this matter.</p>
+
+<p>Best regards,<br>
+The [RE]Print Studios Project Team</p>
+
+<hr style="margin: 40px 0; border: none; border-top: 1px solid #F2EDE6;">
+
+<p style="text-align: center; font-size: 12px; color: #999999;">
+  <em>You're receiving this reminder because you have deadline notifications enabled. You can manage your notification preferences in your account settings.</em>
+</p>

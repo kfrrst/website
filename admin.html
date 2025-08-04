@@ -8,6 +8,8 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="admin.css">
+  <link rel="stylesheet" href="components/admin/FormBuilder.css">
+  <link rel="stylesheet" href="styles/admin-modules.css">
 </head>
 <body>
   <!-- Login Section (shown by default) -->
@@ -47,6 +49,8 @@
             <span>Remember me for 30 days</span>
           </label>
         </div>
+        
+        <div id="admin-login-error" class="login-error" style="display: none;"></div>
         
         <button type="submit" class="btn-primary">
           <span id="button-text">Access Admin Portal</span>
@@ -371,7 +375,13 @@
           <div class="setting-card">
             <h3>Email Templates</h3>
             <p>Customize automated email messages</p>
-            <button class="btn-secondary">Manage Templates</button>
+            <button class="btn-secondary" onclick="window.adminPortal.showEmailTemplates()">Manage Templates</button>
+          </div>
+          
+          <div class="setting-card">
+            <h3>Service Types & Forms</h3>
+            <p>Manage services, phases, and dynamic forms</p>
+            <button class="btn-secondary" onclick="window.adminPortal.showServiceManager()">Manage Services</button>
           </div>
           
           <div class="setting-card">
@@ -387,12 +397,178 @@
           </div>
         </div>
       </section>
+      
+      <!-- Email Templates Section -->
+      <section id="email-templates" class="admin-section" style="display: none;">
+        <h2>[Email Templates Manager]</h2>
+        
+        <div class="template-manager-container">
+          <div class="template-sidebar">
+            <h3>Available Templates</h3>
+            <div id="template-list" class="template-list">
+              <!-- Template list will be populated here -->
+            </div>
+          </div>
+          
+          <div class="template-editor">
+            <div class="editor-header">
+              <h3 id="template-name">Select a template</h3>
+              <div class="editor-actions">
+                <button class="btn-secondary" onclick="window.adminPortal.previewEmailTemplate()" disabled id="preview-btn">Preview</button>
+                <button class="btn-primary" onclick="window.adminPortal.saveEmailTemplate()" disabled id="save-template-btn">Save Template</button>
+              </div>
+            </div>
+            
+            <div class="editor-content">
+              <div class="template-info" id="template-info" style="display: none;">
+                <div class="form-group">
+                  <label>Subject Line</label>
+                  <input type="text" id="template-subject" class="form-control" readonly>
+                </div>
+                <div class="form-group">
+                  <label>Available Variables</label>
+                  <div id="template-variables" class="variable-list"></div>
+                </div>
+              </div>
+              
+              <div class="form-group">
+                <label>Template HTML</label>
+                <div class="editor-toolbar">
+                  <button type="button" class="toolbar-btn" onclick="window.adminPortal.insertEmailElement('heading')" title="Insert Heading">
+                    <strong>H</strong>
+                  </button>
+                  <button type="button" class="toolbar-btn" onclick="window.adminPortal.insertEmailElement('paragraph')" title="Insert Paragraph">
+                    ¶
+                  </button>
+                  <button type="button" class="toolbar-btn" onclick="window.adminPortal.insertEmailElement('button')" title="Insert Button">
+                    [Button]
+                  </button>
+                  <button type="button" class="toolbar-btn" onclick="window.adminPortal.insertEmailElement('divider')" title="Insert Divider">
+                    —
+                  </button>
+                  <span class="toolbar-separator"></span>
+                  <button type="button" class="toolbar-btn" onclick="window.adminPortal.insertEmailElement('loop')" title="Insert Loop">
+                    {{#each}}
+                  </button>
+                  <button type="button" class="toolbar-btn" onclick="window.adminPortal.insertEmailElement('condition')" title="Insert Condition">
+                    {{#if}}
+                  </button>
+                  <button type="button" class="toolbar-btn" onclick="window.adminPortal.insertEmailElement('date')" title="Format Date">
+                    📅
+                  </button>
+                  <button type="button" class="toolbar-btn" onclick="window.adminPortal.insertEmailElement('currency')" title="Format Currency">
+                    $
+                  </button>
+                </div>
+                <textarea id="template-editor" class="code-editor" rows="20" placeholder="Select a template to edit"></textarea>
+              </div>
+            </div>
+          </div>
+          
+          <div class="template-preview" id="template-preview-panel" style="display: none;">
+            <div class="preview-header">
+              <h3>Email Preview</h3>
+              <button class="btn-link" onclick="window.adminPortal.closeEmailPreview()">Close</button>
+            </div>
+            <div class="preview-controls">
+              <label>Preview Mode:</label>
+              <select id="preview-mode" onchange="window.adminPortal.updateEmailPreview()">
+                <option value="desktop">Desktop</option>
+                <option value="mobile">Mobile (375px)</option>
+              </select>
+            </div>
+            <div class="preview-frame-container">
+              <iframe id="email-preview-frame" class="email-preview-frame"></iframe>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <!-- Service Management Section -->
+      <section id="service-manager" class="admin-section" style="display: none;">
+        <h2>[Service Types & Forms Manager]</h2>
+        
+        <div class="service-manager-tabs">
+          <button class="tab-btn active" data-tab="services">Service Types</button>
+          <button class="tab-btn" data-tab="phases">Phase Library</button>
+          <button class="tab-btn" data-tab="forms">Form Modules</button>
+          <button class="tab-btn" data-tab="documents">Document Templates</button>
+        </div>
+        
+        <!-- Service Types Tab -->
+        <div class="tab-content" id="services-tab">
+          <div class="section-header">
+            <h3>Service Types</h3>
+            <button class="btn-primary" onclick="window.adminPortal.showServiceTypeModal()">+ Add Service Type</button>
+          </div>
+          <div id="service-types-list" class="service-grid">
+            <!-- Service types will be loaded here -->
+          </div>
+        </div>
+        
+        <!-- Phase Library Tab -->
+        <div class="tab-content" id="phases-tab" style="display: none;">
+          <div class="section-header">
+            <h3>Phase Library</h3>
+            <button class="btn-primary" onclick="window.adminPortal.showPhaseModal()">+ Add Phase</button>
+          </div>
+          <div id="phases-list" class="phase-grid">
+            <!-- Phases will be loaded here -->
+          </div>
+        </div>
+        
+        <!-- Form Modules Tab -->
+        <div class="tab-content" id="forms-tab" style="display: none;">
+          <div class="section-header">
+            <h3>Form Modules</h3>
+            <button class="btn-primary" onclick="window.adminPortal.showFormModuleModal()">+ Create Form Module</button>
+          </div>
+          <div class="form-builder-container">
+            <div class="form-modules-sidebar">
+              <h4>Existing Modules</h4>
+              <div id="form-modules-list" class="modules-list">
+                <!-- Form modules will be loaded here -->
+              </div>
+            </div>
+            <div class="form-builder-main">
+              <div id="form-builder" class="form-builder">
+                <p class="placeholder-text">Select a form module to edit or create a new one</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Document Templates Tab -->
+        <div class="tab-content" id="documents-tab" style="display: none;">
+          <div class="section-header">
+            <h3>Document Templates</h3>
+            <button class="btn-primary" onclick="window.adminPortal.showDocumentTemplateModal()">+ Create Template</button>
+          </div>
+          <div id="document-templates-list" class="templates-grid">
+            <!-- Document templates will be loaded here -->
+          </div>
+        </div>
+      </section>
     </main>
   </div>
 
   <!-- Modals and Forms will be added here -->
 
-  <script type="module" src="utils/progressTracker.js"></script>
-  <script src="admin.js"></script>
+  <script src="/socket.io/socket.io.js"></script>
+  <script type="module" src="components/ProgressTracker.js"></script>
+  <script>
+    // Test localStorage before loading admin.js
+    console.log('=== TESTING LOCALSTORAGE ===');
+    try {
+      const testKey = 'test_' + Date.now();
+      localStorage.setItem(testKey, 'test_value');
+      const retrieved = localStorage.getItem(testKey);
+      console.log('localStorage test:', retrieved === 'test_value' ? 'PASSED' : 'FAILED');
+      localStorage.removeItem(testKey);
+    } catch (e) {
+      console.error('localStorage test FAILED:', e);
+    }
+  </script>
+  <script type="module" src="/components/admin/AdminPortal.js"></script>
 </body>
 </html>

@@ -1,0 +1,45 @@
+<h2 class="mt-0">Action Required: Phase Ready for Review</h2>
+
+<p>Hi {{clientName}},</p>
+
+<p>Great news! We've completed work on <strong>{{phaseName}}</strong> for your project "{{projectName}}" and it's now ready for your review and approval.</p>
+
+<div class="info-box">
+  <h3 class="mt-0">Phase Details</h3>
+  <p class="mb-0"><strong>Phase:</strong> {{phaseName}}</p>
+  {{#if phaseDescription}}
+  <p class="mb-0"><strong>Description:</strong> {{phaseDescription}}</p>
+  {{/if}}
+  {{#if deliverableCount}}
+  <p class="mb-0"><strong>Deliverables:</strong> {{deliverableCount}} file{{#if (gt deliverableCount 1)}}s{{/if}} ready for review</p>
+  {{/if}}
+</div>
+
+{{#if keyDeliverables}}
+<h3>What's Included:</h3>
+<ul>
+  {{#each keyDeliverables}}
+  <li>{{this}}</li>
+  {{/each}}
+</ul>
+{{/if}}
+
+<h3>Next Steps</h3>
+<p>Please log in to your client portal to review the deliverables and provide your feedback. You can:</p>
+<ul>
+  <li><strong>Approve</strong> the phase if everything meets your expectations</li>
+  <li><strong>Request Changes</strong> if you need any adjustments</li>
+</ul>
+
+<div class="text-center mt-40 mb-40">
+  <a href="{{reviewUrl}}" class="button">Review Phase</a>
+</div>
+
+{{#if deadline}}
+<p class="text-center"><em>Please provide your feedback by {{formatDate deadline}} to keep the project on schedule.</em></p>
+{{/if}}
+
+<p>If you have any questions or need assistance accessing the portal, feel free to reach out to our project team.</p>
+
+<p>Best regards,<br>
+The [RE]Print Studios Team</p>

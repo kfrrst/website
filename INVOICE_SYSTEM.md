@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Kendrick Forrest Client Portal now includes a complete invoice system with Stripe payment integration, PDF generation, and email notifications. This system allows administrators to create, manage, and send invoices to clients, while clients can view and pay invoices online.
+The [RE]Print Studios Client Portal now includes a complete invoice system with Stripe payment integration, PDF generation, and email notifications. This system allows administrators to create, manage, and send invoices to clients, while clients can view and pay invoices online.
 
 ## Features
 

@@ -1,0 +1,32 @@
+<h2 class="mt-0">Phase Approved Successfully</h2>
+
+<p>Hi {{clientName}},</p>
+
+<p>Thank you for approving <strong>{{phaseName}}</strong> for your project "{{projectName}}". Your approval has been recorded and we're moving forward with the next steps.</p>
+
+<div class="success-box">
+  <h3 class="mt-0">Approval Details</h3>
+  <p class="mb-0"><strong>Phase:</strong> {{phaseName}}</p>
+  <p class="mb-0"><strong>Approved at:</strong> {{formatDate approvedAt}}</p>
+  {{#if approvalNotes}}
+  <p class="mb-0"><strong>Your notes:</strong> {{approvalNotes}}</p>
+  {{/if}}
+</div>
+
+{{#if nextPhase}}
+<h3>What's Next?</h3>
+<p>We'll now begin work on <strong>{{nextPhase.name}}</strong>{{#if nextPhase.description}}: {{nextPhase.description}}{{/if}}</p>
+
+{{#if nextPhase.estimatedDuration}}
+<p>Estimated timeline: {{nextPhase.estimatedDuration}}</p>
+{{/if}}
+{{/if}}
+
+<div class="text-center mt-40 mb-40">
+  <a href="{{projectUrl}}" class="button">View Project Status</a>
+</div>
+
+<p>We'll keep you updated as we progress. Thank you for your timely feedback!</p>
+
+<p>Best regards,<br>
+The [RE]Print Studios Team</p>

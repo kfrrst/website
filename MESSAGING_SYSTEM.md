@@ -1,4 +1,4 @@
-# Kendrick Forrest Client Portal - Real-Time Messaging System
+# [RE]Print Studios - Real-Time Messaging System
 
 ## Overview
 

@@ -1,37 +1,5 @@
-/* ROOT VARIABLES - [RE]Print Studios Brand Colors */
-:root {
-  /* Base colors */
-  --base-bg: #F9F6F1;      /* Bone white background */
-  --text-primary: #333333;  /* Charcoal text */
-  --text-secondary: #666666; /* Graphite 60% */
-  --text-light: #999999;    /* Light gray */
-  
-  /* Primary accent colors */
-  --blue: #0057FF;         /* Primary actions, links, active states */
-  --yellow: #F7C600;       /* Hover tints, highlights, attention */
-  --red: #E63946;          /* Errors, warnings, overdue */
-  --green: #27AE60;        /* Success, completed, paid */
-  
-  /* Hover states */
-  --blue-hover: #0045CC;
-  --yellow-hover: #E6B700;
-  --red-hover: #D62839;
-  --green-hover: #229A4E;
-  
-  /* Additional UI colors */
-  --white: #FFFFFF;
-  --black: #000000;
-  --border-light: #E0E0E0;
-  --shadow: rgba(0, 0, 0, 0.1);
-  
-  /* Typography */
-  --font-family: 'Montserrat', sans-serif;
-  --font-light: 300;
-  --font-regular: 400;
-  --font-medium: 500;
-  --font-semibold: 600;
-  --font-bold: 700;
-}
+/* Import Monochromatic Design System */
+@import url('./styles/design-system.css');
 
 /* GLOBAL RESETS */
 * {
@@ -42,8 +10,8 @@
   
   body {
     font-family: var(--font-family);
-    background-color: var(--base-bg);
-    color: var(--text-primary);
+    background-color: var(--bone);
+    color: var(--text);
     line-height: 1.6;
     overflow-x: hidden;
   }
@@ -252,7 +220,7 @@
     height: 30px;
   }
   
-  .feature-item h3 {
+  .feature-item h2 {
     font-size: 0.9rem;
     font-weight: 700;
     color: #333;
@@ -263,15 +231,15 @@
     transition: all 0.3s ease;
   }
   
-  .feature-item:hover h3 {
+  .feature-item:hover h2 {
     color: #000;
     letter-spacing: 0.2em;
   }
   
   .feature-item p {
     font-size: 0.85rem;
-    font-weight: 300;
-    color: #666;
+    font-weight: 400;
+    color: #333;
     line-height: 1.6;
   }
 
@@ -323,7 +291,7 @@
   }
   
   .project-card {
-    background-color: #fff;
+    background-color: var(--bone-light);
     border: 1px solid #ccc;
     padding: 1rem;
     cursor: pointer;
@@ -955,7 +923,7 @@ select:focus {
   }
   
   body {
-    background: white !important;
+    background: var(--bone-light) !important;
     color: black !important;
   }
   
@@ -1317,4 +1285,25 @@ select:focus {
 .phase-action-item:hover {
   background-color: var(--yellow);
   transform: translateY(-2px);
+}
+
+/* DEV CREDENTIALS STYLES */
+.dev-credentials {
+  margin-top: 1rem;
+  padding: 1rem;
+  border: 1px solid #999;
+  background: rgba(153, 153, 153, 0.05);
+  border-radius: 4px;
+}
+
+.dev-credentials-title {
+  font-size: 0.8rem;
+  color: #666;
+  margin: 0;
+}
+
+.dev-credentials-info {
+  font-size: 0.8rem;
+  color: #666;
+  margin: 0.25rem 0 0 0;
 }

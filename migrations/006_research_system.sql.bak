@@ -1,0 +1,569 @@
+-- [RE]Print Studios Research System Migration
+-- Migration: 006_research_system.sql
+-- Created: 2025-08-04
+-- Description: Adds research management tables for the ResearchList component
+
+-- =============================================================================
+-- RESEARCH ITEMS TABLE
+-- =============================================================================
+CREATE TABLE research_items (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+    title VARCHAR(200) NOT NULL,
+    research_type VARCHAR(50) NOT NULL CHECK (research_type IN ('market_analysis', 'user_research', 'competitive_analysis', 'brand_audit')),
+    description TEXT,
+    tags TEXT[] DEFAULT ARRAY[]::TEXT[],
+    status VARCHAR(20) DEFAULT 'active' CHECK (status IN ('active', 'archived', 'deleted')),
+    created_by UUID NOT NULL REFERENCES users(id),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    
+    -- Indexes for performance
+    INDEX idx_research_items_project (project_id),
+    INDEX idx_research_items_type (research_type),
+    INDEX idx_research_items_tags USING GIN(tags),
+    INDEX idx_research_items_created (created_at DESC),
+    INDEX idx_research_items_updated (updated_at DESC)
+);
+
+-- =============================================================================
+-- RESEARCH FINDINGS TABLE
+-- =============================================================================
+CREATE TABLE research_findings (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    research_item_id UUID NOT NULL REFERENCES research_items(id) ON DELETE CASCADE,
+    finding_text TEXT NOT NULL,
+    is_highlighted BOOLEAN DEFAULT false,
+    tags TEXT[] DEFAULT ARRAY[]::TEXT[],
+    source_url TEXT,
+    source_document VARCHAR(255),
+    confidence_level INTEGER CHECK (confidence_level BETWEEN 1 AND 5), -- 1=Low, 5=High
+    created_by UUID NOT NULL REFERENCES users(id),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    
+    -- Indexes for performance
+    INDEX idx_research_findings_item (research_item_id),
+    INDEX idx_research_findings_highlighted (is_highlighted),
+    INDEX idx_research_findings_tags USING GIN(tags),
+    INDEX idx_research_findings_text USING GIN(to_tsvector('english', finding_text))
+);
+
+-- =============================================================================
+-- RESEARCH DOCUMENTS TABLE
+-- =============================================================================
+CREATE TABLE research_documents (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    research_item_id UUID NOT NULL REFERENCES research_items(id) ON DELETE CASCADE,
+    file_id UUID NOT NULL REFERENCES files(id) ON DELETE CASCADE,
+    document_type VARCHAR(50) DEFAULT 'general' CHECK (document_type IN ('general', 'report', 'survey', 'interview', 'analysis', 'presentation')),
+    description TEXT,
+    is_primary BOOLEAN DEFAULT false, -- Mark one document as primary for the research item
+    added_by UUID NOT NULL REFERENCES users(id),
+    added_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    
+    -- Prevent duplicate file links to same research item
+    UNIQUE(research_item_id, file_id),
+    
+    -- Indexes for performance
+    INDEX idx_research_documents_item (research_item_id),
+    INDEX idx_research_documents_file (file_id),
+    INDEX idx_research_documents_type (document_type),
+    INDEX idx_research_documents_primary (is_primary)
+);
+
+-- =============================================================================
+-- RESEARCH INSIGHTS TABLE (For AI/ML extracted insights)
+-- =============================================================================
+CREATE TABLE research_insights (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    research_item_id UUID NOT NULL REFERENCES research_items(id) ON DELETE CASCADE,
+    insight_type VARCHAR(50) NOT NULL CHECK (insight_type IN ('trend', 'opportunity', 'threat', 'strength', 'weakness', 'recommendation')),
+    insight_text TEXT NOT NULL,
+    confidence_score DECIMAL(3,2) CHECK (confidence_score BETWEEN 0.00 AND 1.00),
+    source_finding_ids UUID[],
+    auto_generated BOOLEAN DEFAULT false,
+    validated_by UUID REFERENCES users(id),
+    validated_at TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    
+    -- Indexes for performance
+    INDEX idx_research_insights_item (research_item_id),
+    INDEX idx_research_insights_type (insight_type),
+    INDEX idx_research_insights_confidence (confidence_score DESC),
+    INDEX idx_research_insights_auto (auto_generated),
+    INDEX idx_research_insights_text USING GIN(to_tsvector('english', insight_text))
+);
+
+-- =============================================================================
+-- RESEARCH COLLABORATION TABLE (For team collaboration on research)
+-- =============================================================================
+CREATE TABLE research_collaboration (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    research_item_id UUID NOT NULL REFERENCES research_items(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    role VARCHAR(20) DEFAULT 'viewer' CHECK (role IN ('owner', 'editor', 'viewer', 'commenter')),
+    permissions JSONB DEFAULT '{}', -- Granular permissions
+    invited_by UUID NOT NULL REFERENCES users(id),
+    invited_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    accepted_at TIMESTAMP WITH TIME ZONE,
+    
+    -- Prevent duplicate collaborations
+    UNIQUE(research_item_id, user_id),
+    
+    -- Indexes for performance
+    INDEX idx_research_collaboration_item (research_item_id),
+    INDEX idx_research_collaboration_user (user_id),
+    INDEX idx_research_collaboration_role (role)
+);
+
+-- =============================================================================
+-- RESEARCH COMMENTS TABLE (For collaborative discussions)
+-- =============================================================================
+CREATE TABLE research_comments (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    research_item_id UUID REFERENCES research_items(id) ON DELETE CASCADE,
+    finding_id UUID REFERENCES research_findings(id) ON DELETE CASCADE,
+    parent_comment_id UUID REFERENCES research_comments(id) ON DELETE CASCADE,
+    comment_text TEXT NOT NULL,
+    is_resolved BOOLEAN DEFAULT false,
+    mentioned_users UUID[],
+    attachments JSONB DEFAULT '[]', -- File attachments
+    author_id UUID NOT NULL REFERENCES users(id),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    
+    -- Must be attached to either research item or finding
+    CHECK ((research_item_id IS NOT NULL) OR (finding_id IS NOT NULL)),
+    
+    -- Indexes for performance
+    INDEX idx_research_comments_item (research_item_id),
+    INDEX idx_research_comments_finding (finding_id),
+    INDEX idx_research_comments_parent (parent_comment_id),
+    INDEX idx_research_comments_author (author_id),
+    INDEX idx_research_comments_resolved (is_resolved),
+    INDEX idx_research_comments_created (created_at DESC)
+);
+
+-- =============================================================================
+-- RESEARCH TEMPLATES TABLE (For research templates and methodologies)
+-- =============================================================================
+CREATE TABLE research_templates (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    name VARCHAR(200) NOT NULL,
+    description TEXT,
+    research_type VARCHAR(50) NOT NULL CHECK (research_type IN ('market_analysis', 'user_research', 'competitive_analysis', 'brand_audit')),
+    template_data JSONB NOT NULL, -- Template structure and questions
+    is_public BOOLEAN DEFAULT false,
+    created_by UUID NOT NULL REFERENCES users(id),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    
+    -- Indexes for performance
+    INDEX idx_research_templates_type (research_type),
+    INDEX idx_research_templates_public (is_public),
+    INDEX idx_research_templates_creator (created_by)
+);
+
+-- =============================================================================
+-- UPDATE TRIGGERS
+-- =============================================================================
+
+-- Update timestamp trigger function (if not exists)
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = CURRENT_TIMESTAMP;
+    RETURN NEW;
+END;
+$$ language 'plpgsql';
+
+-- Apply update triggers
+CREATE TRIGGER update_research_items_updated_at 
+    BEFORE UPDATE ON research_items
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_research_findings_updated_at 
+    BEFORE UPDATE ON research_findings
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_research_comments_updated_at 
+    BEFORE UPDATE ON research_comments
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_research_templates_updated_at 
+    BEFORE UPDATE ON research_templates
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- =============================================================================
+-- HELPER FUNCTIONS
+-- =============================================================================
+
+-- Function to get research item statistics
+CREATE OR REPLACE FUNCTION get_research_stats(project_uuid UUID, user_uuid UUID)
+RETURNS TABLE (
+    research_type VARCHAR(50),
+    item_count BIGINT,
+    finding_count BIGINT,
+    document_count BIGINT,
+    last_updated TIMESTAMP WITH TIME ZONE
+) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT 
+        ri.research_type,
+        COUNT(DISTINCT ri.id) as item_count,
+        COUNT(DISTINCT rf.id) as finding_count,
+        COUNT(DISTINCT rd.id) as document_count,
+        MAX(ri.updated_at) as last_updated
+    FROM research_items ri
+    LEFT JOIN projects p ON ri.project_id = p.id
+    LEFT JOIN clients c ON p.client_id = c.id
+    LEFT JOIN research_findings rf ON ri.id = rf.research_item_id
+    LEFT JOIN research_documents rd ON ri.id = rd.research_item_id
+    WHERE ri.project_id = project_uuid 
+      AND ri.status = 'active'
+      AND (p.client_id = user_uuid OR c.admin_id = user_uuid)
+    GROUP BY ri.research_type
+    ORDER BY ri.research_type;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Function to search research items and findings
+CREATE OR REPLACE FUNCTION search_research(
+    project_uuid UUID, 
+    user_uuid UUID, 
+    search_term TEXT,
+    research_type_filter VARCHAR(50) DEFAULT NULL,
+    limit_count INTEGER DEFAULT 50,
+    offset_count INTEGER DEFAULT 0
+)
+RETURNS TABLE (
+    item_id UUID,
+    item_title VARCHAR(200),
+    item_type VARCHAR(50),
+    item_description TEXT,
+    match_type VARCHAR(20), -- 'title', 'description', 'finding', 'tag'
+    match_content TEXT,
+    relevance_score REAL,
+    created_at TIMESTAMP WITH TIME ZONE
+) AS $$
+BEGIN
+    RETURN QUERY
+    (
+        -- Search in item titles
+        SELECT 
+            ri.id as item_id,
+            ri.title as item_title,
+            ri.research_type as item_type,
+            ri.description as item_description,
+            'title'::VARCHAR(20) as match_type,
+            ri.title as match_content,
+            ts_rank(to_tsvector('english', ri.title), plainto_tsquery('english', search_term)) as relevance_score,
+            ri.created_at
+        FROM research_items ri
+        LEFT JOIN projects p ON ri.project_id = p.id
+        LEFT JOIN clients c ON p.client_id = c.id
+        WHERE ri.project_id = project_uuid
+          AND ri.status = 'active'
+          AND (p.client_id = user_uuid OR c.admin_id = user_uuid)
+          AND (research_type_filter IS NULL OR ri.research_type = research_type_filter)
+          AND to_tsvector('english', ri.title) @@ plainto_tsquery('english', search_term)
+        
+        UNION ALL
+        
+        -- Search in descriptions
+        SELECT 
+            ri.id as item_id,
+            ri.title as item_title,
+            ri.research_type as item_type,
+            ri.description as item_description,
+            'description'::VARCHAR(20) as match_type,
+            ri.description as match_content,
+            ts_rank(to_tsvector('english', ri.description), plainto_tsquery('english', search_term)) as relevance_score,
+            ri.created_at
+        FROM research_items ri
+        LEFT JOIN projects p ON ri.project_id = p.id
+        LEFT JOIN clients c ON p.client_id = c.id
+        WHERE ri.project_id = project_uuid
+          AND ri.status = 'active'
+          AND ri.description IS NOT NULL
+          AND (p.client_id = user_uuid OR c.admin_id = user_uuid)
+          AND (research_type_filter IS NULL OR ri.research_type = research_type_filter)
+          AND to_tsvector('english', ri.description) @@ plainto_tsquery('english', search_term)
+        
+        UNION ALL
+        
+        -- Search in findings
+        SELECT 
+            ri.id as item_id,
+            ri.title as item_title,
+            ri.research_type as item_type,
+            ri.description as item_description,
+            'finding'::VARCHAR(20) as match_type,
+            rf.finding_text as match_content,
+            ts_rank(to_tsvector('english', rf.finding_text), plainto_tsquery('english', search_term)) as relevance_score,
+            ri.created_at
+        FROM research_items ri
+        LEFT JOIN projects p ON ri.project_id = p.id
+        LEFT JOIN clients c ON p.client_id = c.id
+        LEFT JOIN research_findings rf ON ri.id = rf.research_item_id
+        WHERE ri.project_id = project_uuid
+          AND ri.status = 'active'
+          AND (p.client_id = user_uuid OR c.admin_id = user_uuid)
+          AND (research_type_filter IS NULL OR ri.research_type = research_type_filter)
+          AND to_tsvector('english', rf.finding_text) @@ plainto_tsquery('english', search_term)
+        
+        UNION ALL
+        
+        -- Search in tags
+        SELECT 
+            ri.id as item_id,
+            ri.title as item_title,
+            ri.research_type as item_type,
+            ri.description as item_description,
+            'tag'::VARCHAR(20) as match_type,
+            array_to_string(ri.tags, ', ') as match_content,
+            1.0::REAL as relevance_score, -- Fixed score for tag matches
+            ri.created_at
+        FROM research_items ri
+        LEFT JOIN projects p ON ri.project_id = p.id
+        LEFT JOIN clients c ON p.client_id = c.id
+        WHERE ri.project_id = project_uuid
+          AND ri.status = 'active'
+          AND (p.client_id = user_uuid OR c.admin_id = user_uuid)
+          AND (research_type_filter IS NULL OR ri.research_type = research_type_filter)
+          AND EXISTS (
+              SELECT 1 FROM unnest(ri.tags) as tag 
+              WHERE LOWER(tag) LIKE LOWER('%' || search_term || '%')
+          )
+    )
+    ORDER BY relevance_score DESC, created_at DESC
+    LIMIT limit_count OFFSET offset_count;
+END;
+$$ LANGUAGE plpgsql;
+
+-- =============================================================================
+-- SAMPLE DATA
+-- =============================================================================
+
+-- Insert sample research templates
+INSERT INTO research_templates (name, description, research_type, template_data, is_public, created_by) VALUES
+(
+    'Market Analysis Template',
+    'Comprehensive market analysis framework for understanding market size, trends, and opportunities',
+    'market_analysis',
+    '{
+        "sections": [
+            {
+                "title": "Market Size & Trends",
+                "questions": [
+                    "What is the total addressable market (TAM)?",
+                    "What are the key market trends?",
+                    "How is the market growing year-over-year?"
+                ]
+            },
+            {
+                "title": "Target Audience",
+                "questions": [
+                    "Who are the primary customers?",
+                    "What are their demographics?",
+                    "What are their pain points?"
+                ]
+            },
+            {
+                "title": "Competitive Landscape",
+                "questions": [
+                    "Who are the main competitors?",
+                    "What are their market shares?",
+                    "What are their strengths and weaknesses?"
+                ]
+            }
+        ]
+    }'::jsonb,
+    true,
+    (SELECT id FROM users WHERE role = 'admin' LIMIT 1)
+),
+(
+    'User Research Interview Guide',
+    'Structured interview guide for user research sessions',
+    'user_research',
+    '{
+        "sections": [
+            {
+                "title": "Background Questions",
+                "questions": [
+                    "Tell me about your role and responsibilities",
+                    "How do you currently solve [problem]?",
+                    "What tools do you use?"
+                ]
+            },
+            {
+                "title": "Pain Points",
+                "questions": [
+                    "What are your biggest challenges?",
+                    "What frustrates you most about current solutions?",
+                    "How much time do you spend on this task?"
+                ]
+            },
+            {
+                "title": "Solution Validation",
+                "questions": [
+                    "How would you ideally solve this problem?",
+                    "What features would be most valuable?",
+                    "What would make you switch to a new solution?"
+                ]
+            }
+        ]
+    }'::jsonb,
+    true,
+    (SELECT id FROM users WHERE role = 'admin' LIMIT 1)
+),
+(
+    'Competitive Analysis Framework',
+    'Comprehensive framework for analyzing competitors',
+    'competitive_analysis',
+    '{
+        "sections": [
+            {
+                "title": "Competitor Overview",
+                "questions": [
+                    "What is their value proposition?",
+                    "What products/services do they offer?",
+                    "What is their pricing model?"
+                ]
+            },
+            {
+                "title": "Strengths & Weaknesses",
+                "questions": [
+                    "What are they doing well?",
+                    "Where are they falling short?",
+                    "What opportunities do we see?"
+                ]
+            },
+            {
+                "title": "Market Position",
+                "questions": [
+                    "How do they position themselves?",
+                    "What is their brand perception?",
+                    "What is their market share?"
+                ]
+            }
+        ]
+    }'::jsonb,
+    true,
+    (SELECT id FROM users WHERE role = 'admin' LIMIT 1)
+),
+(
+    'Brand Audit Checklist',
+    'Comprehensive brand audit framework for assessing current brand state',
+    'brand_audit',
+    '{
+        "sections": [
+            {
+                "title": "Brand Identity",
+                "questions": [
+                    "How consistent is the visual identity?",
+                    "Does the brand voice match the audience?",
+                    "Are brand guidelines being followed?"
+                ]
+            },
+            {
+                "title": "Brand Perception",
+                "questions": [
+                    "How do customers perceive the brand?",
+                    "What emotions does the brand evoke?",
+                    "How does it compare to competitors?"
+                ]
+            },
+            {
+                "title": "Brand Performance",
+                "questions": [
+                    "What is the brand recognition level?",
+                    "How strong is brand loyalty?",
+                    "What is the Net Promoter Score?"
+                ]
+            }
+        ]
+    }'::jsonb,
+    true,
+    (SELECT id FROM users WHERE role = 'admin' LIMIT 1)
+);
+
+-- =============================================================================
+-- PERMISSIONS AND SECURITY
+-- =============================================================================
+
+-- Row Level Security policies
+ALTER TABLE research_items ENABLE ROW LEVEL SECURITY;
+ALTER TABLE research_findings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE research_documents ENABLE ROW LEVEL SECURITY;
+ALTER TABLE research_comments ENABLE ROW LEVEL SECURITY;
+
+-- Research items policy
+CREATE POLICY research_items_access_policy ON research_items
+    USING (
+        project_id IN (
+            SELECT p.id FROM projects p
+            LEFT JOIN clients c ON p.client_id = c.id
+            WHERE p.client_id = current_user_id() 
+               OR c.admin_id = current_user_id()
+               OR current_user_role() = 'admin'
+        )
+    );
+
+-- Research findings policy
+CREATE POLICY research_findings_access_policy ON research_findings
+    USING (
+        research_item_id IN (
+            SELECT ri.id FROM research_items ri
+            LEFT JOIN projects p ON ri.project_id = p.id
+            LEFT JOIN clients c ON p.client_id = c.id
+            WHERE p.client_id = current_user_id() 
+               OR c.admin_id = current_user_id()
+               OR current_user_role() = 'admin'
+        )
+    );
+
+-- Research documents policy
+CREATE POLICY research_documents_access_policy ON research_documents
+    USING (
+        research_item_id IN (
+            SELECT ri.id FROM research_items ri
+            LEFT JOIN projects p ON ri.project_id = p.id
+            LEFT JOIN clients c ON p.client_id = c.id
+            WHERE p.client_id = current_user_id() 
+               OR c.admin_id = current_user_id()
+               OR current_user_role() = 'admin'
+        )
+    );
+
+-- Research comments policy
+CREATE POLICY research_comments_access_policy ON research_comments
+    USING (
+        research_item_id IN (
+            SELECT ri.id FROM research_items ri
+            LEFT JOIN projects p ON ri.project_id = p.id
+            LEFT JOIN clients c ON p.client_id = c.id
+            WHERE p.client_id = current_user_id() 
+               OR c.admin_id = current_user_id()
+               OR current_user_role() = 'admin'
+        )
+        OR finding_id IN (
+            SELECT rf.id FROM research_findings rf
+            LEFT JOIN research_items ri ON rf.research_item_id = ri.id
+            LEFT JOIN projects p ON ri.project_id = p.id
+            LEFT JOIN clients c ON p.client_id = c.id
+            WHERE p.client_id = current_user_id() 
+               OR c.admin_id = current_user_id()
+               OR current_user_role() = 'admin'
+        )
+    );
+
+-- =============================================================================
+-- COMPLETION MESSAGE
+-- =============================================================================
+SELECT 
+    'Research System Migration Complete!' AS status,
+    COUNT(*) AS research_templates_created
+FROM research_templates;

@@ -1,0 +1,41 @@
+<h2 class="mt-0">Invoice Reminder</h2>
+
+<p>Hi {{clientName}},</p>
+
+<p>This is a friendly reminder that your invoice is due in <strong>{{daysUntilDue}} days</strong>.</p>
+
+<div class="warning-box">
+  <h3 class="mt-0">Invoice Details</h3>
+  <p><strong>Invoice Number:</strong> {{invoiceNumber}}</p>
+  <p><strong>Project:</strong> {{projectName}}</p>
+  <p><strong>Due Date:</strong> {{formatDate dueDate}}</p>
+  <p class="mb-0" style="font-size: 20px;"><strong>Amount Due:</strong> {{formatCurrency amountDue}}</p>
+</div>
+
+<p>To avoid any late fees or service interruptions, please make your payment by the due date.</p>
+
+<h3>Easy Online Payment</h3>
+<p>You can pay this invoice quickly and securely through your client portal:</p>
+
+<div class="text-center mt-40 mb-40">
+  <a href="{{paymentUrl}}" class="button">Pay Now</a>
+</div>
+
+{{#if paymentTerms}}
+<p><strong>Payment Terms:</strong> {{paymentTerms}}</p>
+{{/if}}
+
+<p>If you've already sent payment, please disregard this reminder. Sometimes payments can take a few days to process.</p>
+
+<p>If you have any questions about this invoice or need to discuss payment arrangements, please contact our billing team at <a href="mailto:billing@reprintstudios.com">billing@reprintstudios.com</a>.</p>
+
+<p>Thank you for your attention to this matter.</p>
+
+<p>Best regards,<br>
+The [RE]Print Studios Billing Team</p>
+
+<hr style="margin: 40px 0; border: none; border-top: 1px solid #F2EDE6;">
+
+<p style="text-align: center; font-size: 12px; color: #999999;">
+  <em>This is an automated reminder. We appreciate your prompt payment.</em>
+</p>

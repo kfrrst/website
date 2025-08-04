@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Phase States Testing - [RE]Print Studios</title>
+  <link rel="stylesheet" href="styles/design-system.css" />
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="portal.css" />
+  <link rel="stylesheet" href="styles/phase-card.css" />
+  <link rel="stylesheet" href="styles/feedback-modal.css" />
+  <link rel="stylesheet" href="styles/phase-deliverables.css" />
+  <link rel="stylesheet" href="styles/phase-timeline.css" />
+  <link rel="stylesheet" href="styles/progress-tracker-tabs.css" />
+  <link rel="stylesheet" href="styles/phase-transitions.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body class="portal-body">
+
+  <div class="test-container" style="max-width: 1200px; margin: 0 auto; padding: 2rem;">
+    <h1>Phase States Testing Suite</h1>
+    <p>Testing all phase states, transitions, and interactions</p>
+
+    <section class="test-section">
+      <h2>1. Phase State Variations</h2>
+      
+      <!-- Not Started Phase -->
+      <div class="test-phase-wrapper">
+        <h3>Not Started Phase</h3>
+        <div id="phase-not-started"></div>
+      </div>
+
+      <!-- In Progress Phase -->
+      <div class="test-phase-wrapper">
+        <h3>In Progress Phase</h3>
+        <div id="phase-in-progress"></div>
+      </div>
+
+      <!-- Awaiting Approval Phase -->
+      <div class="test-phase-wrapper">
+        <h3>Awaiting Approval Phase</h3>
+        <div id="phase-awaiting-approval"></div>
+      </div>
+
+      <!-- Changes Requested Phase -->
+      <div class="test-phase-wrapper">
+        <h3>Changes Requested Phase</h3>
+        <div id="phase-changes-requested"></div>
+      </div>
+
+      <!-- Approved Phase -->
+      <div class="test-phase-wrapper">
+        <h3>Approved Phase</h3>
+        <div id="phase-approved"></div>
+      </div>
+
+      <!-- Completed Phase -->
+      <div class="test-phase-wrapper">
+        <h3>Completed Phase</h3>
+        <div id="phase-completed"></div>
+      </div>
+    </section>
+
+    <section class="test-section">
+      <h2>2. Progress Tracker Tabs</h2>
+      <div id="progress-tracker-test"></div>
+    </section>
+
+    <section class="test-section">
+      <h2>3. Phase Deliverables</h2>
+      <div id="deliverables-test"></div>
+    </section>
+
+    <section class="test-section">
+      <h2>4. Phase Timeline</h2>
+      <div id="timeline-test"></div>
+    </section>
+
+    <section class="test-section">
+      <h2>5. Transition Animations</h2>
+      <button onclick="testTransitions()">Test Phase Transitions</button>
+      <div id="transition-test" style="margin-top: 2rem;"></div>
+    </section>
+
+    <section class="test-section">
+      <h2>6. Error States</h2>
+      <button onclick="testErrorStates()">Test Error Handling</button>
+      <div id="error-test" style="margin-top: 2rem;"></div>
+    </section>
+
+    <section class="test-section">
+      <h2>Test Results</h2>
+      <div id="test-results" style="background: var(--bone-light); padding: 1rem; border-radius: 8px; margin-top: 1rem;">
+        <p>Test results will appear here...</p>
+      </div>
+    </section>
+  </div>
+
+  <style>
+    .test-container {
+      background: var(--bone);
+      min-height: 100vh;
+    }
+
+    .test-section {
+      margin: 3rem 0;
+      padding: 2rem;
+      background: var(--bone-light);
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border-light);
+    }
+
+    .test-phase-wrapper {
+      margin: 2rem 0;
+      padding: 1rem;
+      background: var(--bone);
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border-subtle);
+    }
+
+    .test-phase-wrapper h3 {
+      margin-bottom: 1rem;
+      color: var(--text);
+      font-weight: var(--font-weight-semibold);
+    }
+
+    button {
+      background: var(--blue);
+      color: var(--bone-light);
+      border: none;
+      padding: 0.75rem 1.5rem;
+      border-radius: var(--radius-md);
+      font-weight: var(--font-weight-medium);
+      cursor: pointer;
+      transition: all var(--transition-normal);
+    }
+
+    button:hover {
+      background: #1E40AF;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px var(--shadow-medium);
+    }
+
+    .test-success {
+      color: var(--green);
+      margin: 0.5rem 0;
+    }
+
+    .test-error {
+      color: var(--red);
+      margin: 0.5rem 0;
+    }
+  </style>
+
+  <script type="module">
+    import { PhaseCard } from './components/PhaseCard.js';
+    import { PhaseDeliverables } from './components/PhaseDeliverables.js';
+    import { PhaseTimeline } from './components/PhaseTimeline.js';
+    import { ProgressTracker } from './components/ProgressTracker.js';
+
+    // Test data
+    const testPhases = {
+      notStarted: {
+        id: 'test-1',
+        phase_key: 'onboarding',
+        name: 'Onboarding',
+        description: 'Initial kickoff and info gathering',
+        status: 'not_started',
+        order_index: 0,
+        requires_approval: true,
+        activity_count: 0
+      },
+      inProgress: {
+        id: 'test-2',
+        phase_key: 'ideation',
+        name: 'Ideation',
+        description: 'Brainstorming & concept development',
+        status: 'in_progress',
+        order_index: 1,
+        requires_approval: false,
+        activity_count: 3
+      },
+      awaitingApproval: {
+        id: 'test-3',
+        phase_key: 'design',
+        name: 'Design',
+        description: 'Creation of designs and prototypes',
+        status: 'awaiting_approval',
+        order_index: 2,
+        requires_approval: true,
+        activity_count: 7
+      },
+      changesRequested: {
+        id: 'test-4',
+        phase_key: 'review',
+        name: 'Review & Feedback',
+        description: 'Client review and feedback collection',
+        status: 'changes_requested',
+        order_index: 3,
+        requires_approval: true,
+        activity_count: 12,
+        rejection_feedback: 'Please update the color scheme to match brand guidelines'
+      },
+      approved: {
+        id: 'test-5',
+        phase_key: 'production',
+        name: 'Production/Print',
+        description: 'Final production and printing',
+        status: 'approved',
+        order_index: 4,
+        requires_approval: true,
+        approved_at: new Date().toISOString(),
+        approved_by_name: 'John Doe',
+        activity_count: 5
+      },
+      completed: {
+        id: 'test-6',
+        phase_key: 'delivery',
+        name: 'Delivery',
+        description: 'Final deliverables and handover',
+        status: 'completed',
+        order_index: 7,
+        requires_approval: false,
+        completed_at: new Date().toISOString(),
+        activity_count: 15
+      }
+    };
+
+    const testDeliverables = [
+      {
+        id: 1,
+        name: 'Brand_Guidelines_v2.pdf',
+        size: 2457600,
+        type: 'application/pdf',
+        uploaded_at: new Date().toISOString(),
+        uploaded_by_name: 'Kendrick Forrest'
+      },
+      {
+        id: 2,
+        name: 'Logo_Concepts.ai',
+        size: 5242880,
+        type: 'application/illustrator',
+        uploaded_at: new Date().toISOString(),
+        uploaded_by_name: 'Kendrick Forrest'
+      },
+      {
+        id: 3,
+        name: 'Mockup_Preview.jpg',
+        size: 1048576,
+        type: 'image/jpeg',
+        uploaded_at: new Date().toISOString(),
+        uploaded_by_name: 'Kendrick Forrest'
+      }
+    ];
+
+    // Initialize test components
+    async function initializeTests() {
+      const results = [];
+      
+      try {
+        // Test 1: Phase Cards in different states
+        console.log('Testing Phase Cards...');
+        
+        // Not Started
+        const notStartedCard = new PhaseCard({
+          container: document.getElementById('phase-not-started'),
+          phase: testPhases.notStarted,
+          deliverables: [],
+          isActive: false,
+          commentCount: testPhases.notStarted.activity_count,
+          isAdmin: false,
+          authToken: 'test-token'
+        });
+        notStartedCard.render();
+        results.push({ test: 'Not Started Phase Card', status: 'success' });
+
+        // In Progress
+        const inProgressCard = new PhaseCard({
+          container: document.getElementById('phase-in-progress'),
+          phase: testPhases.inProgress,
+          deliverables: testDeliverables.slice(0, 1),
+          isActive: true,
+          commentCount: testPhases.inProgress.activity_count,
+          isAdmin: false,
+          authToken: 'test-token'
+        });
+        inProgressCard.render();
+        results.push({ test: 'In Progress Phase Card', status: 'success' });
+
+        // Awaiting Approval
+        const awaitingCard = new PhaseCard({
+          container: document.getElementById('phase-awaiting-approval'),
+          phase: testPhases.awaitingApproval,
+          deliverables: testDeliverables,
+          isActive: false,
+          commentCount: testPhases.awaitingApproval.activity_count,
+          isAdmin: false,
+          authToken: 'test-token',
+          onApprove: (phaseId) => {
+            console.log('Approve clicked:', phaseId);
+            showTestResult('Approve action triggered');
+          },
+          onRequestChanges: (phaseId, feedback) => {
+            console.log('Request changes clicked:', phaseId, feedback);
+            showTestResult('Request changes action triggered');
+          }
+        });
+        awaitingCard.render();
+        results.push({ test: 'Awaiting Approval Phase Card', status: 'success' });
+
+        // Changes Requested
+        const changesCard = new PhaseCard({
+          container: document.getElementById('phase-changes-requested'),
+          phase: testPhases.changesRequested,
+          deliverables: testDeliverables,
+          isActive: false,
+          commentCount: testPhases.changesRequested.activity_count,
+          isAdmin: false,
+          authToken: 'test-token'
+        });
+        changesCard.render();
+        results.push({ test: 'Changes Requested Phase Card', status: 'success' });
+
+        // Approved
+        const approvedCard = new PhaseCard({
+          container: document.getElementById('phase-approved'),
+          phase: testPhases.approved,
+          deliverables: testDeliverables,
+          isActive: false,
+          commentCount: testPhases.approved.activity_count,
+          isAdmin: false,
+          authToken: 'test-token'
+        });
+        approvedCard.render();
+        results.push({ test: 'Approved Phase Card', status: 'success' });
+
+        // Completed
+        const completedCard = new PhaseCard({
+          container: document.getElementById('phase-completed'),
+          phase: testPhases.completed,
+          deliverables: testDeliverables,
+          isActive: false,
+          commentCount: testPhases.completed.activity_count,
+          isAdmin: false,
+          authToken: 'test-token'
+        });
+        completedCard.render();
+        results.push({ test: 'Completed Phase Card', status: 'success' });
+
+        // Test 2: Progress Tracker
+        console.log('Testing Progress Tracker...');
+        const progressTracker = new ProgressTracker({
+          container: document.getElementById('progress-tracker-test'),
+          phases: Object.values(testPhases),
+          currentPhase: 3,
+          interactive: true,
+          orientation: 'tabs',
+          onPhaseClick: (phaseKey, phaseIndex) => {
+            console.log('Phase clicked:', phaseKey, phaseIndex);
+            showTestResult(`Phase clicked: ${phaseKey}`);
+          }
+        });
+        await progressTracker.initWithData('test-project', {
+          phases: Object.values(testPhases),
+          tracking: { current_phase_index: 3 }
+        });
+        results.push({ test: 'Progress Tracker', status: 'success' });
+
+        // Test 3: Phase Deliverables
+        console.log('Testing Phase Deliverables...');
+        const deliverables = new PhaseDeliverables({
+          container: document.getElementById('deliverables-test'),
+          deliverables: testDeliverables,
+          phaseId: 'test-3',
+          phaseName: 'Design',
+          viewMode: 'grid',
+          isAdmin: false,
+          allowUploads: true,
+          authToken: 'test-token',
+          onFileDownload: (fileId) => {
+            console.log('Download file:', fileId);
+            showTestResult(`Download file: ${fileId}`);
+          }
+        });
+        deliverables.render();
+        results.push({ test: 'Phase Deliverables', status: 'success' });
+
+        // Test 4: Phase Timeline
+        console.log('Testing Phase Timeline...');
+        const timeline = new PhaseTimeline({
+          container: document.getElementById('timeline-test'),
+          projectId: 'test-project',
+          phaseId: 'test-3',
+          activities: generateTestActivities(),
+          showFilters: true,
+          maxItems: 10
+        });
+        timeline.render();
+        results.push({ test: 'Phase Timeline', status: 'success' });
+
+      } catch (error) {
+        console.error('Test error:', error);
+        results.push({ test: error.message, status: 'error' });
+      }
+
+      // Display results
+      displayTestResults(results);
+    }
+
+    function generateTestActivities() {
+      return [
+        {
+          id: 1,
+          type: 'phase_approved',
+          description: 'Phase approved by John Doe',
+          created_at: new Date().toISOString(),
+          user_name: 'John Doe',
+          metadata: { phase_name: 'Design' }
+        },
+        {
+          id: 2,
+          type: 'file_uploaded',
+          description: 'Uploaded Brand_Guidelines_v2.pdf',
+          created_at: new Date(Date.now() - 3600000).toISOString(),
+          user_name: 'Kendrick Forrest',
+          metadata: { file_name: 'Brand_Guidelines_v2.pdf' }
+        },
+        {
+          id: 3,
+          type: 'comment_added',
+          description: 'Added a comment',
+          created_at: new Date(Date.now() - 7200000).toISOString(),
+          user_name: 'Jane Smith',
+          metadata: { comment: 'Looking great! Love the color choices.' }
+        },
+        {
+          id: 4,
+          type: 'phase_changes_requested',
+          description: 'Requested changes',
+          created_at: new Date(Date.now() - 86400000).toISOString(),
+          user_name: 'John Doe',
+          metadata: { 
+            phase_name: 'Design',
+            feedback: 'Please update the typography to match brand standards'
+          }
+        }
+      ];
+    }
+
+    function displayTestResults(results) {
+      const resultsDiv = document.getElementById('test-results');
+      resultsDiv.innerHTML = '<h3>Test Results:</h3>';
+      
+      let passCount = 0;
+      let failCount = 0;
+      
+      results.forEach(result => {
+        const className = result.status === 'success' ? 'test-success' : 'test-error';
+        resultsDiv.innerHTML += `<p class="${className}">✓ ${result.test}: ${result.status}</p>`;
+        
+        if (result.status === 'success') passCount++;
+        else failCount++;
+      });
+      
+      resultsDiv.innerHTML += `<hr style="margin: 1rem 0; border-color: var(--border-light);">`;
+      resultsDiv.innerHTML += `<p><strong>Total: ${results.length} tests | Passed: ${passCount} | Failed: ${failCount}</strong></p>`;
+    }
+
+    function showTestResult(message) {
+      const resultsDiv = document.getElementById('test-results');
+      const timestamp = new Date().toLocaleTimeString();
+      resultsDiv.innerHTML += `<p style="color: var(--text-secondary);">[${timestamp}] ${message}</p>`;
+    }
+
+    // Test transition animations
+    window.testTransitions = function() {
+      const container = document.getElementById('transition-test');
+      container.innerHTML = '<div class="phase-content-layout phase-switching-in">Testing phase transition animation...</div>';
+      
+      setTimeout(() => {
+        container.querySelector('.phase-content-layout').classList.remove('phase-switching-in');
+        showTestResult('Transition animation completed');
+      }, 1000);
+    };
+
+    // Test error states
+    window.testErrorStates = function() {
+      const container = document.getElementById('error-test');
+      
+      // Test network error
+      container.innerHTML = '<div class="phase-error">Network error: Unable to load phase data</div>';
+      showTestResult('Error state displayed');
+      
+      // Test loading state
+      setTimeout(() => {
+        container.innerHTML = '<div class="phase-loading">Loading phase data...</div>';
+        showTestResult('Loading state displayed');
+      }, 2000);
+      
+      // Test empty state
+      setTimeout(() => {
+        container.innerHTML = '<div class="phase-empty">No deliverables found for this phase</div>';
+        showTestResult('Empty state displayed');
+      }, 4000);
+    };
+
+    // Initialize tests on page load
+    document.addEventListener('DOMContentLoaded', initializeTests);
+  </script>
+
+</body>
+</html>

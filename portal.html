@@ -4,10 +4,17 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>[RE]Print Studios - Client Portal Dashboard</title>
+  <link rel="stylesheet" href="styles/design-system.css" />
   <link rel="stylesheet" href="styles.css" />
   <link rel="stylesheet" href="portal.css" />
   <link rel="stylesheet" href="styles/progress-tracker-seamless.css" />
   <link rel="stylesheet" href="styles/progress-tracker-tabs.css" />
+  <link rel="stylesheet" href="styles/phase-card.css" />
+  <link rel="stylesheet" href="styles/feedback-modal.css" />
+  <link rel="stylesheet" href="styles/phase-deliverables.css" />
+  <link rel="stylesheet" href="styles/phase-timeline.css" />
+  <link rel="stylesheet" href="styles/project-modal-enhanced.css" />
+  <link rel="stylesheet" href="styles/phase-transitions.css" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -69,6 +76,10 @@
           <span>Messages</span>
           <span class="nav-badge">8</span>
         </a>
+        <a href="#documents" class="nav-link">
+          <i class="fas fa-file-alt"></i>
+          <span>Documents</span>
+        </a>
         <a href="#invoices" class="nav-link">
           <i class="fas fa-file-invoice"></i>
           <span>Invoices</span>
@@ -80,11 +91,11 @@
           <span class="user-name">John Doe</span>
         </div>
         <div class="header-actions">
-          <button class="btn-icon notification-btn" onclick="toggleNotifications()">
+          <button class="btn-icon notification-btn" data-action="toggle-notifications">
             <i class="fas fa-bell"></i>
             <span class="notification-badge">3</span>
           </button>
-          <button class="btn-logout" onclick="logout()">
+          <button class="btn-logout" data-action="logout">
             <i class="fas fa-sign-out-alt"></i>
             <span>Logout</span>
           </button>
@@ -173,7 +184,7 @@
                 <span class="project-status in-progress">In Progress</span>
               </div>
               <div class="progress-bar">
-                <div class="progress-fill" style="width: 65%"></div>
+                <div class="progress-fill" data-progress="65"></div>
               </div>
               <p class="progress-text">65% Complete</p>
               <div class="project-meta">
@@ -189,7 +200,7 @@
                 <span class="project-status planning">Planning</span>
               </div>
               <div class="progress-bar">
-                <div class="progress-fill" style="width: 25%"></div>
+                <div class="progress-fill" data-progress="25"></div>
               </div>
               <p class="progress-text">25% Complete</p>
               <div class="project-meta">
@@ -239,6 +250,18 @@
       </div>
     </section>
 
+    <!-- DOCUMENTS SECTION -->
+    <section id="documents" class="portal-section">
+      <div class="section-header">
+        <h2>[Documents]</h2>
+        <p>Generate and download project documents, proposals, and reports.</p>
+      </div>
+      <div id="documents-section">
+        <!-- Document generation UI will be loaded here -->
+        <p class="loading-message">Loading documents...</p>
+      </div>
+    </section>
+
     <!-- INVOICES SECTION -->
     <section id="invoices" class="portal-section">
       <div class="section-header">
@@ -255,25 +278,28 @@
 
   <!-- QUICK ACTIONS FLOATING BUTTON -->
   <div class="floating-actions">
-    <button class="fab-main" onclick="toggleQuickActions()">
+    <button class="fab-main" data-action="toggle-quick-actions">
       <span class="fab-icon">+</span>
     </button>
     <div class="fab-menu hidden">
-      <button class="fab-item" onclick="startNewMessage()">
+      <button class="fab-item" data-action="start-new-message">
         <span class="fab-icon">[MSG]</span>
         <span class="fab-label">New Message</span>
       </button>
-      <button class="fab-item" onclick="uploadFile()">
+      <button class="fab-item" data-action="upload-file">
         <span class="fab-icon">[FILE]</span>
         <span class="fab-label">Upload File</span>
       </button>
     </div>
   </div>
 
+  <!-- Stripe.js -->
+  <script src="https://js.stripe.com/v3/"></script>
+  
+  <!-- Application Scripts -->
   <script src="/socket.io/socket.io.js"></script>
   <script type="module" src="/components/ProgressTracker.js?v=1.4"></script>
-  <script type="module" src="/portal.js?v=1.4"></script>
-  <!-- Test button to verify JavaScript is working -->
-  <button onclick="testFunction()" style="position: fixed; top: 10px; right: 10px; z-index: 9999; background: #333; color: white; border: none; padding: 5px 10px; border-radius: 3px; font-size: 12px;">Test JS</button>
+  <script src="/components/StripePayment.js"></script>
+  <script type="module" src="/components/portal/Portal.js?v=2.0"></script>
 </body>
 </html>

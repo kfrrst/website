@@ -1,0 +1,50 @@
+<h2 class="mt-0">Welcome to [RE]Print Studios!</h2>
+
+<p>Hi {{userName}},</p>
+
+<p>Your account has been successfully activated! You now have access to your client portal where you can track projects, communicate with our team, and manage your creative journey.</p>
+
+<div class="success-box">
+  <h3 class="mt-0">Account Details</h3>
+  <p><strong>Name:</strong> {{userName}}</p>
+  <p><strong>Email:</strong> {{userEmail}}</p>
+  <p class="mb-0"><strong>Account Type:</strong> {{accountType}}</p>
+</div>
+
+<h3>What You Can Do in Your Portal:</h3>
+<ul>
+  <li><strong>Track Project Progress:</strong> See real-time updates on all project phases</li>
+  <li><strong>Review & Approve Work:</strong> Provide feedback and approve deliverables</li>
+  <li><strong>Access Files:</strong> Download project files anytime</li>
+  <li><strong>Communicate:</strong> Message directly with our team</li>
+  <li><strong>Manage Invoices:</strong> View and pay invoices online</li>
+</ul>
+
+<div class="text-center mt-40 mb-40">
+  <a href="{{loginUrl}}" class="button">Access Your Portal</a>
+</div>
+
+<h3>Getting Started</h3>
+<p>Once you log in, you'll see your dashboard with any active projects. If you're starting a new project, our team will set it up and notify you when it's ready.</p>
+
+{{#if hasProject}}
+<p><strong>Good news!</strong> You already have a project set up and waiting for you in the portal.</p>
+{{/if}}
+
+<h3>Need Help?</h3>
+<p>If you have any questions or need assistance accessing your account, our support team is here to help:</p>
+<ul>
+  <li>Email: <a href="mailto:support@reprintstudios.com">support@reprintstudios.com</a></li>
+  <li>Portal Help: Available in the portal's help section</li>
+</ul>
+
+<p>We're excited to work with you!</p>
+
+<p>Best regards,<br>
+The [RE]Print Studios Team</p>
+
+<hr style="margin: 40px 0; border: none; border-top: 1px solid #F2EDE6;">
+
+<p style="text-align: center; font-size: 12px; color: #999999;">
+  <em>Your login credentials were sent in a separate email. Please keep them secure and do not share them with others.</em>
+</p>

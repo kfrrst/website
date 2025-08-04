@@ -6,6 +6,9 @@ import { authenticateToken } from '../middleware/auth.js';
 import { query, beginTransaction, commitTransaction, rollbackTransaction } from '../config/database.js';
 import { v4 as uuidv4 } from 'uuid';
 import dotenv from 'dotenv';
+import { sendTemplateEmail } from '../utils/emailService.js';
+import { EMAIL_TEMPLATES } from '../utils/emailTemplates.js';
+import { userValidations, handleValidationErrors } from '../middleware/validation.js';
 
 // Load environment variables
 dotenv.config();
@@ -34,32 +37,20 @@ const generateTokens = (userId, email, role) => {
   return { accessToken, refreshToken };
 };
 
-// Validation rules
-const registerValidation = [
-  body('email').isEmail().normalizeEmail(),
-  body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
-  body('name').trim().notEmpty().withMessage('Name is required'),
-  body('role').optional().isIn(['client', 'admin']).withMessage('Invalid role')
-];
-
-const loginValidation = [
-  body('email').isEmail().normalizeEmail(),
-  body('password').notEmpty()
-];
+// Note: Validation rules moved to middleware/validation.js for centralized management
 
 // Register endpoint
-router.post('/register', registerValidation, async (req, res) => {
+router.post('/register', userValidations.register, handleValidationErrors, async (req, res) => {
   const client = await beginTransaction();
   
   try {
-    // Check validation errors
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      await rollbackTransaction(client);
-      return res.status(400).json({ errors: errors.array() });
-    }
 
     const { email, password, name, role = 'client' } = req.body;
+    
+    // Split name into first and last name for database storage
+    const nameParts = name ? name.trim().split(' ') : ['', ''];
+    const firstName = nameParts[0] || '';
+    const lastName = nameParts.slice(1).join(' ') || '';
 
     // Check if user already exists
     const existingUser = await client.query(
@@ -80,10 +71,10 @@ router.post('/register', registerValidation, async (req, res) => {
     // Create user
     const userId = uuidv4();
     const userResult = await client.query(
-      `INSERT INTO users (id, email, password_hash, name, role) 
-       VALUES ($1, $2, $3, $4, $5) 
-       RETURNING id, email, name, role, created_at`,
-      [userId, email, hashedPassword, name, role]
+      `INSERT INTO users (id, email, password_hash, first_name, last_name, role) 
+       VALUES ($1, $2, $3, $4, $5, $6) 
+       RETURNING id, email, first_name, last_name, role, created_at`,
+      [userId, email, hashedPassword, firstName, lastName, role]
     );
     
     const user = userResult.rows[0];
@@ -122,13 +113,8 @@ router.post('/register', registerValidation, async (req, res) => {
 });
 
 // Login endpoint
-router.post('/login', loginValidation, async (req, res) => {
+router.post('/login', userValidations.login, handleValidationErrors, async (req, res) => {
   try {
-    // Check validation errors
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ errors: errors.array() });
-    }
 
     const { email, password } = req.body;
 
@@ -173,12 +159,67 @@ router.post('/login', loginValidation, async (req, res) => {
       [sessionId, user.id, sessionToken, refreshToken]
     );
     
-    // Log activity
+    // Get login location info
+    const ipAddress = req.headers['x-forwarded-for'] || req.connection.remoteAddress || 'Unknown';
+    const userAgent = req.headers['user-agent'] || 'Unknown';
+    
+    // Parse user agent for device and browser info
+    const deviceInfo = userAgent.includes('Mobile') ? 'Mobile Device' : 'Desktop';
+    const browserInfo = userAgent.match(/(Chrome|Firefox|Safari|Edge|Opera)\/[\d.]+/)?.[0] || 'Unknown Browser';
+    
+    // Log activity with IP and device info
     await query(
-      `INSERT INTO activity_log (id, user_id, action, entity_type, entity_id, description)
-       VALUES ($1, $2, $3, $4, $5, $6)`,
-      [uuidv4(), user.id, 'login', 'user', user.id, `User ${user.email} logged in`]
+      `INSERT INTO activity_log (id, user_id, action, entity_type, entity_id, description, metadata)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [
+        uuidv4(), 
+        user.id, 
+        'login', 
+        'user', 
+        user.id, 
+        `User ${user.email} logged in`,
+        JSON.stringify({ ip: ipAddress, device: deviceInfo, browser: browserInfo })
+      ]
     );
+    
+    // Check if this is a new location/device
+    const recentLoginsResult = await query(
+      `SELECT metadata FROM activity_log 
+       WHERE user_id = $1 
+       AND action = 'login' 
+       AND created_at > NOW() - INTERVAL '30 days'
+       AND metadata IS NOT NULL
+       ORDER BY created_at DESC
+       LIMIT 10`,
+      [user.id]
+    );
+    
+    const isNewLocation = !recentLoginsResult.rows.some(row => {
+      const metadata = row.metadata;
+      return metadata && metadata.ip === ipAddress;
+    });
+    
+    // Send security alert if new location
+    if (isNewLocation && ipAddress !== 'Unknown') {
+      try {
+        await sendTemplateEmail(EMAIL_TEMPLATES.SECURITY_ALERT, {
+          to: user.email,
+          userId: user.id,
+          userName: `${user.first_name} ${user.last_name || ''}`.trim(),
+          loginTime: new Date(),
+          location: ipAddress === '::1' || ipAddress === '127.0.0.1' ? 'Local Development' : ipAddress,
+          deviceInfo: deviceInfo,
+          browserInfo: browserInfo,
+          ipAddress: ipAddress,
+          changePasswordUrl: `${process.env.BASE_URL || 'http://localhost:3000'}/reset-password`,
+          context: 'security',
+          type: 'security'
+        });
+      } catch (emailError) {
+        console.error('Failed to send security alert email:', emailError);
+        // Don't fail login if email fails
+      }
+    }
 
     res.json({
       message: 'Login successful',
@@ -288,9 +329,9 @@ router.post('/logout', authenticateToken, async (req, res) => {
 router.get('/me', authenticateToken, async (req, res) => {
   try {
     const userResult = await query(
-      `SELECT id, email, name, role, created_at, last_login, is_active 
+      `SELECT id, email, first_name, last_name, role, created_at, last_login_at, is_active 
        FROM users WHERE id = $1`,
-      [req.user.userId]
+      [req.user.id]
     );
     
     if (userResult.rows.length === 0) {
@@ -303,10 +344,12 @@ router.get('/me', authenticateToken, async (req, res) => {
       user: {
         id: user.id,
         email: user.email,
-        name: user.name,
+        name: `${user.first_name} ${user.last_name}`,
+        firstName: user.first_name,
+        lastName: user.last_name,
         role: user.role,
         createdAt: user.created_at,
-        lastLogin: user.last_login,
+        lastLogin: user.last_login_at,
         isActive: user.is_active
       }
     });

@@ -1,0 +1,422 @@
+/* Phase Transition Animations */
+
+/* Phase Content Container Animations */
+.phase-content-container {
+  position: relative;
+  min-height: 400px;
+  overflow: hidden;
+}
+
+.phase-content-layout {
+  opacity: 1;
+  transform: translateX(0);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Phase Switching Animations */
+.phase-content-layout.phase-switching-out {
+  opacity: 0;
+  transform: translateX(-30px);
+}
+
+.phase-content-layout.phase-switching-in {
+  opacity: 0;
+  transform: translateX(30px);
+  animation: slideInFromRight 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+@keyframes slideInFromRight {
+  0% {
+    opacity: 0;
+    transform: translateX(30px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Phase Card Animations */
+.phase-card {
+  transform: translateY(0);
+  opacity: 1;
+  transition: all 0.3s ease-out;
+}
+
+.phase-card.loading {
+  opacity: 0.6;
+  transform: translateY(10px);
+}
+
+.phase-card.entering {
+  animation: fadeInUp 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+@keyframes fadeInUp {
+  0% {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Status Badge Animations */
+.phase-status-badge {
+  transition: all 0.3s ease-out;
+}
+
+.phase-status-badge.status-updating {
+  animation: pulse 0.6s ease-in-out infinite alternate;
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1.05);
+    opacity: 0.8;
+  }
+}
+
+/* Phase Actions Button Animations */
+.phase-actions button {
+  transform: scale(1);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.phase-actions button:hover {
+  transform: scale(1.02) translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.phase-actions button:active {
+  transform: scale(0.98) translateY(0);
+}
+
+.phase-actions button.processing {
+  position: relative;
+  pointer-events: none;
+}
+
+.phase-actions button.processing::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 16px;
+  height: 16px;
+  margin: -8px 0 0 -8px;
+  border: 2px solid transparent;
+  border-top: 2px solid currentColor;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.phase-actions button.processing .btn-text {
+  opacity: 0;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Success/Error Animation States */
+.phase-actions button.success {
+  background: var(--green, #27ae60) !important;
+  border-color: var(--green, #27ae60) !important;
+  animation: successPulse 0.6s ease-out;
+}
+
+.phase-actions button.error {
+  background: var(--red, #ff3b30) !important;
+  border-color: var(--red, #ff3b30) !important;
+  animation: errorShake 0.5s ease-out;
+}
+
+@keyframes successPulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+    box-shadow: 0 0 20px rgba(39, 174, 96, 0.4);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes errorShake {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-5px);
+  }
+  75% {
+    transform: translateX(5px);
+  }
+}
+
+/* Deliverables Section Animations */
+.phase-deliverables {
+  opacity: 1;
+  transform: translateY(0);
+  transition: all 0.3s ease-out;
+}
+
+.phase-deliverables.loading {
+  opacity: 0.7;
+  transform: translateY(10px);
+}
+
+.deliverable-item {
+  opacity: 1;
+  transform: translateY(0);
+  transition: all 0.2s ease-out;
+}
+
+.deliverable-item.entering {
+  animation: deliverableSlideIn 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.deliverable-item.removing {
+  animation: deliverableSlideOut 0.3s ease-in forwards;
+}
+
+@keyframes deliverableSlideIn {
+  0% {
+    opacity: 0;
+    transform: translateY(20px) scale(0.95);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes deliverableSlideOut {
+  0% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-20px) scale(0.95);
+  }
+}
+
+/* File Upload Animation */
+.upload-dropzone {
+  transition: all 0.3s ease-out;
+  position: relative;
+  overflow: hidden;
+}
+
+.upload-dropzone.drag-over {
+  transform: scale(1.02);
+  box-shadow: 0 8px 25px rgba(0, 87, 255, 0.2);
+  border-color: var(--blue, #0057ff);
+  background: rgba(0, 87, 255, 0.05);
+}
+
+.upload-dropzone.uploading {
+  pointer-events: none;
+}
+
+.upload-dropzone.uploading::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(0, 87, 255, 0.2),
+    transparent
+  );
+  animation: uploadProgress 1.5s infinite;
+}
+
+@keyframes uploadProgress {
+  0% {
+    left: -100%;
+  }
+  100% {
+    left: 100%;
+  }
+}
+
+/* Timeline Animations */
+.timeline-item {
+  opacity: 1;
+  transform: translateX(0);
+  transition: all 0.3s ease-out;
+}
+
+.timeline-item.entering {
+  animation: timelineSlideIn 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+@keyframes timelineSlideIn {
+  0% {
+    opacity: 0;
+    transform: translateX(-30px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.timeline-marker {
+  transition: all 0.3s ease-out;
+}
+
+.timeline-item:hover .timeline-marker {
+  transform: scale(1.1);
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+}
+
+/* Modal Transition Animations */
+.project-details-content {
+  animation: modalSlideIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes modalSlideIn {
+  0% {
+    opacity: 0;
+    transform: translateY(30px) scale(0.95);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Project Overview Toggle Animation */
+.project-overview-content {
+  opacity: 1;
+  transform: translateY(0);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.project-overview-content.hidden {
+  opacity: 0;
+  transform: translateY(20px);
+  pointer-events: none;
+}
+
+/* Phase Tab Animations */
+.project-phase-tabs .progress-tab {
+  transition: all 0.2s ease-out;
+}
+
+.project-phase-tabs .progress-tab:hover {
+  transform: translateY(-2px);
+}
+
+.project-phase-tabs .progress-tab.active {
+  animation: tabActivate 0.3s ease-out;
+}
+
+@keyframes tabActivate {
+  0% {
+    transform: scale(0.95);
+  }
+  50% {
+    transform: scale(1.02);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* Loading Spinner Enhancements */
+.loading-spinner {
+  animation: spin 1s linear infinite, pulse 2s ease-in-out infinite;
+}
+
+/* Notification Animations */
+.phase-success-notification,
+.phase-error {
+  animation: notificationSlide 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes notificationSlide {
+  0% {
+    opacity: 0;
+    transform: translateY(-20px) scale(0.95);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Hover Enhancements */
+.deliverable-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+}
+
+.phase-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.12);
+}
+
+/* Reduced Motion Support */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  
+  .phase-content-layout.phase-switching-out,
+  .phase-content-layout.phase-switching-in {
+    transition: none;
+    transform: none;
+    opacity: 1;
+  }
+}
+
+/* Mobile Optimized Animations */
+@media (max-width: 768px) {
+  .phase-card:hover,
+  .deliverable-item:hover {
+    transform: none;
+    box-shadow: none;
+  }
+  
+  /* Reduce animation intensity on mobile */
+  .phase-content-layout {
+    transition-duration: 0.3s;
+  }
+  
+  .phase-actions button:hover {
+    transform: scale(1.01);
+  }
+}
+
+/* Dark Mode Animation Adjustments */
+@media (prefers-color-scheme: dark) {
+  .phase-card:hover {
+    box-shadow: 0 12px 30px rgba(255, 255, 255, 0.1);
+  }
+  
+  .deliverable-item:hover {
+    box-shadow: 0 8px 25px rgba(255, 255, 255, 0.1);
+  }
+}

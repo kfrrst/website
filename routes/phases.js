@@ -1,7 +1,10 @@
 import express from 'express';
 import { body, param, query, validationResult } from 'express-validator';
 import { authenticateToken } from '../middleware/auth.js';
-import { query as dbQuery } from '../config/database.js';
+import { query as dbQuery, beginTransaction, commitTransaction, rollbackTransaction } from '../config/database.js';
+import { logPhaseTransition, logPhaseApproval } from './activities.js';
+import { sendTemplateEmail } from '../utils/emailService.js';
+import { EMAIL_TEMPLATES } from '../utils/emailTemplates.js';
 
 const router = express.Router();
 
@@ -765,6 +768,308 @@ router.put('/actions/:actionId/status', authenticateToken, async (req, res) => {
   }
 });
 
+// POST /api/phases/:phaseId/approve - Approve a phase
+router.post('/:phaseId/approve', authenticateToken, async (req, res) => {
+  const client = await beginTransaction();
+  
+  try {
+    const { phaseId } = req.params;
+    const { notes } = req.body;
+    const userId = req.user.id;
+    
+    // Get phase with project info
+    const phaseQuery = await client.query(`
+      SELECT 
+        pp.*,
+        p.id as project_id,
+        p.name as project_name,
+        p.client_id,
+        pt.current_phase_index
+      FROM project_phases pp
+      JOIN project_phase_tracking pt ON pp.id = pt.current_phase_id
+      JOIN projects p ON pt.project_id = p.id
+      WHERE pp.id = $1
+    `, [phaseId]);
+    
+    if (phaseQuery.rows.length === 0) {
+      await rollbackTransaction(client);
+      return res.status(404).json({ 
+        success: false, 
+        error: 'Phase not found or not current phase' 
+      });
+    }
+    
+    const phase = phaseQuery.rows[0];
+    
+    // Verify permissions
+    if (req.user.role !== 'admin' && phase.client_id !== userId) {
+      await rollbackTransaction(client);
+      return res.status(403).json({ 
+        success: false, 
+        error: 'Only the project owner can approve phases' 
+      });
+    }
+    
+    // Update phase approval in tracking
+    const updateColumns = {
+      'onboarding': 'onboarding_completed_at',
+      'ideation': 'ideation_completed_at',
+      'design': 'design_completed_at',
+      'review': 'review_completed_at',
+      'production': 'production_completed_at',
+      'payment': 'payment_completed_at',
+      'signoff': 'signoff_completed_at',
+      'delivery': 'delivery_completed_at'
+    };
+    
+    const completionColumn = updateColumns[phase.phase_key];
+    if (completionColumn) {
+      await client.query(`
+        UPDATE project_phase_tracking 
+        SET ${completionColumn} = CURRENT_TIMESTAMP
+        WHERE project_id = $1
+      `, [phase.project_id]);
+    }
+    
+    // Log phase approval
+    await logPhaseApproval(client, {
+      user_id: userId,
+      project_id: phase.project_id,
+      phase_id: phaseId,
+      approved: true,
+      notes
+    });
+    
+    // Auto-advance to next phase if not last
+    const nextPhaseIndex = phase.current_phase_index + 1;
+    if (nextPhaseIndex < 8) {
+      const nextPhaseResult = await client.query(
+        'SELECT * FROM project_phases WHERE order_index = $1',
+        [nextPhaseIndex]
+      );
+      
+      if (nextPhaseResult.rows.length > 0) {
+        const nextPhase = nextPhaseResult.rows[0];
+        
+        await client.query(`
+          UPDATE project_phase_tracking
+          SET 
+            current_phase_id = $1,
+            current_phase_index = $2,
+            phase_started_at = CURRENT_TIMESTAMP
+          WHERE project_id = $3
+        `, [nextPhase.id, nextPhaseIndex, phase.project_id]);
+        
+        // Log phase transition
+        await logPhaseTransition(client, {
+          user_id: userId,
+          project_id: phase.project_id,
+          from_phase_id: phaseId,
+          to_phase_id: nextPhase.id,
+          reason: 'Auto-advanced after approval'
+        });
+      }
+    } else {
+      // Mark project as completed
+      await client.query(`
+        UPDATE projects 
+        SET status = 'completed', completed_at = CURRENT_TIMESTAMP
+        WHERE id = $1
+      `, [phase.project_id]);
+      
+      await client.query(`
+        UPDATE project_phase_tracking
+        SET is_completed = true, completed_at = CURRENT_TIMESTAMP
+        WHERE project_id = $1
+      `, [phase.project_id]);
+    }
+    
+    await commitTransaction(client);
+    
+    // Send email notification to admin/team
+    try {
+      // Get admin users
+      const adminResult = await dbQuery(
+        `SELECT email, first_name FROM users WHERE role = 'admin' LIMIT 1`
+      );
+      
+      if (adminResult.rows.length > 0) {
+        const admin = adminResult.rows[0];
+        const userInfo = await dbQuery(
+          `SELECT first_name, last_name FROM users WHERE id = $1`,
+          [userId]
+        );
+        const clientName = userInfo.rows[0] ? 
+          `${userInfo.rows[0].first_name} ${userInfo.rows[0].last_name}` : 'Client';
+        
+        await sendTemplateEmail(EMAIL_TEMPLATES.PHASE_APPROVED, {
+          to: admin.email,
+          clientName: clientName,
+          projectName: phase.project_name,
+          phaseName: phase.name,
+          approvedAt: new Date(),
+          approvalNotes: notes,
+          nextPhase: nextPhaseIndex < 8 ? {
+            name: `Phase ${nextPhaseIndex + 1}`,
+            description: 'Next phase of the project'
+          } : null,
+          projectUrl: `${process.env.BASE_URL || 'http://localhost:3000'}/admin#projects/${phase.project_id}`,
+          context: 'project'
+        });
+      }
+    } catch (emailError) {
+      console.error('Failed to send phase approval email:', emailError);
+      // Don't fail the request if email fails
+    }
+    
+    res.json({
+      success: true,
+      message: 'Phase approved successfully',
+      phase: {
+        id: phaseId,
+        status: 'completed',
+        approved_by: userId,
+        approved_at: new Date().toISOString()
+      }
+    });
+    
+  } catch (error) {
+    await rollbackTransaction(client);
+    console.error('Error approving phase:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Failed to approve phase. Please try again.',
+      errorCode: 'PHASE_APPROVAL_ERROR'
+    });
+  }
+});
+
+// POST /api/phases/:phaseId/request-changes - Request changes for a phase
+router.post('/:phaseId/request-changes', authenticateToken, async (req, res) => {
+  const client = await beginTransaction();
+  
+  try {
+    const { phaseId } = req.params;
+    const { changes_requested } = req.body;
+    const userId = req.user.id;
+    
+    if (!changes_requested || changes_requested.trim().length === 0) {
+      await rollbackTransaction(client);
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Please provide details about the changes needed' 
+      });
+    }
+    
+    // Get phase with project info
+    const phaseQuery = await client.query(`
+      SELECT 
+        pp.*,
+        p.id as project_id,
+        p.name as project_name,
+        p.client_id
+      FROM project_phases pp
+      JOIN project_phase_tracking pt ON pp.id = pt.current_phase_id
+      JOIN projects p ON pt.project_id = p.id
+      WHERE pp.id = $1
+    `, [phaseId]);
+    
+    if (phaseQuery.rows.length === 0) {
+      await rollbackTransaction(client);
+      return res.status(404).json({ 
+        success: false, 
+        error: 'Phase not found or not current phase' 
+      });
+    }
+    
+    const phase = phaseQuery.rows[0];
+    
+    // Verify permissions
+    if (req.user.role !== 'admin' && phase.client_id !== userId) {
+      await rollbackTransaction(client);
+      return res.status(403).json({ 
+        success: false, 
+        error: 'Only the project owner can request changes' 
+      });
+    }
+    
+    // Log phase rejection/change request
+    await logPhaseApproval(client, {
+      user_id: userId,
+      project_id: phase.project_id,
+      phase_id: phaseId,
+      approved: false,
+      notes: changes_requested
+    });
+    
+    // Add as a project message
+    await client.query(`
+      INSERT INTO messages 
+      (project_id, sender_id, message, created_at)
+      VALUES ($1, $2, $3, CURRENT_TIMESTAMP)
+      RETURNING id
+    `, [
+      phase.project_id,
+      userId,
+      `Changes requested for ${phase.name}:\n\n${changes_requested}`
+    ]);
+    
+    await commitTransaction(client);
+    
+    // Send email notification to admin/team
+    try {
+      // Get admin users
+      const adminResult = await dbQuery(
+        `SELECT email, first_name FROM users WHERE role = 'admin' LIMIT 1`
+      );
+      
+      if (adminResult.rows.length > 0) {
+        const admin = adminResult.rows[0];
+        const userInfo = await dbQuery(
+          `SELECT first_name, last_name FROM users WHERE id = $1`,
+          [userId]
+        );
+        const clientName = userInfo.rows[0] ? 
+          `${userInfo.rows[0].first_name} ${userInfo.rows[0].last_name}` : 'Client';
+        
+        await sendTemplateEmail(EMAIL_TEMPLATES.PHASE_CHANGES_REQUESTED, {
+          to: admin.email,
+          clientName: clientName,
+          projectName: phase.project_name,
+          phaseName: phase.name,
+          requestedAt: new Date(),
+          feedback: changes_requested,
+          projectUrl: `${process.env.BASE_URL || 'http://localhost:3000'}/admin#projects/${phase.project_id}`,
+          context: 'project'
+        });
+      }
+    } catch (emailError) {
+      console.error('Failed to send changes requested email:', emailError);
+      // Don't fail the request if email fails
+    }
+    
+    res.json({
+      success: true,
+      message: 'Change request submitted successfully',
+      phase: {
+        id: phaseId,
+        status: 'changes_requested',
+        last_feedback: changes_requested,
+        last_feedback_at: new Date().toISOString()
+      }
+    });
+    
+  } catch (error) {
+    await rollbackTransaction(client);
+    console.error('Error requesting changes:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Failed to submit change request. Please try again.',
+      errorCode: 'CHANGE_REQUEST_ERROR'
+    });
+  }
+});
+
 // POST /api/phases/projects/:projectId/advance - Advance to next phase
 router.post('/projects/:projectId/advance', authenticateToken, async (req, res) => {
   try {
@@ -822,6 +1127,47 @@ router.post('/projects/:projectId/advance', authenticateToken, async (req, res) 
       `Phase advanced to ${nextPhase.name}`,
       JSON.stringify({ from_index: next_phase_index - 1, to_index: next_phase_index, notes })
     ]);
+    
+    // Send email notification to client if phase requires approval
+    if (nextPhase.requires_client_action && req.user.role === 'admin') {
+      try {
+        // Get client info
+        const clientResult = await dbQuery(
+          `SELECT u.email, u.first_name, u.last_name 
+           FROM users u 
+           JOIN projects p ON u.id = p.client_id 
+           WHERE p.id = $1`,
+          [projectId]
+        );
+        
+        if (clientResult.rows.length > 0) {
+          const client = clientResult.rows[0];
+          const clientName = `${client.first_name} ${client.last_name || ''}`.trim();
+          
+          // Get deliverable count for this phase
+          const deliverableResult = await dbQuery(
+            `SELECT COUNT(*) as count FROM files WHERE project_id = $1 AND phase_id = $2`,
+            [projectId, nextPhase.id]
+          );
+          
+          await sendTemplateEmail(EMAIL_TEMPLATES.PHASE_APPROVAL_NEEDED, {
+            to: client.email,
+            userId: project.client_id,
+            clientName: clientName,
+            projectName: project.name,
+            phaseName: nextPhase.name,
+            phaseDescription: nextPhase.description,
+            deliverableCount: parseInt(deliverableResult.rows[0].count),
+            reviewUrl: `${process.env.BASE_URL || 'http://localhost:3000'}/portal#projects`,
+            context: 'phase',
+            type: 'phase_approval'
+          });
+        }
+      } catch (emailError) {
+        console.error('Failed to send phase approval needed email:', emailError);
+        // Don't fail the request if email fails
+      }
+    }
     
     res.json({
       success: true,

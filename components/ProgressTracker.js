@@ -39,9 +39,14 @@ export class ProgressTracker {
       container: null,
       currentPhase: 0,
       phases: BRAND.phaseDefinitions,
+      dynamicPhases: [], // Support for service-specific phases
+      serviceType: null,
       onPhaseClick: () => {},
       onActionComplete: () => {},
+      onPhaseTransition: () => {},
       authToken: null,
+      enableDynamicNavigation: true,
+      showNewComponents: true, // Enable new component integration
       ...options
     };
     
@@ -49,6 +54,13 @@ export class ProgressTracker {
     this.phaseTracking = null;
     this.clientActions = [];
     this.isLoading = false;
+    this.serviceConfig = null;
+    this.dynamicComponents = {
+      ProofChecklist: null,
+      BatchStatus: null,
+      StagingLink: null
+    };
+    this.websocketConnection = null;
   }
 
   async init(projectId) {
@@ -56,11 +68,16 @@ export class ProgressTracker {
     this.isLoading = true;
     
     try {
+      // Initialize WebSocket connection if available
+      if (window.io && this.options.enableDynamicNavigation) {
+        this.initializeWebSocket();
+      }
+      
       // Debug auth token
       console.log('ProgressTracker auth token:', this.options.authToken ? `${this.options.authToken.substring(0, 20)}...` : 'NO TOKEN!');
       
-      // Fetch project phase data
-      const response = await fetch(`/api/phases/project/${projectId}/tracking`, {
+      // Fetch project phase data with service configuration
+      const response = await fetch(`/api/phases/project/${projectId}/tracking?include_service=true`, {
         headers: {
           'Authorization': `Bearer ${this.options.authToken}`,
           'Content-Type': 'application/json'
@@ -99,6 +116,18 @@ export class ProgressTracker {
       this.projectData = data.project;
       this.phaseTracking = data.tracking;
       this.clientActions = data.actions || [];
+      this.serviceConfig = data.service_config || null;
+      
+      // Use dynamic phases if available
+      if (data.service_config && data.service_config.phases) {
+        this.options.dynamicPhases = data.service_config.phases;
+        this.options.serviceType = data.service_config.service_type;
+      }
+      
+      // Initialize new components if enabled
+      if (this.options.showNewComponents) {
+        this.initializeNewComponents();
+      }
       
       this.render();
       this.setupEventListeners();
@@ -108,6 +137,46 @@ export class ProgressTracker {
       this.renderError(error.message);
     } finally {
       this.isLoading = false;
+    }
+  }
+
+  async initWithData(projectId, phasesData) {
+    this.options.projectId = projectId;
+    this.isLoading = true;
+    
+    try {
+      // Use the provided phase data directly
+      this.projectData = {
+        id: projectId,
+        phases: phasesData.phases,
+        project: phasesData.project
+      };
+      this.phaseTracking = phasesData.tracking || {};
+      this.clientActions = [];
+      
+      this.render();
+      this.setupEventListeners();
+      
+    } catch (error) {
+      console.error('Error initializing progress tracker with data:', error);
+      this.renderError(error.message);
+    } finally {
+      this.isLoading = false;
+    }
+  }
+
+  updateWithData(phasesData) {
+    try {
+      // Update the internal data
+      this.projectData.phases = phasesData.phases;
+      this.phaseTracking = phasesData.tracking || {};
+      
+      // Re-render with updated data
+      this.render();
+      
+      console.log('Progress tracker updated with new data');
+    } catch (error) {
+      console.error('Error updating progress tracker with data:', error);
     }
   }
 
@@ -124,7 +193,7 @@ export class ProgressTracker {
 
   generateHTML() {
     const currentPhaseIndex = this.phaseTracking?.current_phase_index || 0;
-    const phases = this.options.phases;
+    const phases = this.getEffectivePhases();
     
     // Check if we're in tab mode
     if (this.options.orientation === 'tabs') {
@@ -164,6 +233,7 @@ export class ProgressTracker {
         <div class="phase-tabs-content">
           ${this.renderCurrentPhaseDetails(phases[currentPhaseIndex], currentPhaseIndex)}
         </div>
+        ${this.options.serviceType ? `<div class="service-type-indicator">Service: ${this.options.serviceType}</div>` : ''}
       </div>
     `;
   }
@@ -172,6 +242,7 @@ export class ProgressTracker {
     const status = this.getPhaseStatus(index, currentIndex);
     const isClickable = this.options.onPhaseClick;
     const isActive = index === currentIndex;
+    const activityCount = phase.activity_count || 0;
     
     return `
       <button class="phase-tab ${status} ${isActive ? 'active' : ''} ${isClickable ? 'clickable' : ''}" 
@@ -181,6 +252,7 @@ export class ProgressTracker {
         <span class="tab-icon">${this.getPhaseIcon(phase.key)}</span>
         <span class="tab-label">${phase.name}</span>
         ${status === 'completed' ? '<span class="tab-check">✓</span>' : ''}
+        ${activityCount > 0 ? `<span class="tab-comment-badge" title="${activityCount} activities">${activityCount}</span>` : ''}
       </button>
     `;
   }
@@ -221,6 +293,8 @@ export class ProgressTracker {
         </div>
         
         ${phase.description ? `<p class="phase-description">${phase.description}</p>` : ''}
+        
+        ${this.renderNewComponents(phase.key, phaseIndex)}
         
         ${actions.length > 0 ? this.renderPhaseActions(actions, phase) : ''}
         
@@ -382,7 +456,8 @@ export class ProgressTracker {
 
   calculateProgress() {
     if (!this.phaseTracking) return 0;
-    const totalPhases = this.options.phases.length;
+    const phases = this.getEffectivePhases();
+    const totalPhases = phases.length;
     const currentIndex = this.phaseTracking.current_phase_index || 0;
     const phaseProgress = (currentIndex / (totalPhases - 1)) * 100;
     
@@ -394,7 +469,8 @@ export class ProgressTracker {
     }
     
     // Add progress within current phase
-    const currentPhaseActions = this.getPhaseActions(this.options.phases[currentIndex]?.key);
+    const effectivePhases = this.getEffectivePhases();
+    const currentPhaseActions = this.getPhaseActions(effectivePhases[currentIndex]?.key);
     if (currentPhaseActions.length > 0) {
       const completedActions = currentPhaseActions.filter(a => this.isActionCompleted(a.id));
       const actionProgress = (completedActions.length / currentPhaseActions.length) * (100 / totalPhases);
@@ -434,6 +510,195 @@ export class ProgressTracker {
     return new Date(dateString).toLocaleDateString();
   }
 
+  // New component rendering
+  renderNewComponents(phaseKey, phaseIndex) {
+    if (!this.options.showNewComponents) return '';
+    
+    let componentsHTML = '';
+    
+    // ProofChecklist for review phase
+    if (phaseKey === 'review' && this.dynamicComponents.ProofChecklist) {
+      componentsHTML += `
+        <div class="phase-component proof-checklist-container">
+          <h5>Proof Approval Checklist</h5>
+          <div id="proof-checklist-${this.options.projectId}" class="component-placeholder">
+            <!-- ProofChecklist component will be mounted here -->
+          </div>
+        </div>
+      `;
+    }
+    
+    // BatchStatus for production phase
+    if ((phaseKey === 'production' || phaseKey === 'design') && this.dynamicComponents.BatchStatus) {
+      componentsHTML += `
+        <div class="phase-component batch-status-container">
+          <h5>Processing Status</h5>
+          <div id="batch-status-${this.options.projectId}" class="component-placeholder">
+            <!-- BatchStatus component will be mounted here -->
+          </div>
+        </div>
+      `;
+    }
+    
+    // StagingLink for review and delivery phases
+    if ((phaseKey === 'review' || phaseKey === 'delivery') && this.dynamicComponents.StagingLink) {
+      componentsHTML += `
+        <div class="phase-component staging-link-container">
+          <h5>Preview Links</h5>
+          <div id="staging-link-${this.options.projectId}" class="component-placeholder">
+            <!-- StagingLink component will be mounted here -->
+          </div>
+        </div>
+      `;
+    }
+    
+    return componentsHTML;
+  }
+  
+  // Initialize WebSocket connection
+  initializeWebSocket() {
+    try {
+      this.websocketConnection = window.io();
+      
+      this.websocketConnection.on('phase_transition', (data) => {
+        if (data.project_id === this.options.projectId) {
+          this.handlePhaseTransition(data);
+        }
+      });
+      
+      this.websocketConnection.on('project_update', (data) => {
+        if (data.project_id === this.options.projectId) {
+          this.handleProjectUpdate(data);
+        }
+      });
+      
+      console.log('ProgressTracker WebSocket initialized');
+    } catch (error) {
+      console.warn('WebSocket initialization failed:', error);
+    }
+  }
+  
+  // Initialize new components
+  initializeNewComponents() {
+    // Mark components as available for rendering
+    this.dynamicComponents.ProofChecklist = true;
+    this.dynamicComponents.BatchStatus = true;
+    this.dynamicComponents.StagingLink = true;
+  }
+  
+  // Handle phase transitions
+  handlePhaseTransition(data) {
+    console.log('Phase transition received:', data);
+    
+    // Update phase tracking
+    if (this.phaseTracking) {
+      this.phaseTracking.current_phase_index = data.to_phase_index;
+    }
+    
+    // Re-render with new phase
+    this.render();
+    this.setupEventListeners();
+    
+    // Notify parent application
+    if (this.options.onPhaseTransition) {
+      this.options.onPhaseTransition(data);
+    }
+    
+    // Show phase transition notification
+    this.showPhaseTransitionNotification(data);
+  }
+  
+  // Handle project updates
+  handleProjectUpdate(data) {
+    console.log('Project update received:', data);
+    
+    // Update project data
+    if (data.tracking) {
+      this.phaseTracking = { ...this.phaseTracking, ...data.tracking };
+    }
+    
+    if (data.actions) {
+      this.clientActions = data.actions;
+    }
+    
+    // Re-render with updated data
+    this.render();
+    this.setupEventListeners();
+  }
+  
+  // Show phase transition notification
+  showPhaseTransitionNotification(data) {
+    const phaseList = this.getEffectivePhases();
+    const fromPhase = phaseList[data.from_phase_index];
+    const toPhase = phaseList[data.to_phase_index];
+    
+    if (fromPhase && toPhase) {
+      const notification = document.createElement('div');
+      notification.className = 'phase-transition-notification';
+      notification.innerHTML = `
+        <div class="notification-content">
+          <span class="notification-icon">🎉</span>
+          <div class="notification-text">
+            <strong>Phase Advanced!</strong>
+            <p>Moved from ${fromPhase.name} to ${toPhase.name}</p>
+          </div>
+          <button class="notification-close" onclick="this.parentElement.parentElement.remove()">×</button>
+        </div>
+      `;
+      
+      document.body.appendChild(notification);
+      
+      // Auto-remove after 5 seconds
+      setTimeout(() => {
+        if (notification.parentElement) {
+          notification.remove();
+        }
+      }, 5000);
+    }
+  }
+  
+  // Get effective phases (dynamic or default)
+  getEffectivePhases() {
+    return this.options.dynamicPhases.length > 0 ? this.options.dynamicPhases : this.options.phases;
+  }
+  
+  // Enhanced phase advancement
+  async advancePhase(targetPhaseIndex) {
+    const currentIndex = this.phaseTracking?.current_phase_index || 0;
+    const availablePhases = this.getEffectivePhases();
+    
+    if (targetPhaseIndex <= currentIndex || targetPhaseIndex >= availablePhases.length) {
+      console.warn('Invalid phase advancement target:', targetPhaseIndex);
+      return false;
+    }
+    
+    try {
+      const response = await fetch(`/api/projects/${this.options.projectId}/advance-phase`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${this.options.authToken}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          target_phase_index: targetPhaseIndex,
+          service_type: this.options.serviceType
+        })
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Phase advancement failed: ${response.status}`);
+      }
+      
+      const result = await response.json();
+      console.log('Phase advanced successfully:', result);
+      
+      return true;
+    } catch (error) {
+      console.error('Phase advancement error:', error);
+      return false;
+    }
+  }
+  
   // Event handling
   attachEventListeners() {
     const container = this.options.container;
@@ -819,6 +1084,130 @@ style.textContent = `
 
 .progress-tracker-error button {
   margin-top: 1rem;
+}
+
+/* New component integration styles */
+.phase-component {
+  margin: 1.5rem 0;
+  padding: 1rem;
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+}
+
+.phase-component h5 {
+  margin: 0 0 1rem 0;
+  color: #333;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.component-placeholder {
+  min-height: 100px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #999;
+  font-style: italic;
+}
+
+.service-type-indicator {
+  text-align: center;
+  padding: 0.5rem;
+  background: #f0f9ff;
+  border: 1px solid #0ea5e9;
+  border-radius: 4px;
+  margin-top: 1rem;
+  color: #0ea5e9;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+/* Phase transition notification */
+.phase-transition-notification {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 1000;
+  background: white;
+  border: 1px solid #4CAF50;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  animation: slideInRight 0.3s ease;
+}
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.notification-content {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 1.5rem;
+  min-width: 300px;
+}
+
+.notification-icon {
+  font-size: 1.5rem;
+}
+
+.notification-text {
+  flex: 1;
+}
+
+.notification-text strong {
+  color: #4CAF50;
+  font-size: 1rem;
+  display: block;
+  margin-bottom: 0.25rem;
+}
+
+.notification-text p {
+  margin: 0;
+  color: #666;
+  font-size: 0.875rem;
+}
+
+.notification-close {
+  background: none;
+  border: none;
+  font-size: 1.2rem;
+  color: #999;
+  cursor: pointer;
+  padding: 0.25rem;
+  border-radius: 2px;
+  transition: all 0.2s ease;
+}
+
+.notification-close:hover {
+  background: #f5f5f5;
+  color: #333;
+}
+
+/* Enhanced phase nodes for dynamic navigation */
+.phase-node.dynamic {
+  transition: all 0.3s ease;
+}
+
+.phase-node.dynamic:hover {
+  transform: translateY(-4px) scale(1.05);
+  box-shadow: 0 4px 12px rgba(33, 150, 243, 0.2);
+}
+
+.phase-node.dynamic .node-icon {
+  transition: all 0.3s ease;
+}
+
+.phase-node.dynamic:hover .node-icon {
+  box-shadow: 0 0 0 6px rgba(33, 150, 243, 0.15);
 }
 `;
 

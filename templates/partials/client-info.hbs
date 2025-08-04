@@ -1,0 +1,23 @@
+<div class="client-info section">
+  <h3>Client Information</h3>
+  <table>
+    <tr>
+      <td><strong>Name:</strong></td>
+      <td>{{client.name}}</td>
+    </tr>
+    <tr>
+      <td><strong>Company:</strong></td>
+      <td>{{client.company}}</td>
+    </tr>
+    <tr>
+      <td><strong>Email:</strong></td>
+      <td>{{client.email}}</td>
+    </tr>
+    {{#if client.phone}}
+    <tr>
+      <td><strong>Phone:</strong></td>
+      <td>{{client.phone}}</td>
+    </tr>
+    {{/if}}
+  </table>
+</div>

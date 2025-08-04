@@ -1,0 +1,48 @@
+<h2 class="mt-0">Phase Completed Successfully</h2>
+
+<p>Hi {{clientName}},</p>
+
+<p>Great news! The <strong>{{phaseName}}</strong> phase for your project "{{projectName}}" has been completed.</p>
+
+<div class="success-box">
+  <h3 class="mt-0">Completion Details</h3>
+  <p class="mb-0"><strong>Phase:</strong> {{phaseName}}</p>
+  <p class="mb-0"><strong>Completed on:</strong> {{formatDate completedAt}}</p>
+  {{#if deliverableCount}}
+  <p class="mb-0"><strong>Deliverables:</strong> {{deliverableCount}} file{{#if (gt deliverableCount 1)}}s{{/if}} available</p>
+  {{/if}}
+</div>
+
+{{#if keyDeliverables}}
+<h3>What Was Delivered:</h3>
+<ul>
+  {{#each keyDeliverables}}
+  <li>{{this}}</li>
+  {{/each}}
+</ul>
+{{/if}}
+
+{{#if nextPhase}}
+<h3>What's Next?</h3>
+<p>We'll be starting work on <strong>{{nextPhase.name}}</strong>{{#if nextPhase.description}}: {{nextPhase.description}}{{/if}}</p>
+
+{{#if nextPhase.requiresApproval}}
+<p class="info-box">
+  <strong>Note:</strong> The next phase will require your review and approval before we can proceed further.
+</p>
+{{/if}}
+{{/if}}
+
+{{#if isLastPhase}}
+<h3>🎉 Project Complete!</h3>
+<p>This was the final phase of your project. Thank you for working with us throughout this creative journey!</p>
+{{/if}}
+
+<div class="text-center mt-40 mb-40">
+  <a href="{{projectUrl}}" class="button">View Project</a>
+</div>
+
+<p>If you have any questions about the completed work, please don't hesitate to reach out.</p>
+
+<p>Best regards,<br>
+The [RE]Print Studios Team</p>

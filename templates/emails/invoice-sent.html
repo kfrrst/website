@@ -1,0 +1,75 @@
+<h2 class="mt-0">Invoice for Your Project</h2>
+
+<p>Hi {{clientName}},</p>
+
+<p>Thank you for your continued partnership with [RE]Print Studios. Please find your invoice details below.</p>
+
+<div class="info-box">
+  <h3 class="mt-0">Invoice Details</h3>
+  <p><strong>Invoice Number:</strong> {{invoiceNumber}}</p>
+  <p><strong>Issue Date:</strong> {{formatDate issueDate}}</p>
+  <p><strong>Due Date:</strong> {{formatDate dueDate}}</p>
+  <p><strong>Project:</strong> {{projectName}}</p>
+  <p class="mb-0" style="font-size: 24px; color: #2E2E2E;"><strong>Amount Due:</strong> {{formatCurrency totalAmount}}</p>
+</div>
+
+{{#if description}}
+<h3>Description</h3>
+<p>{{description}}</p>
+{{/if}}
+
+{{#if lineItems}}
+<h3>Invoice Breakdown</h3>
+<table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+  <thead>
+    <tr style="border-bottom: 2px solid #F2EDE6;">
+      <th style="text-align: left; padding: 10px 0;">Item</th>
+      <th style="text-align: right; padding: 10px 0;">Amount</th>
+    </tr>
+  </thead>
+  <tbody>
+    {{#each lineItems}}
+    <tr style="border-bottom: 1px solid #F2EDE6;">
+      <td style="padding: 10px 0;">{{this.description}}</td>
+      <td style="text-align: right; padding: 10px 0;">{{formatCurrency this.amount}}</td>
+    </tr>
+    {{/each}}
+  </tbody>
+  <tfoot>
+    <tr>
+      <td style="padding: 10px 0; font-weight: bold;">Total</td>
+      <td style="text-align: right; padding: 10px 0; font-weight: bold;">{{formatCurrency totalAmount}}</td>
+    </tr>
+  </tfoot>
+</table>
+{{/if}}
+
+<h3>Payment Options</h3>
+<p>You can pay this invoice securely online through your client portal:</p>
+
+<div class="text-center mt-40 mb-40">
+  <a href="{{paymentUrl}}" class="button">Pay Invoice Online</a>
+</div>
+
+<p style="text-align: center; color: #666666;">
+  <em>We accept all major credit cards and ACH transfers.</em>
+</p>
+
+{{#if attachmentNote}}
+<p><strong>Note:</strong> A PDF copy of this invoice is attached to this email for your records.</p>
+{{/if}}
+
+<p>If you have any questions about this invoice, please contact our billing team at <a href="mailto:billing@reprintstudios.com">billing@reprintstudios.com</a>.</p>
+
+<p>Thank you for your business!</p>
+
+<p>Best regards,<br>
+The [RE]Print Studios Team</p>
+
+<hr style="margin: 40px 0; border: none; border-top: 1px solid #F2EDE6;">
+
+<p style="text-align: center; font-size: 12px; color: #999999;">
+  [RE]Print Studios<br>
+  Bloomington, IL<br>
+  Tax ID: XX-XXXXXXX
+</p>

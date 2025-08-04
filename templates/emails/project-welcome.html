@@ -1,0 +1,52 @@
+<h2 class="mt-0">Welcome to Your Project!</h2>
+
+<p>Hi {{clientName}},</p>
+
+<p>We're excited to begin working on <strong>{{projectName}}</strong> with you! Your project has been set up in our system and we're ready to start bringing your vision to life.</p>
+
+<div class="info-box">
+  <h3 class="mt-0">Project Overview</h3>
+  <p><strong>Project:</strong> {{projectName}}</p>
+  {{#if projectDescription}}
+  <p><strong>Description:</strong> {{projectDescription}}</p>
+  {{/if}}
+  <p><strong>Start Date:</strong> {{formatDate startDate}}</p>
+  {{#if estimatedEndDate}}
+  <p><strong>Estimated Completion:</strong> {{formatDate estimatedEndDate}}</p>
+  {{/if}}
+  <p class="mb-0"><strong>Total Phases:</strong> {{totalPhases}}</p>
+</div>
+
+<h3>Your Project Journey</h3>
+<p>Your project will progress through the following phases:</p>
+
+<ol>
+  {{#each phases}}
+  <li><strong>{{this.name}}</strong>{{#if this.description}} - {{this.description}}{{/if}}</li>
+  {{/each}}
+</ol>
+
+<h3>What You Can Expect</h3>
+<ul>
+  <li>Regular updates as we complete each phase</li>
+  <li>Clear communication throughout the process</li>
+  <li>Opportunities to review and provide feedback at key milestones</li>
+  <li>All project files organized in one convenient location</li>
+</ul>
+
+<h3>Access Your Project</h3>
+<p>You can track progress, view deliverables, and communicate with our team through your client portal:</p>
+
+<div class="text-center mt-40 mb-40">
+  <a href="{{portalUrl}}" class="button">Go to Client Portal</a>
+</div>
+
+{{#if projectManager}}
+<p><strong>Your Project Manager:</strong> {{projectManager.name}}<br>
+Feel free to reach out at <a href="mailto:{{projectManager.email}}">{{projectManager.email}}</a> if you have any questions.</p>
+{{/if}}
+
+<p>We're looking forward to this creative journey together!</p>
+
+<p>Best regards,<br>
+The [RE]Print Studios Team</p>

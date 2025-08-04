@@ -14,8 +14,10 @@ import { generateInvoicePDF } from '../utils/pdfGenerator.js';
 import { 
   sendInvoiceEmail, 
   sendPaymentConfirmationEmail,
-  sendOverdueReminderEmail 
+  sendOverdueReminderEmail,
+  sendTemplateEmail
 } from '../utils/emailService.js';
+import { EMAIL_TEMPLATES } from '../utils/emailTemplates.js';
 
 const router = express.Router();
 
@@ -442,7 +444,30 @@ router.post('/:id/send', authenticateToken, async (req, res) => {
     // Generate PDF
     const pdfBuffer = await generateInvoicePDF(invoice, lineItemsResult.rows, invoice);
     
-    // Send email
+    // Send email using the new template system
+    const clientName = `${invoice.first_name} ${invoice.last_name || ''}`.trim();
+    
+    await sendTemplateEmail(EMAIL_TEMPLATES.INVOICE_SENT, {
+      to: invoice.email,
+      userId: invoice.client_id,
+      clientName: clientName,
+      invoiceNumber: invoice.invoice_number,
+      issueDate: invoice.issue_date,
+      dueDate: invoice.due_date,
+      projectName: invoice.title,
+      totalAmount: invoice.total_amount,
+      description: invoice.description,
+      lineItems: lineItemsResult.rows.map(item => ({
+        description: item.description,
+        amount: item.amount
+      })),
+      paymentUrl: `${process.env.BASE_URL || 'http://localhost:3000'}/portal/invoices/${id}`,
+      attachmentNote: true,
+      context: 'invoice',
+      type: 'invoice'
+    });
+    
+    // Also send with PDF attachment using the old method for backward compatibility
     await sendInvoiceEmail(invoice, invoice, pdfBuffer);
     
     // Update invoice status
@@ -593,6 +618,25 @@ router.post('/:id/pay', authenticateToken, async (req, res) => {
       
       // Send payment confirmation email
       try {
+        const clientName = `${invoice.first_name} ${invoice.last_name || ''}`.trim();
+        
+        await sendTemplateEmail(EMAIL_TEMPLATES.PAYMENT_RECEIVED, {
+          to: invoice.email,
+          userId: invoice.client_id,
+          clientName: clientName,
+          invoiceNumber: invoice.invoice_number,
+          amountPaid: invoice.total_amount,
+          paymentDate: new Date(),
+          paymentMethod: 'Credit Card',
+          transactionId: paymentIntent.id,
+          projectName: invoice.title,
+          isProjectComplete: false, // Would need to check project status
+          portalUrl: `${process.env.BASE_URL || 'http://localhost:3000'}/portal`,
+          context: 'invoice',
+          type: 'invoice'
+        });
+        
+        // Also send using old method for backward compatibility
         await sendPaymentConfirmationEmail(
           { ...invoice, paid_date: new Date(), payment_reference: paymentIntent.id },
           invoice

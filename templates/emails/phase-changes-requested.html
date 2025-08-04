@@ -1,0 +1,31 @@
+<h2 class="mt-0">Changes Requested - We're On It!</h2>
+
+<p>Hi {{clientName}},</p>
+
+<p>Thank you for reviewing <strong>{{phaseName}}</strong> for your project "{{projectName}}". We've received your feedback and are working on the requested changes.</p>
+
+<div class="warning-box">
+  <h3 class="mt-0">Change Request Details</h3>
+  <p class="mb-0"><strong>Phase:</strong> {{phaseName}}</p>
+  <p class="mb-0"><strong>Requested at:</strong> {{formatDate requestedAt}}</p>
+  {{#if feedback}}
+  <p class="mb-0"><strong>Your feedback:</strong></p>
+  <p class="mb-0" style="white-space: pre-wrap;">{{feedback}}</p>
+  {{/if}}
+</div>
+
+<h3>What Happens Next?</h3>
+<p>Our team is reviewing your feedback and will implement the requested changes. We'll notify you as soon as the updated deliverables are ready for your review.</p>
+
+{{#if estimatedCompletionDate}}
+<p><strong>Estimated completion:</strong> {{formatDate estimatedCompletionDate}}</p>
+{{/if}}
+
+<div class="text-center mt-40 mb-40">
+  <a href="{{projectUrl}}" class="button">View Project</a>
+</div>
+
+<p>If you have any additional comments or need to clarify your feedback, please don't hesitate to reach out to our project team.</p>
+
+<p>Best regards,<br>
+The [RE]Print Studios Team</p>

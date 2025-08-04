@@ -2,6 +2,8 @@ import express from 'express';
 import { body, param, query, validationResult } from 'express-validator';
 import { authenticateToken, requireAdmin } from '../middleware/auth.js';
 import { query as dbQuery, beginTransaction, commitTransaction, rollbackTransaction } from '../config/database.js';
+import { sendTemplateEmail } from '../utils/emailService.js';
+import { EMAIL_TEMPLATES } from '../utils/emailTemplates.js';
 
 const router = express.Router();
 
@@ -424,6 +426,51 @@ router.post('/',
 
       await commitTransaction(client);
 
+      // Send welcome email to client
+      try {
+        // Get client full details for email
+        const clientResult = await dbQuery(
+          `SELECT email, first_name, last_name FROM users WHERE id = $1`,
+          [client_id]
+        );
+        
+        if (clientResult.rows.length > 0) {
+          const clientInfo = clientResult.rows[0];
+          const clientName = `${clientInfo.first_name} ${clientInfo.last_name || ''}`.trim();
+          
+          // Get all phases for the email
+          const phasesResult = await dbQuery(
+            `SELECT phase_key, name, description FROM project_phases ORDER BY order_index`
+          );
+          
+          await sendTemplateEmail(EMAIL_TEMPLATES.PROJECT_WELCOME, {
+            to: clientInfo.email,
+            userId: client_id,
+            clientName: clientName,
+            projectName: name,
+            projectDescription: description,
+            startDate: start_date || new Date(),
+            estimatedEndDate: due_date,
+            totalPhases: phasesResult.rows.length,
+            phases: phasesResult.rows.map(phase => ({
+              name: phase.name,
+              description: phase.description
+            })),
+            portalUrl: `${process.env.BASE_URL || 'http://localhost:3000'}/portal`,
+            projectManager: {
+              name: 'Kendrick Forrest',
+              email: 'kendrick@reprintstudios.com'
+            },
+            hasProject: true,
+            context: 'project',
+            type: 'project_notifications'
+          });
+        }
+      } catch (emailError) {
+        console.error('Failed to send project welcome email:', emailError);
+        // Don't fail the request if email fails
+      }
+
       res.status(201).json({
         message: 'Project created successfully',
         project: newProject
@@ -561,6 +608,88 @@ router.put('/:id',
       );
 
       await commitTransaction(dbClient);
+
+      // Send project completion email if status changed to completed
+      if (updatedFields.status === 'completed' && currentProject.status !== 'completed') {
+        try {
+          // Get client and project details
+          const projectResult = await dbQuery(
+            `SELECT 
+              p.*, 
+              u.email, u.first_name, u.last_name,
+              COUNT(DISTINCT f.id) as total_deliverables
+             FROM projects p
+             JOIN users u ON p.client_id = u.id
+             LEFT JOIN files f ON f.project_id = p.id AND f.is_active = true
+             WHERE p.id = $1
+             GROUP BY p.id, u.email, u.first_name, u.last_name`,
+            [projectId]
+          );
+          
+          if (projectResult.rows.length > 0) {
+            const project = projectResult.rows[0];
+            const clientName = `${project.first_name} ${project.last_name || ''}`.trim();
+            
+            // Get completed phases
+            const phasesResult = await dbQuery(
+              `SELECT pp.name, 
+                CASE
+                  WHEN pp.phase_key = 'onboarding' THEN pt.onboarding_completed_at
+                  WHEN pp.phase_key = 'ideation' THEN pt.ideation_completed_at
+                  WHEN pp.phase_key = 'design' THEN pt.design_completed_at
+                  WHEN pp.phase_key = 'review' THEN pt.review_completed_at
+                  WHEN pp.phase_key = 'production' THEN pt.production_completed_at
+                  WHEN pp.phase_key = 'payment' THEN pt.payment_completed_at
+                  WHEN pp.phase_key = 'signoff' THEN pt.signoff_completed_at
+                  WHEN pp.phase_key = 'delivery' THEN pt.delivery_completed_at
+                END as completed_at
+               FROM project_phases pp
+               CROSS JOIN project_phase_tracking pt
+               WHERE pt.project_id = $1
+               ORDER BY pp.order_index`,
+              [projectId]
+            );
+            
+            // Check for outstanding invoices
+            const invoiceResult = await dbQuery(
+              `SELECT COUNT(*) as unpaid_count 
+               FROM invoices 
+               WHERE project_id = $1 AND status IN ('draft', 'sent', 'overdue')`,
+              [projectId]
+            );
+            
+            // Calculate project duration
+            const startDate = new Date(project.start_date || project.created_at);
+            const completionDate = new Date();
+            const durationDays = Math.ceil((completionDate - startDate) / (1000 * 60 * 60 * 24));
+            const durationText = durationDays > 30 
+              ? `${Math.floor(durationDays / 30)} months` 
+              : `${durationDays} days`;
+            
+            await sendTemplateEmail(EMAIL_TEMPLATES.PROJECT_COMPLETED, {
+              to: project.email,
+              userId: project.client_id,
+              clientName: clientName,
+              projectName: project.name,
+              startDate: startDate,
+              completionDate: completionDate,
+              projectDuration: durationText,
+              totalDeliverables: project.total_deliverables,
+              completedPhases: phasesResult.rows.filter(p => p.completed_at).map(p => ({
+                name: p.name,
+                completedAt: p.completed_at
+              })),
+              portalUrl: `${process.env.BASE_URL || 'http://localhost:3000'}/portal`,
+              hasOutstandingInvoice: invoiceResult.rows[0].unpaid_count > 0,
+              context: 'project',
+              type: 'project_notifications'
+            });
+          }
+        } catch (emailError) {
+          console.error('Failed to send project completion email:', emailError);
+          // Don't fail the request if email fails
+        }
+      }
 
       res.json({
         message: 'Project updated successfully',
@@ -942,6 +1071,129 @@ router.post('/:id/progress',
       await rollbackTransaction(client);
       console.error('Error updating project progress:', error);
       res.status(500).json({ error: 'Failed to update project progress' });
+    }
+  }
+);
+
+// =============================================================================
+// GET /api/projects/:id/phases - Get project phases with status
+// =============================================================================
+router.get('/:id/phases',
+  authenticateToken,
+  [
+    param('id').isUUID().withMessage('Invalid project ID format')
+  ],
+  validateRequest,
+  async (req, res) => {
+    try {
+      const { id: projectId } = req.params;
+      const userId = req.user.id;
+      const userRole = req.user.role;
+
+      // Check project access
+      if (!await canAccessProject(projectId, userId, userRole)) {
+        return res.status(404).json({ error: 'Project not found or access denied' });
+      }
+
+      // Get project phases with tracking data
+      const phasesQuery = `
+        SELECT 
+          pp.id,
+          pp.phase_key,
+          pp.name,
+          pp.description,
+          pp.order_index,
+          pp.requires_approval,
+          pp.expected_duration_days,
+          pt.current_phase_index,
+          pt.current_phase_id,
+          pt.onboarding_completed_at,
+          pt.ideation_completed_at,
+          pt.design_completed_at,
+          pt.review_completed_at,
+          pt.production_completed_at,
+          pt.payment_completed_at,
+          pt.signoff_completed_at,
+          pt.delivery_completed_at,
+          pt.is_completed,
+          CASE 
+            WHEN pp.id = pt.current_phase_id AND NOT pt.is_completed THEN 'in_progress'
+            WHEN pp.order_index < pt.current_phase_index THEN 'completed'
+            WHEN pp.order_index > pt.current_phase_index THEN 'not_started'
+            WHEN pt.is_completed THEN 'completed'
+            ELSE 'not_started'
+          END as status,
+          CASE
+            WHEN pp.phase_key = 'onboarding' THEN pt.onboarding_completed_at
+            WHEN pp.phase_key = 'ideation' THEN pt.ideation_completed_at
+            WHEN pp.phase_key = 'design' THEN pt.design_completed_at
+            WHEN pp.phase_key = 'review' THEN pt.review_completed_at
+            WHEN pp.phase_key = 'production' THEN pt.production_completed_at
+            WHEN pp.phase_key = 'payment' THEN pt.payment_completed_at
+            WHEN pp.phase_key = 'signoff' THEN pt.signoff_completed_at
+            WHEN pp.phase_key = 'delivery' THEN pt.delivery_completed_at
+          END as completed_at,
+          (
+            SELECT COUNT(*) FROM project_activities pa 
+            WHERE pa.project_id = $1 AND pa.phase_id = pp.id
+          ) as activity_count,
+          (
+            SELECT COUNT(*) FROM files f 
+            WHERE f.project_id = $1 AND f.phase_id = pp.id AND f.is_active = true
+          ) as file_count
+        FROM project_phases pp
+        LEFT JOIN project_phase_tracking pt ON pt.project_id = $1
+        ORDER BY pp.order_index ASC
+      `;
+
+      const phasesResult = await dbQuery(phasesQuery, [projectId]);
+
+      // Get overall project info
+      const projectQuery = `
+        SELECT 
+          p.id,
+          p.name,
+          p.status,
+          p.progress_percentage,
+          p.start_date,
+          p.due_date,
+          pt.current_phase_index,
+          pt.is_completed,
+          pt.completed_at as project_completed_at
+        FROM projects p
+        LEFT JOIN project_phase_tracking pt ON pt.project_id = p.id
+        WHERE p.id = $1 AND p.is_active = true
+      `;
+
+      const projectResult = await dbQuery(projectQuery, [projectId]);
+
+      if (projectResult.rows.length === 0) {
+        return res.status(404).json({ error: 'Project not found' });
+      }
+
+      const project = projectResult.rows[0];
+      const phases = phasesResult.rows;
+
+      res.json({
+        project: {
+          id: project.id,
+          name: project.name,
+          status: project.status,
+          progress_percentage: project.progress_percentage,
+          start_date: project.start_date,
+          due_date: project.due_date,
+          current_phase_index: project.current_phase_index,
+          is_completed: project.is_completed,
+          completed_at: project.project_completed_at
+        },
+        phases: phases,
+        total_phases: phases.length,
+        current_phase: phases.find(p => p.status === 'in_progress') || null
+      });
+
+    } catch (error) {
+      console.error('Error fetching project phases:', error);
+      res.status(500).json({ error: 'Failed to fetch project phases' });
     }
   }
 );

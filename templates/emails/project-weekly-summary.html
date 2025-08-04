@@ -1,0 +1,77 @@
+<h2 class="mt-0">Weekly Project Summary</h2>
+
+<p>Hi {{clientName}},</p>
+
+<p>Here's your weekly summary for the week of <strong>{{weekOf}}</strong>.</p>
+
+{{#if projects}}
+{{#each projects}}
+<div class="info-box" style="margin-bottom: 30px;">
+  <h3 class="mt-0">{{this.name}}</h3>
+  
+  {{#if this.currentPhase}}
+  <p><strong>Current Phase:</strong> {{this.currentPhase.name}} ({{this.currentPhase.status}})</p>
+  {{/if}}
+  
+  {{#if this.progress}}
+  <p><strong>Overall Progress:</strong> {{this.progress}}% complete</p>
+  {{/if}}
+  
+  {{#if this.weeklyActivity}}
+  <h4>This Week's Activity:</h4>
+  <ul>
+    {{#each this.weeklyActivity}}
+    <li>{{this}}</li>
+    {{/each}}
+  </ul>
+  {{/if}}
+  
+  {{#if this.upcomingDeadlines}}
+  <h4>Upcoming Deadlines:</h4>
+  <ul>
+    {{#each this.upcomingDeadlines}}
+    <li>{{this.item}} - {{formatDate this.date}}</li>
+    {{/each}}
+  </ul>
+  {{/if}}
+  
+  {{#if this.actionRequired}}
+  <div class="warning-box mt-20">
+    <p class="mb-0"><strong>Action Required:</strong> {{this.actionRequired}}</p>
+  </div>
+  {{/if}}
+</div>
+{{/each}}
+{{else}}
+<p>No active projects this week.</p>
+{{/if}}
+
+{{#if overallStats}}
+<h3>Overall Statistics</h3>
+<ul>
+  {{#if overallStats.filesUploaded}}
+  <li>Files uploaded: {{overallStats.filesUploaded}}</li>
+  {{/if}}
+  {{#if overallStats.phasesCompleted}}
+  <li>Phases completed: {{overallStats.phasesCompleted}}</li>
+  {{/if}}
+  {{#if overallStats.messagesExchanged}}
+  <li>Messages exchanged: {{overallStats.messagesExchanged}}</li>
+  {{/if}}
+</ul>
+{{/if}}
+
+<div class="text-center mt-40 mb-40">
+  <a href="{{portalUrl}}" class="button">View All Projects</a>
+</div>
+
+<p>Have a great week ahead!</p>
+
+<p>Best regards,<br>
+The [RE]Print Studios Team</p>
+
+<hr style="margin: 40px 0; border: none; border-top: 1px solid #F2EDE6;">
+
+<p class="text-center" style="font-size: 14px; color: #999;">
+  <em>You're receiving this weekly summary because you opted in to project updates. You can change your email preferences in your account settings.</em>
+</p>

@@ -7,6 +7,8 @@ import { canViewFile, canDownloadFile, canEditFile, canDeleteFile, canUploadToPr
 import path from 'path';
 import fs from 'fs-extra';
 import { v4 as uuidv4 } from 'uuid';
+import { sendTemplateEmail } from '../utils/emailService.js';
+import { EMAIL_TEMPLATES } from '../utils/emailTemplates.js';
 
 const router = express.Router();
 
@@ -112,6 +114,52 @@ router.post('/upload',
       }
       
       await commitTransaction(client);
+      
+      // Send email notifications if files were uploaded to a project
+      if (project_id && savedFiles.length > 0) {
+        try {
+          // Get project and client details
+          const projectResult = await dbQuery(
+            `SELECT p.name as project_name, p.client_id,
+                    u.email, u.first_name, u.last_name,
+                    pp.name as phase_name, pp.id as phase_id
+             FROM projects p
+             JOIN users u ON p.client_id = u.id
+             LEFT JOIN project_phase_tracking pt ON p.id = pt.project_id
+             LEFT JOIN project_phases pp ON pt.current_phase_id = pp.id
+             WHERE p.id = $1`,
+            [project_id]
+          );
+          
+          if (projectResult.rows.length > 0 && req.user.role === 'admin') {
+            const project = projectResult.rows[0];
+            const clientName = `${project.first_name} ${project.last_name || ''}`.trim();
+            
+            // Send notification for each uploaded file
+            for (const file of savedFiles) {
+              await sendTemplateEmail(EMAIL_TEMPLATES.FILE_UPLOADED, {
+                to: project.email,
+                userId: project.client_id,
+                clientName: clientName,
+                projectName: project.project_name,
+                fileName: file.original_name,
+                fileSize: formatFileSize(file.file_size),
+                fileType: file.file_type,
+                uploaderName: req.user.name || 'Admin',
+                uploadDate: new Date(),
+                phaseName: project.phase_name,
+                downloadUrl: `${process.env.BASE_URL || 'http://localhost:3000'}/portal#files/${file.id}`,
+                description: description,
+                context: 'file',
+                type: 'file_upload'
+              });
+            }
+          }
+        } catch (emailError) {
+          console.error('Failed to send file upload notification:', emailError);
+          // Don't fail the request if email fails
+        }
+      }
       
       res.status(201).json({
         message: `${savedFiles.length} file(s) uploaded successfully`,
@@ -586,6 +634,328 @@ router.delete('/:id',
       await rollbackTransaction(client);
       console.error('Error deleting file:', error);
       res.status(500).json({ error: 'Failed to delete file' });
+    }
+  }
+);
+
+// =============================================================================
+// GET /api/files/:id/thumbnail - Get file thumbnail
+// =============================================================================
+router.get('/:id/thumbnail',
+  authenticateToken,
+  canViewFile,
+  [
+    param('id').isUUID().withMessage('Invalid file ID format')
+  ],
+  validateRequest,
+  async (req, res) => {
+    try {
+      const fileId = req.params.id;
+      
+      // Get file information
+      const fileQuery = `
+        SELECT 
+          id, original_name, stored_name, file_path, file_size, mime_type, file_type
+        FROM files 
+        WHERE id = $1 AND is_active = true
+      `;
+      
+      const result = await dbQuery(fileQuery, [fileId]);
+      
+      if (result.rows.length === 0) {
+        return res.status(404).json({ error: 'File not found' });
+      }
+      
+      const file = result.rows[0];
+      
+      // Only generate thumbnails for images
+      if (file.file_type !== 'image') {
+        return res.status(400).json({ error: 'Thumbnails only available for images' });
+      }
+      
+      // Check if file exists on disk
+      if (!await fs.pathExists(file.file_path)) {
+        return res.status(404).json({ error: 'File not found on disk' });
+      }
+      
+      // Generate thumbnail path
+      const uploadsDir = path.dirname(file.file_path);
+      const thumbnailsDir = path.join(uploadsDir, 'thumbnails');
+      const thumbnailPath = path.join(thumbnailsDir, `thumb_${file.stored_name}`);
+      
+      // Create thumbnails directory if it doesn't exist
+      await fs.ensureDir(thumbnailsDir);
+      
+      // Check if thumbnail already exists
+      if (!await fs.pathExists(thumbnailPath)) {
+        try {
+          // Generate thumbnail using sharp (you'll need to install: npm install sharp)
+          const sharp = require('sharp');
+          await sharp(file.file_path)
+            .resize(300, 300, { 
+              fit: 'inside',
+              withoutEnlargement: true 
+            })
+            .jpeg({ quality: 80 })
+            .toFile(thumbnailPath);
+        } catch (thumbnailError) {
+          console.error('Thumbnail generation failed:', thumbnailError);
+          return res.status(500).json({ error: 'Failed to generate thumbnail' });
+        }
+      }
+      
+      // Set appropriate headers
+      res.setHeader('Content-Type', 'image/jpeg');
+      res.setHeader('Cache-Control', 'public, max-age=86400'); // Cache for 1 day
+      
+      // Stream thumbnail
+      const thumbnailStream = fs.createReadStream(thumbnailPath);
+      thumbnailStream.pipe(res);
+      
+      thumbnailStream.on('error', (error) => {
+        console.error('Error streaming thumbnail:', error);
+        if (!res.headersSent) {
+          res.status(500).json({ error: 'Error loading thumbnail' });
+        }
+      });
+      
+    } catch (error) {
+      console.error('Error generating thumbnail:', error);
+      if (!res.headersSent) {
+        res.status(500).json({ error: 'Failed to load thumbnail' });
+      }
+    }
+  }
+);
+
+// =============================================================================
+// GET /api/files/:id/preview - Get file preview (full size image)
+// =============================================================================
+router.get('/:id/preview',
+  authenticateToken,
+  canViewFile,
+  [
+    param('id').isUUID().withMessage('Invalid file ID format')
+  ],
+  validateRequest,
+  async (req, res) => {
+    try {
+      const fileId = req.params.id;
+      
+      // Get file information
+      const fileQuery = `
+        SELECT 
+          id, original_name, stored_name, file_path, file_size, mime_type, file_type
+        FROM files 
+        WHERE id = $1 AND is_active = true
+      `;
+      
+      const result = await dbQuery(fileQuery, [fileId]);
+      
+      if (result.rows.length === 0) {
+        return res.status(404).json({ error: 'File not found' });
+      }
+      
+      const file = result.rows[0];
+      
+      // Only allow preview for images
+      if (file.file_type !== 'image') {
+        return res.status(400).json({ error: 'Preview only available for images' });
+      }
+      
+      // Check if file exists on disk
+      if (!await fs.pathExists(file.file_path)) {
+        return res.status(404).json({ error: 'File not found on disk' });
+      }
+      
+      // Set appropriate headers
+      res.setHeader('Content-Type', file.mime_type);
+      res.setHeader('Cache-Control', 'public, max-age=3600'); // Cache for 1 hour
+      res.setHeader('Content-Disposition', `inline; filename="${file.original_name}"`);
+      
+      // Stream the file
+      const fileStream = fs.createReadStream(file.file_path);
+      fileStream.pipe(res);
+      
+      fileStream.on('error', (error) => {
+        console.error('Error streaming preview:', error);
+        if (!res.headersSent) {
+          res.status(500).json({ error: 'Error loading preview' });
+        }
+      });
+      
+    } catch (error) {
+      console.error('Error loading preview:', error);
+      if (!res.headersSent) {
+        res.status(500).json({ error: 'Failed to load preview' });
+      }
+    }
+  }
+);
+
+// =============================================================================
+// GET /api/files/phase/:phaseId - Get files for a project phase
+// =============================================================================
+router.get('/phase/:phaseId',
+  authenticateToken,
+  [
+    param('phaseId').isUUID().withMessage('Invalid phase ID format')
+  ],
+  validateRequest,
+  async (req, res) => {
+    try {
+      const { phaseId } = req.params;
+      const userId = req.user.id;
+      const isAdmin = req.user.role === 'admin';
+      
+      // First verify user has access to this phase
+      const phaseAccessQuery = `
+        SELECT pp.*, p.client_id, p.admin_id
+        FROM project_phases pp
+        JOIN projects p ON pp.project_id = p.id
+        WHERE pp.id = $1 AND (p.client_id = $2 OR p.admin_id = $2 OR $3 = true)
+      `;
+      
+      const phaseResult = await dbQuery(phaseAccessQuery, [phaseId, userId, isAdmin]);
+      
+      if (phaseResult.rows.length === 0) {
+        return res.status(404).json({ error: 'Phase not found or access denied' });
+      }
+      
+      // Get files for this phase
+      const filesQuery = `
+        SELECT 
+          f.id,
+          f.original_name,
+          f.file_size,
+          f.mime_type,
+          f.file_type,
+          f.description,
+          f.is_public,
+          f.download_count,
+          f.version_number,
+          f.created_at,
+          u.first_name || ' ' || u.last_name as uploaded_by_name,
+          u.email as uploader_email
+        FROM files f
+        LEFT JOIN users u ON f.uploader_id = u.id
+        WHERE f.phase_id = $1 AND f.is_active = true
+        ORDER BY f.created_at DESC
+      `;
+      
+      const filesResult = await dbQuery(filesQuery, [phaseId]);
+      
+      const files = filesResult.rows.map(file => ({
+        id: file.id,
+        name: file.original_name,
+        type: file.mime_type,
+        file_type: file.file_type,
+        size: file.file_size,
+        size_formatted: formatFileSize(file.file_size),
+        description: file.description,
+        version: file.version_number,
+        upload_timestamp: file.created_at,
+        uploaded_by_name: file.uploaded_by_name,
+        uploaded_by_email: file.uploader_email,
+        download_count: file.download_count,
+        thumbnail_url: file.file_type === 'image' ? `/api/files/${file.id}/thumbnail` : null
+      }));
+      
+      res.json({ files });
+      
+    } catch (error) {
+      console.error('Error fetching phase files:', error);
+      res.status(500).json({ error: 'Failed to fetch phase files' });
+    }
+  }
+);
+
+// =============================================================================
+// GET /api/files/:id/technical-specs - Get technical specifications for a file
+// =============================================================================
+router.get('/:id/technical-specs',
+  authenticateToken,
+  canViewFile,
+  [
+    param('id').isUUID().withMessage('Invalid file ID format')
+  ],
+  validateRequest,
+  async (req, res) => {
+    try {
+      const fileId = req.params.id;
+      
+      // Get technical specs from database
+      const specsQuery = `
+        SELECT 
+          fts.*,
+          f.original_name,
+          f.file_size,
+          f.mime_type
+        FROM file_technical_specs fts
+        JOIN files f ON fts.file_id = f.id
+        WHERE fts.file_id = $1 AND f.is_active = true
+      `;
+      
+      const result = await dbQuery(specsQuery, [fileId]);
+      
+      if (result.rows.length === 0) {
+        // If no specs exist, try to generate them
+        const fileQuery = `
+          SELECT id, original_name, file_path, file_size, mime_type, file_type
+          FROM files 
+          WHERE id = $1 AND is_active = true
+        `;
+        
+        const fileResult = await dbQuery(fileQuery, [fileId]);
+        
+        if (fileResult.rows.length === 0) {
+          return res.status(404).json({ error: 'File not found' });
+        }
+        
+        const file = fileResult.rows[0];
+        
+        // Generate basic specs based on file type
+        const extension = path.extname(file.original_name).substring(1).toUpperCase();
+        let specs = {
+          file_id: fileId,
+          dpi_horizontal: ['AI', 'PDF', 'PSD', 'TIFF'].includes(extension) ? 300 : 72,
+          dpi_vertical: ['AI', 'PDF', 'PSD', 'TIFF'].includes(extension) ? 300 : 72,
+          color_mode: ['AI', 'PDF', 'PSD'].includes(extension) ? 'CMYK' : 'RGB',
+          has_bleed: false,
+          is_print_ready: ['AI', 'PDF'].includes(extension),
+          validation_errors: [],
+          validation_warnings: [],
+          processed_at: new Date().toISOString(),
+          processing_engine: 'fallback'
+        };
+        
+        // Try to insert the basic specs
+        try {
+          await dbQuery(`
+            INSERT INTO file_technical_specs (
+              file_id, dpi_horizontal, dpi_vertical, color_mode, 
+              has_bleed, is_print_ready, validation_errors, validation_warnings,
+              processed_at, processing_engine
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+          `, [
+            specs.file_id, specs.dpi_horizontal, specs.dpi_vertical, 
+            specs.color_mode, specs.has_bleed, specs.is_print_ready,
+            JSON.stringify(specs.validation_errors), 
+            JSON.stringify(specs.validation_warnings),
+            specs.processed_at, specs.processing_engine
+          ]);
+        } catch (insertError) {
+          console.error('Failed to insert file specs:', insertError);
+        }
+        
+        return res.json(specs);
+      }
+      
+      res.json(result.rows[0]);
+      
+    } catch (error) {
+      console.error('Error fetching file technical specs:', error);
+      res.status(500).json({ error: 'Failed to fetch file technical specifications' });
     }
   }
 );

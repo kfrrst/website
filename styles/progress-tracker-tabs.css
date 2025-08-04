@@ -10,8 +10,8 @@
 .phase-tabs-nav {
   display: flex;
   align-items: center;
-  border-bottom: 2px solid var(--border-light);
-  background: var(--base-bg);
+  border-bottom: 1px solid var(--border-subtle);
+  background: var(--bone);
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: thin;
@@ -37,17 +37,18 @@
   position: relative;
   display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 1rem 1.5rem;
+  gap: var(--space-sm);
+  padding: var(--space-lg) var(--space-xl);
   background: transparent;
   border: none;
-  border-bottom: 3px solid transparent;
+  border-bottom: 2px solid transparent;
   color: var(--text-secondary);
   font-family: var(--font-family);
   font-size: 0.875rem;
-  font-weight: 500;
+  font-weight: var(--font-weight-medium);
   white-space: nowrap;
   cursor: pointer;
+  transition: all var(--transition-normal);
   transition: all 0.3s ease;
   min-width: 120px;
   text-align: center;
@@ -56,14 +57,14 @@
 
 /* Tab states */
 .phase-tab:hover:not(:disabled) {
-  background: rgba(0, 87, 255, 0.05);
-  color: var(--blue);
+  background: var(--hover);
+  color: var(--text);
 }
 
 .phase-tab.active {
   color: var(--blue);
   border-bottom-color: var(--blue);
-  background: rgba(0, 87, 255, 0.05);
+  background: var(--accent-blue);
 }
 
 .phase-tab.completed {
@@ -334,5 +335,94 @@
   to {
     opacity: 1;
     transform: translateX(0);
+  }
+}
+
+/* Comment Count Badge Styles */
+.tab-comment-badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: var(--text-muted);
+  color: var(--bone-light);
+  font-size: 0.625rem;
+  font-weight: var(--font-weight-semibold);
+  min-width: 16px;
+  height: 16px;
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+  line-height: 1;
+  z-index: 10;
+  animation: commentBadgeAppear var(--transition-bounce) ease-out;
+  border: 1px solid var(--bone);
+  box-shadow: 0 1px 2px var(--shadow);
+}
+
+.tab-comment-badge:empty {
+  display: none;
+}
+
+/* Subtle badge colors for different phase statuses */
+.phase-tab.completed .tab-comment-badge {
+  background: var(--green);
+  color: var(--bone-light);
+}
+
+.phase-tab.active .tab-comment-badge {
+  background: var(--blue);
+  color: var(--bone-light);
+}
+
+.phase-tab.current .tab-comment-badge {
+  background: var(--text);
+  color: var(--bone-light);
+}
+
+.phase-tab:not(.active):not(.completed):not(.current) .tab-comment-badge {
+  background: var(--text-muted);
+  color: var(--bone-light);
+}
+
+/* Animation for badge appearance */
+@keyframes commentBadgeAppear {
+  0% {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  70% {
+    transform: scale(1.1);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Mobile adjustments for comment badges */
+@media (max-width: 768px) {
+  .tab-comment-badge {
+    top: 6px;
+    right: 6px;
+    min-width: 16px;
+    height: 16px;
+    font-size: 0.5rem;
+    border-radius: 8px;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .tab-comment-badge {
+    border: 1px solid var(--white, #ffffff);
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .tab-comment-badge {
+    animation: none;
   }
 }

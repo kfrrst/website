@@ -10,6 +10,16 @@ import { createServer } from 'http';
 import { Server } from 'socket.io';
 import { testConnection } from './config/database.js';
 import PhaseAutomationService, { createAutomationTables } from './utils/phaseAutomation.js';
+import { 
+  rateLimiters, 
+  preventSqlInjection, 
+  preventNoSqlInjection,
+  preventPathTraversal,
+  preventCommandInjection,
+  securityHeaders,
+  requestSizeLimits,
+  auditLog 
+} from './middleware/security.js';
 
 // Load environment variables
 dotenv.config();
@@ -33,11 +43,8 @@ const io = new Server(server, {
   }
 });
 
-// Security middleware - temporarily disable CSP for debugging
-app.use(helmet({
-  contentSecurityPolicy: false, // Temporarily disabled for debugging
-  crossOriginEmbedderPolicy: false,
-}));
+// Enhanced security headers
+app.use(securityHeaders);
 
 // CORS configuration
 app.use(cors({
@@ -47,19 +54,22 @@ app.use(cors({
   credentials: true
 }));
 
-// Rate limiting
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // Limit each IP to 100 requests per windowMs
-  message: 'Too many requests from this IP, please try again later.'
-});
+// Apply rate limiting
+app.use('/api/auth/login', rateLimiters.auth);
+app.use('/api/auth/register', rateLimiters.auth);
+app.use('/api/auth/refresh', rateLimiters.auth);
+app.use('/api/files/upload', rateLimiters.upload);
+app.use('/api/', rateLimiters.api);
 
-// Apply rate limiting to API routes
-app.use('/api/', limiter);
+// Body parsing middleware with security limits
+app.use(express.json({ limit: requestSizeLimits.json }));
+app.use(express.urlencoded({ extended: true, limit: requestSizeLimits.urlencoded }));
 
-// Body parsing middleware
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+// Security middleware
+app.use(preventNoSqlInjection);
+app.use(preventSqlInjection);
+app.use(preventPathTraversal);
+app.use(preventCommandInjection);
 
 // Logging middleware
 if (process.env.NODE_ENV !== 'production') {
@@ -94,7 +104,16 @@ import phaseRoutes from './routes/phases.js';
 import activityRoutes from './routes/activity.js';
 import userRoutes from './routes/users.js';
 import dashboardRoutes from './routes/dashboard.js';
+import emailRoutes from './routes/email.js';
+import emailPreviewRoutes from './routes/emailPreview.js';
+import analyticsRoutes from './routes/analytics.js';
+import paymentRoutes from './routes/payments.js';
+import formRoutes from './routes/forms.js';
+import documentRoutes from './routes/documents.js';
+import researchRoutes from './routes/research.js';
+import proofRoutes from './routes/proofs.js';
 import { initializeSocketHandlers } from './utils/socketHandlers.js';
+import { startCronJobs } from './utils/cronJobs.js';
 
 // Make io instance available to routes
 app.set('io', io);
@@ -102,18 +121,26 @@ app.set('io', io);
 // Initialize Socket.io handlers
 initializeSocketHandlers(io);
 
-// Mount API routes
-app.use('/api/auth', authRoutes);
-app.use('/api/projects', projectRoutes);
-app.use('/api/clients', clientRoutes);
-app.use('/api/invoices', invoiceRoutes);
-app.use('/api/files', fileRoutes);
+// Mount API routes with audit logging for sensitive operations
+app.use('/api/auth', auditLog('auth'), authRoutes);
+app.use('/api/projects', auditLog('projects'), projectRoutes);
+app.use('/api/clients', auditLog('clients'), clientRoutes);
+app.use('/api/invoices', auditLog('invoices'), invoiceRoutes);
+app.use('/api/files', auditLog('files'), fileRoutes);
 app.use('/api/messages', messageRoutes);
 app.use('/api/inquiries', inquiryRoutes);
 app.use('/api/phases', phaseRoutes);
 app.use('/api/activity', activityRoutes);
-app.use('/api/users', userRoutes);
+app.use('/api/users', auditLog('users'), userRoutes);
 app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/email', emailRoutes);
+app.use('/api/email-preview', emailPreviewRoutes);
+app.use('/api/analytics', analyticsRoutes);
+app.use('/api/payments', auditLog('payments'), paymentRoutes);
+app.use('/api/forms', formRoutes);
+app.use('/api/documents', documentRoutes);
+app.use('/api/research', auditLog('research'), researchRoutes);
+app.use('/api', auditLog('proofs'), proofRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
@@ -124,11 +151,24 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+// Redirect admin.html to /admin for consistent localStorage domain
+app.get('/admin.html', (req, res) => {
+  res.redirect('/admin');
+});
+
 // Admin routes - serve admin.html for admin paths
 app.get('/admin', (req, res) => {
+  // Set headers to prevent caching issues with localStorage
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
   res.sendFile(path.join(__dirname, 'admin.html'));
 });
 app.get('/admin/*', (req, res) => {
+  // Set headers to prevent caching issues with localStorage
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
   res.sendFile(path.join(__dirname, 'admin.html'));
 });
 
@@ -156,6 +196,22 @@ app.get('/*', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });
 
+// 404 handler - must be after all other routes
+app.use((req, res) => {
+  // For API requests, return JSON
+  if (req.path.startsWith('/api/')) {
+    res.status(404).json({
+      error: {
+        message: 'API endpoint not found',
+        status: 404
+      }
+    });
+  } else {
+    // For page requests, serve 404.html
+    res.status(404).sendFile(path.join(__dirname, '404.html'));
+  }
+});
+
 // Global error handler
 app.use((err, req, res, next) => {
   console.error(err.stack);
@@ -163,13 +219,19 @@ app.use((err, req, res, next) => {
   // Don't leak error details in production
   const isDevelopment = process.env.NODE_ENV === 'development';
   
-  res.status(err.status || 500).json({
-    error: {
-      message: isDevelopment ? err.message : 'Internal server error',
-      status: err.status || 500,
-      ...(isDevelopment && { stack: err.stack })
-    }
-  });
+  // For API errors
+  if (req.path.startsWith('/api/')) {
+    res.status(err.status || 500).json({
+      error: {
+        message: isDevelopment ? err.message : 'Internal server error',
+        status: err.status || 500,
+        ...(isDevelopment && { stack: err.stack })
+      }
+    });
+  } else {
+    // For page errors, serve 500.html
+    res.status(500).sendFile(path.join(__dirname, '500.html'));
+  }
 });
 
 // Start server
@@ -189,6 +251,10 @@ server.listen(PORT, async () => {
     const phaseAutomation = new PhaseAutomationService(io);
     await phaseAutomation.start();
     console.log('✅ Phase automation service started');
+    
+    // Start cron jobs
+    startCronJobs();
+    console.log('✅ Cron jobs started');
     
     // Graceful shutdown
     process.on('SIGTERM', () => {

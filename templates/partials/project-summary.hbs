@@ -1,0 +1,31 @@
+<div class="project-summary section">
+  <h3>Project Summary</h3>
+  <table>
+    <tr>
+      <td><strong>Project Name:</strong></td>
+      <td>{{project.name}}</td>
+    </tr>
+    <tr>
+      <td><strong>Services:</strong></td>
+      <td>
+        {{#each project.services}}
+          <span class="service-badge">{{this}}</span>
+        {{/each}}
+      </td>
+    </tr>
+    <tr>
+      <td><strong>Status:</strong></td>
+      <td><span class="status-{{project.status}}">{{capitalize project.status}}</span></td>
+    </tr>
+    <tr>
+      <td><strong>Created:</strong></td>
+      <td>{{formatDate project.created_at "short"}}</td>
+    </tr>
+    {{#if project.total_budget}}
+    <tr>
+      <td><strong>Budget:</strong></td>
+      <td>{{formatCurrency project.total_budget}}</td>
+    </tr>
+    {{/if}}
+  </table>
+</div>

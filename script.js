@@ -121,11 +121,28 @@ class ClientPortal {
 
   // Setup all event listeners
   setupEventListeners() {
-    // Navigation toggle
-    const hamburger = document.getElementById('hamburger-menu');
-    if (hamburger) {
-      hamburger.addEventListener('click', this.toggleMenu.bind(this));
-    }
+    // Event delegation for data-action attributes
+    document.addEventListener('click', (e) => {
+      const element = e.target.closest('[data-action]');
+      if (!element) return;
+
+      const action = element.dataset.action;
+      
+      switch (action) {
+        case 'toggle-menu':
+          this.toggleMenu();
+          break;
+        case 'show-inquiry-form':
+          this.showInquiryForm();
+          break;
+        case 'show-client-login':
+          this.showClientLogin();
+          break;
+        case 'hide-client-login':
+          this.hideClientLogin();
+          break;
+      }
+    });
 
     // Close modal on outside click
     const modal = document.getElementById('login-modal');

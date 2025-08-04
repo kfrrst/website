@@ -1,0 +1,725 @@
+/* Phase Card Styles - Production Ready */
+
+.phase-card-container {
+  width: 100%;
+  margin-bottom: 1.5rem;
+}
+
+.phase-card {
+  background: var(--bone-light);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  padding: var(--space-xl);
+  position: relative;
+  transition: all var(--transition-normal);
+  box-shadow: 0 1px 3px var(--shadow);
+}
+
+.phase-card:hover {
+  box-shadow: 0 4px 12px var(--shadow-medium);
+  transform: translateY(-1px);
+  background: var(--bone);
+}
+
+.phase-card.active {
+  border-color: var(--blue);
+  background: var(--accent-blue);
+  box-shadow: 0 0 0 3px rgba(30, 58, 138, 0.1);
+}
+
+/* Header */
+.phase-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.phase-title-group {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.phase-number {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: var(--blue);
+  color: var(--bone-light);
+  border-radius: var(--radius-full);
+  font-weight: var(--font-weight-semibold);
+  font-size: 1rem;
+  box-shadow: 0 2px 4px var(--shadow);
+  transition: all 0.3s ease;
+}
+
+.phase-number.overdue {
+  background: var(--red);
+  animation: pulse-urgent 2s ease-in-out infinite;
+}
+
+.phase-title {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.phase-header-right {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+/* Status Badge */
+.phase-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.375rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.status-icon {
+  font-size: 1rem;
+}
+
+/* Status-specific colors are applied inline for flexibility */
+
+/* Description */
+.phase-description {
+  margin-bottom: 1.25rem;
+}
+
+.phase-description p {
+  margin: 0;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  font-size: 0.9375rem;
+}
+
+/* Deliverables */
+.phase-deliverables {
+  margin-bottom: 1.25rem;
+  padding: 1rem;
+  background: var(--base-bg, #f9f6f1);
+  border-radius: 6px;
+}
+
+.deliverables-title {
+  margin: 0 0 0.75rem 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-secondary);
+}
+
+.deliverables-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.deliverable-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem;
+  background: white;
+  border: 1px solid var(--border-light);
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.deliverable-item:hover {
+  border-color: var(--blue);
+  transform: translateY(-1px);
+}
+
+.file-icon {
+  font-size: 1.25rem;
+  flex-shrink: 0;
+}
+
+.file-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.file-name {
+  font-weight: 500;
+  color: var(--text);
+  font-size: 0.875rem;
+}
+
+.file-meta {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+.btn-download {
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--border-light);
+  background: white;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 1rem;
+}
+
+.btn-download:hover {
+  background: var(--blue);
+  color: white;
+  border-color: var(--blue);
+}
+
+/* Actions */
+.phase-actions {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.btn-primary,
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 6px;
+  font-weight: 500;
+  font-size: 0.9375rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+}
+
+.btn-primary {
+  background: var(--blue);
+  color: white;
+}
+
+.btn-primary:hover {
+  background: var(--blue-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 87, 255, 0.2);
+}
+
+.btn-secondary {
+  background: white;
+  color: var(--text);
+  border: 1px solid var(--border-light);
+}
+
+.btn-secondary:hover {
+  border-color: var(--blue);
+  color: var(--blue);
+  background: rgba(0, 87, 255, 0.05);
+}
+
+.btn-icon {
+  font-size: 1rem;
+}
+
+.admin-note {
+  margin: 0;
+  color: var(--text-secondary);
+  font-style: italic;
+  font-size: 0.875rem;
+}
+
+/* Approval Info */
+.phase-approval-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  background: rgba(39, 174, 96, 0.1);
+  color: var(--green);
+  border-radius: 6px;
+  font-size: 0.875rem;
+  margin-bottom: 1rem;
+}
+
+.approval-icon {
+  font-size: 1.125rem;
+}
+
+/* Footer */
+.phase-footer {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border-light);
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+}
+
+.comment-link {
+  color: var(--blue);
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  transition: color 0.2s ease;
+}
+
+.comment-link:hover {
+  color: var(--blue-hover);
+}
+
+.comment-icon {
+  font-size: 1rem;
+}
+
+.separator {
+  color: var(--border-light);
+}
+
+.expected-date {
+  color: var(--text-secondary);
+}
+
+/* Loading State */
+.phase-loading-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.9);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  border-radius: 8px;
+  z-index: 10;
+}
+
+.loading-spinner {
+  width: 24px;
+  height: 24px;
+  border: 3px solid var(--border-light);
+  border-top-color: var(--blue);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Error State */
+.phase-error {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  background: rgba(230, 57, 70, 0.1);
+  color: var(--red);
+  border-radius: 6px;
+  font-size: 0.875rem;
+  margin-top: 1rem;
+}
+
+.error-icon {
+  font-size: 1.125rem;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .phase-card {
+    padding: 1rem;
+  }
+  
+  .phase-header {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  
+  .phase-title {
+    font-size: 1.125rem;
+  }
+  
+  .phase-actions {
+    flex-direction: column;
+  }
+  
+  .btn-primary,
+  .btn-secondary {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .deliverable-item {
+    flex-wrap: wrap;
+  }
+  
+  .file-info {
+    flex-basis: 100%;
+    order: 2;
+  }
+  
+  .btn-download {
+    order: 1;
+  }
+}
+
+/* Status-specific Card Styles */
+.phase-card.status-not-started {
+  opacity: 0.7;
+}
+
+.phase-card.status-not-started .phase-number {
+  background: var(--text-secondary);
+}
+
+.phase-card.status-in-progress .phase-number {
+  background: var(--yellow);
+  color: var(--text);
+}
+
+.phase-card.status-awaiting-approval {
+  border-color: var(--blue);
+}
+
+.phase-card.status-awaiting-approval .phase-number {
+  background: var(--blue);
+  color: white;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+
+.phase-card.status-completed {
+  background: rgba(39, 174, 96, 0.02);
+}
+
+.phase-card.status-completed .phase-number {
+  background: var(--green);
+  color: white;
+}
+
+/* Print Styles */
+@media print {
+  .phase-card {
+    break-inside: avoid;
+    box-shadow: none;
+    border: 1px solid #ddd;
+  }
+  
+  .btn-download,
+  .phase-actions {
+    display: none;
+  }
+}
+
+/* Success Notification */
+.phase-success-notification {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  background: rgba(39, 174, 96, 0.1);
+  border: 1px solid rgba(39, 174, 96, 0.2);
+  border-radius: 8px;
+  margin-bottom: 16px;
+  animation: slideDown 0.3s ease-out, fadeOut 0.5s ease-out 3.5s forwards;
+}
+
+.phase-success-notification .success-icon {
+  color: var(--green);
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.phase-success-notification .success-message {
+  font-size: 0.875rem;
+  color: var(--green);
+  font-weight: 500;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeOut {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+/* Progress Bar */
+.phase-progress {
+  margin-bottom: 1.25rem;
+}
+
+.progress-bar-container {
+  width: 100%;
+  height: 8px;
+  background: var(--border-light);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 0.5rem;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--blue) 0%, var(--blue-hover) 100%);
+  border-radius: 4px;
+  transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+}
+
+.progress-bar-fill::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.3) 50%, transparent 100%);
+  animation: shimmer 2s infinite;
+}
+
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+.progress-text {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.75rem;
+}
+
+.progress-label {
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.progress-value {
+  color: var(--text);
+  font-weight: 600;
+}
+
+/* Deadline Indicator */
+.deadline-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  margin-top: 0.25rem;
+}
+
+.deadline-indicator.urgent {
+  color: var(--yellow);
+  font-weight: 500;
+}
+
+.deadline-indicator.overdue {
+  color: var(--red);
+  font-weight: 600;
+}
+
+.deadline-icon {
+  font-size: 0.875rem;
+}
+
+/* Activity Indicator */
+.activity-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem 0.5rem;
+  background: var(--red);
+  color: white;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  animation: bounce-in 0.5s ease-out;
+}
+
+@keyframes bounce-in {
+  0% { transform: scale(0); }
+  50% { transform: scale(1.1); }
+  100% { transform: scale(1); }
+}
+
+.activity-dot {
+  width: 6px;
+  height: 6px;
+  background: white;
+  border-radius: 50%;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+/* Client Actions */
+.phase-client-actions {
+  margin-bottom: 1.25rem;
+  padding: 1rem;
+  background: rgba(0, 87, 255, 0.02);
+  border: 1px solid rgba(0, 87, 255, 0.1);
+  border-radius: 8px;
+}
+
+.actions-title {
+  margin: 0 0 0.75rem 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.actions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.action-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem;
+  background: white;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.action-item.completed {
+  opacity: 0.7;
+  background: rgba(39, 174, 96, 0.05);
+}
+
+.action-checkbox {
+  font-size: 1rem;
+  color: var(--blue);
+  flex-shrink: 0;
+}
+
+.action-item.completed .action-checkbox {
+  color: var(--green);
+}
+
+.action-text {
+  flex: 1;
+  font-size: 0.875rem;
+  color: var(--text);
+}
+
+.action-item.completed .action-text {
+  text-decoration: line-through;
+  color: var(--text-secondary);
+}
+
+.action-date {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+/* Locked State */
+.phase-card.locked {
+  position: relative;
+  pointer-events: none;
+  opacity: 0.7;
+}
+
+.phase-locked-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.95);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-lg);
+  z-index: 5;
+}
+
+.locked-content {
+  text-align: center;
+  padding: 2rem;
+}
+
+.locked-icon {
+  font-size: 2.5rem;
+  margin-bottom: 1rem;
+  display: block;
+  opacity: 0.5;
+}
+
+.locked-message {
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  margin: 0;
+  max-width: 300px;
+}
+
+/* Additional Status Styles */
+.phase-card.status-changes-requested {
+  border-color: var(--red);
+  background: rgba(230, 57, 70, 0.02);
+}
+
+.phase-card.status-changes-requested .phase-number {
+  background: var(--red);
+  color: white;
+}
+
+.phase-card.status-on-hold {
+  opacity: 0.6;
+}
+
+.phase-card.status-on-hold .phase-number {
+  background: var(--text-secondary);
+}
+
+/* Pulse Animation for Urgent Items */
+@keyframes pulse-urgent {
+  0%, 100% { 
+    transform: scale(1);
+    box-shadow: 0 2px 4px var(--shadow);
+  }
+  50% { 
+    transform: scale(1.05);
+    box-shadow: 0 4px 12px rgba(230, 57, 70, 0.3);
+  }
+}

@@ -1,4 +1,4 @@
-# Kendrick Forrest Client Portal - Production Deployment Guide
+# [RE]Print Studios - Production Deployment Guide
 
 ## Table of Contents
 1. [System Overview](#system-overview)
@@ -18,7 +18,7 @@
 
 ## System Overview
 
-The Kendrick Forrest Client Portal is a full-stack web application built for creative collaboration and project management. It provides a secure, real-time environment for clients to track projects, communicate with the team, manage files, and handle invoicing.
+The [RE]Print Studios Client Portal is a full-stack web application built for creative collaboration and project management. It provides a secure, real-time environment for clients to track projects, communicate with the team, manage files, and handle invoicing.
 
 ### Technology Stack
 - **Backend**: Node.js, Express.js, PostgreSQL, Socket.io

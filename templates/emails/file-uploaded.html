@@ -1,0 +1,33 @@
+<h2 class="mt-0">New File Uploaded</h2>
+
+<p>Hi {{clientName}},</p>
+
+<p>A new file has been uploaded to your project "{{projectName}}".</p>
+
+<div class="info-box">
+  <h3 class="mt-0">File Details</h3>
+  <p><strong>File Name:</strong> {{fileName}}</p>
+  <p><strong>File Size:</strong> {{fileSize}}</p>
+  {{#if fileType}}
+  <p><strong>File Type:</strong> {{fileType}}</p>
+  {{/if}}
+  <p><strong>Uploaded By:</strong> {{uploaderName}}</p>
+  <p><strong>Upload Date:</strong> {{formatDate uploadDate}}</p>
+  {{#if phaseName}}
+  <p class="mb-0"><strong>Phase:</strong> {{phaseName}}</p>
+  {{/if}}
+</div>
+
+{{#if description}}
+<h3>Description</h3>
+<p>{{description}}</p>
+{{/if}}
+
+<div class="text-center mt-40 mb-40">
+  <a href="{{downloadUrl}}" class="button">View File</a>
+</div>
+
+<p>You can also access this file and all other project files through your client portal.</p>
+
+<p>Best regards,<br>
+The [RE]Print Studios Team</p>

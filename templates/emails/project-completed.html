@@ -1,0 +1,53 @@
+<h2 class="mt-0">Project Completed! 🎉</h2>
+
+<p>Hi {{clientName}},</p>
+
+<p>Congratulations! Your project <strong>"{{projectName}}"</strong> has been successfully completed.</p>
+
+<div class="success-box">
+  <h3 class="mt-0">Project Summary</h3>
+  <p><strong>Project:</strong> {{projectName}}</p>
+  <p><strong>Start Date:</strong> {{formatDate startDate}}</p>
+  <p><strong>Completion Date:</strong> {{formatDate completionDate}}</p>
+  <p><strong>Duration:</strong> {{projectDuration}}</p>
+  {{#if totalDeliverables}}
+  <p class="mb-0"><strong>Total Deliverables:</strong> {{totalDeliverables}} files</p>
+  {{/if}}
+</div>
+
+{{#if completedPhases}}
+<h3>Completed Phases:</h3>
+<ol>
+  {{#each completedPhases}}
+  <li><strong>{{this.name}}</strong> - Completed {{formatDate this.completedAt}}</li>
+  {{/each}}
+</ol>
+{{/if}}
+
+<h3>Your Project Files</h3>
+<p>All project files and deliverables remain accessible in your client portal. You can download them at any time.</p>
+
+<div class="text-center mt-40 mb-40">
+  <a href="{{portalUrl}}" class="button">Access Your Files</a>
+</div>
+
+{{#if hasOutstandingInvoice}}
+<div class="warning-box">
+  <h4 class="mt-0">Outstanding Invoice</h4>
+  <p class="mb-0">Please note that you have an outstanding invoice for this project. You can view and pay it through your client portal.</p>
+</div>
+{{/if}}
+
+<h3>Thank You!</h3>
+<p>It's been a pleasure working with you on this project. We hope you're thrilled with the results!</p>
+
+<p>If you need any additional support or have another project in mind, we're here to help.</p>
+
+<p>Best regards,<br>
+The [RE]Print Studios Team</p>
+
+<hr style="margin: 40px 0; border: none; border-top: 1px solid #F2EDE6;">
+
+<p class="text-center" style="font-size: 14px; color: #999;">
+  <em>Your project files will remain accessible in your portal. We recommend downloading a backup copy for your records.</em>
+</p>

@@ -122,7 +122,7 @@ CREATE TABLE phase_documents (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
     phase_id UUID NOT NULL REFERENCES project_phases(id),
-    file_id UUID NOT NULL REFERENCES project_files(id) ON DELETE CASCADE,
+    file_id UUID NOT NULL REFERENCES files(id) ON DELETE CASCADE,
     document_type VARCHAR(50), -- contract, brief, proof, invoice, etc.
     is_client_visible BOOLEAN DEFAULT true,
     uploaded_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,

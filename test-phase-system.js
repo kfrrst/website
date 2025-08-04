@@ -180,7 +180,7 @@ async function testStaticFiles() {
   });
 
   await test('Portal.js File', async () => {
-    const response = await fetch(`${BASE_URL}/portal.js`);
+    const response = await fetch(`${BASE_URL}/components/portal/Portal.js`);
     if (!response.ok) throw new Error(`Status ${response.status}`);
   });
 

@@ -34,3 +34,6 @@ codex_*.md
 # Build files
 dist/
 build/
+
+*storybook.log
+storybook-static

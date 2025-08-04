@@ -2,8 +2,83 @@
 class AdminPortal {
   constructor() {
     this.apiUrl = '/api';
-    this.token = localStorage.getItem('adminToken');
-    this.refreshToken = localStorage.getItem('adminRefreshToken');
+    this.initialized = false;
+    
+    // Enhanced debugging
+    console.log('=== AdminPortal Constructor START ===');
+    console.log('Time:', new Date().toISOString());
+    console.log('URL:', window.location.href);
+    console.log('Referrer:', document.referrer);
+    
+    // Check what's in localStorage before loading
+    console.log('All localStorage keys:', Object.keys(localStorage));
+    Object.keys(localStorage).forEach(key => {
+      const value = localStorage.getItem(key);
+      console.log(`localStorage['${key}'] = ${value ? value.substring(0, 50) + '...' : 'null'}`);
+    });
+    
+    // Try to get tokens from multiple sources with fallback names
+    this.token = localStorage.getItem('adminToken') || 
+                 localStorage.getItem('admin_session') || 
+                 sessionStorage.getItem('adminToken') ||
+                 sessionStorage.getItem('admin_session');
+                 
+    this.refreshToken = localStorage.getItem('adminRefreshToken') || 
+                        localStorage.getItem('admin_refresh') ||
+                        sessionStorage.getItem('adminRefreshToken') ||
+                        sessionStorage.getItem('admin_refresh');
+    
+    // If not found, check encoded session data
+    if (!this.token) {
+      const encodedSession = localStorage.getItem('adminSessionData');
+      if (encodedSession) {
+        try {
+          const sessionData = JSON.parse(atob(encodedSession));
+          if (sessionData.e > Date.now()) {
+            this.token = sessionData.t;
+            this.refreshToken = sessionData.r;
+            console.log('Restored session from encoded data');
+          } else {
+            console.log('Encoded session expired');
+            localStorage.removeItem('adminSessionData');
+          }
+        } catch (e) {
+          console.error('Failed to decode session data:', e);
+        }
+      }
+    }
+    
+    // If not in storage, check cookies as fallback
+    if (!this.token) {
+      const tokenCookie = document.cookie.split('; ').find(row => row.startsWith('adminToken='));
+      if (tokenCookie) {
+        this.token = tokenCookie.split('=')[1];
+      }
+    }
+    
+    console.log('Token retrieved:', this.token ? 'YES' : 'NO');
+    console.log('RefreshToken retrieved:', this.refreshToken ? 'YES' : 'NO');
+    console.log('Token sources checked: localStorage, sessionStorage, cookies');
+    
+    // Add event listeners to catch any storage clearing
+    window.addEventListener('beforeunload', (e) => {
+      console.log('=== BEFOREUNLOAD EVENT ===');
+      console.log('Tokens still in localStorage?', {
+        adminToken: localStorage.getItem('adminToken') ? 'YES' : 'NO',
+        adminRefreshToken: localStorage.getItem('adminRefreshToken') ? 'YES' : 'NO'
+      });
+    });
+    
+    // Listen for storage events from other tabs
+    window.addEventListener('storage', (e) => {
+      console.log('=== STORAGE EVENT ===', {
+        key: e.key,
+        oldValue: e.oldValue ? 'had value' : 'null',
+        newValue: e.newValue ? 'has value' : 'null',
+        url: e.url
+      });
+    });
+    
     this.currentSection = 'overview';
     this.socket = null;
     this.stats = {};
@@ -12,14 +87,26 @@ class AdminPortal {
     this.invoices = [];
     this.inquiries = [];
     this.searchTimeout = null;
-    this.init();
+    
+    // Don't initialize here - wait for explicit init() call
   }
 
   init() {
+    if (this.initialized) {
+      console.log('Already initialized, skipping...');
+      return;
+    }
+    this.initialized = true;
+    
+    console.log('Admin portal init - Token:', this.token ? 'exists' : 'missing');
+    console.log('Admin portal init - Refresh token:', this.refreshToken ? 'exists' : 'missing');
+    
     // Check if already logged in
     if (this.token) {
+      console.log('Token found, verifying...');
       this.verifyTokenAndShowDashboard();
     } else {
+      console.log('No token, showing login form');
       this.setupLoginForm();
     }
     
@@ -84,8 +171,61 @@ class AdminPortal {
         // Store tokens
         this.token = data.accessToken;
         this.refreshToken = data.refreshToken;
-        localStorage.setItem('adminToken', this.token);
-        localStorage.setItem('adminRefreshToken', this.refreshToken);
+        
+        console.log('=== STORING TOKENS ===');
+        console.log('Tokens to store:', {
+          accessToken: this.token ? `${this.token.substring(0, 20)}...` : 'missing',
+          refreshToken: this.refreshToken ? 'exists' : 'missing'
+        });
+        
+        // Store with explicit error handling in multiple places with fallback names
+        try {
+          // Store with original names
+          localStorage.setItem('adminToken', this.token);
+          sessionStorage.setItem('adminToken', this.token);
+          
+          // Also store with fallback names that might not be cleared
+          localStorage.setItem('admin_session', this.token);
+          sessionStorage.setItem('admin_session', this.token);
+          
+          // Set cookie with httpOnly flag simulation (expires in 7 days)
+          const expires = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toUTCString();
+          document.cookie = `adminToken=${this.token}; path=/; expires=${expires}; SameSite=Strict`;
+          console.log('adminToken stored successfully in all storages');
+        } catch (e) {
+          console.error('Failed to store adminToken:', e);
+        }
+        
+        try {
+          // Store refresh token with both names
+          localStorage.setItem('adminRefreshToken', this.refreshToken);
+          localStorage.setItem('admin_refresh', this.refreshToken);
+          sessionStorage.setItem('adminRefreshToken', this.refreshToken);
+          sessionStorage.setItem('admin_refresh', this.refreshToken);
+          console.log('adminRefreshToken stored successfully');
+        } catch (e) {
+          console.error('Failed to store adminRefreshToken:', e);
+        }
+        
+        // Verify storage immediately
+        const verifyToken = localStorage.getItem('adminToken');
+        const verifyRefresh = localStorage.getItem('adminRefreshToken');
+        console.log('Immediate verification:', {
+          adminToken: verifyToken ? `${verifyToken.substring(0, 20)}...` : 'MISSING!',
+          adminRefreshToken: verifyRefresh ? 'exists' : 'MISSING!'
+        });
+        
+        // Test localStorage persistence
+        localStorage.setItem('test_' + Date.now(), 'test_value');
+        console.log('Test item stored, all keys:', Object.keys(localStorage));
+        
+        // Store encrypted session data as a single item that might not be cleared
+        const sessionData = {
+          t: this.token,
+          r: this.refreshToken,
+          e: Date.now() + (7 * 24 * 60 * 60 * 1000) // 7 days expiry
+        };
+        localStorage.setItem('adminSessionData', btoa(JSON.stringify(sessionData)));
         
         // Remember me functionality
         if (formData.get('remember')) {
@@ -109,35 +249,47 @@ class AdminPortal {
   // Verify token and show dashboard
   async verifyTokenAndShowDashboard() {
     try {
+      console.log('Verifying admin token...');
       const response = await fetch(`${this.apiUrl}/auth/me`, {
         headers: {
           'Authorization': `Bearer ${this.token}`
         }
       });
 
+      console.log('Token verification response:', response.status);
+      
       if (response.ok) {
         const data = await response.json();
+        console.log('User data:', data);
         if (data.user.role === 'admin') {
           this.showDashboard();
         } else {
+          console.error('User is not admin:', data.user.role);
           this.logout();
         }
-      } else if (response.status === 403) {
+      } else if (response.status === 403 || response.status === 401) {
+        console.log('Token expired, attempting refresh...');
         // Try to refresh token
         await this.refreshAccessToken();
       } else {
-        this.logout();
+        console.error('Token verification failed:', response.status);
+        // Don't auto-logout on verification failure during initialization
+        console.log('Showing login form instead of auto-logout');
+        this.setupLoginForm();
       }
     } catch (error) {
       console.error('Token verification error:', error);
-      this.logout();
+      // Don't auto-logout on network/server errors during initialization
+      console.log('Showing login form instead of auto-logout due to error');
+      this.setupLoginForm();
     }
   }
 
   // Refresh access token
   async refreshAccessToken() {
     if (!this.refreshToken) {
-      this.logout();
+      console.log('No refresh token available, showing login form');
+      this.setupLoginForm();
       return;
     }
 
@@ -154,15 +306,38 @@ class AdminPortal {
         const data = await response.json();
         this.token = data.accessToken;
         this.refreshToken = data.refreshToken;
+        
+        // Store in multiple places with fallback names
         localStorage.setItem('adminToken', this.token);
+        localStorage.setItem('admin_session', this.token);
         localStorage.setItem('adminRefreshToken', this.refreshToken);
+        localStorage.setItem('admin_refresh', this.refreshToken);
+        sessionStorage.setItem('adminToken', this.token);
+        sessionStorage.setItem('admin_session', this.token);
+        sessionStorage.setItem('adminRefreshToken', this.refreshToken);
+        sessionStorage.setItem('admin_refresh', this.refreshToken);
+        
+        // Set cookie
+        const expires = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toUTCString();
+        document.cookie = `adminToken=${this.token}; path=/; expires=${expires}; SameSite=Strict`;
+        
+        // Store encoded session data
+        const sessionData = {
+          t: this.token,
+          r: this.refreshToken,
+          e: Date.now() + (7 * 24 * 60 * 60 * 1000)
+        };
+        localStorage.setItem('adminSessionData', btoa(JSON.stringify(sessionData)));
+        
         this.showDashboard();
       } else {
-        this.logout();
+        console.log('Refresh token failed, showing login form');
+        this.setupLoginForm();
       }
     } catch (error) {
       console.error('Token refresh error:', error);
-      this.logout();
+      console.log('Refresh token error, showing login form');
+      this.setupLoginForm();
     }
   }
 
@@ -223,7 +398,7 @@ class AdminPortal {
     // Setup logout
     const logoutBtn = document.getElementById('logout-btn');
     if (logoutBtn) {
-      logoutBtn.addEventListener('click', () => this.logout());
+      logoutBtn.addEventListener('click', () => this.logout(true)); // Manual logout
     }
 
     // Setup keyboard shortcuts
@@ -433,6 +608,9 @@ class AdminPortal {
         break;
       case 'phases':
         await this.loadPhaseAnalytics();
+        break;
+      case 'email-templates':
+        await this.loadEmailTemplates();
         break;
     }
   }
@@ -836,7 +1014,10 @@ class AdminPortal {
   }
 
   // Logout
-  async logout() {
+  async logout(isManual = false) {
+    console.log('LOGOUT called - clearing tokens', { isManual });
+    console.trace('Logout stack trace');
+    
     try {
       await this.fetchWithAuth(`${this.apiUrl}/auth/logout`, {
         method: 'POST',
@@ -849,14 +1030,29 @@ class AdminPortal {
     // Cleanup
     this.cleanup();
 
-    // Clear tokens
+    // Clear tokens from all storage mechanisms including fallback names
     localStorage.removeItem('adminToken');
     localStorage.removeItem('adminRefreshToken');
+    localStorage.removeItem('admin_session');
+    localStorage.removeItem('admin_refresh');
+    localStorage.removeItem('adminSessionData');
+    sessionStorage.removeItem('adminToken');
+    sessionStorage.removeItem('adminRefreshToken');
+    sessionStorage.removeItem('admin_session');
+    sessionStorage.removeItem('admin_refresh');
+    // Clear cookies
+    document.cookie = 'adminToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
     this.token = null;
     this.refreshToken = null;
 
-    // Redirect to login
-    window.location.reload();
+    // Only redirect to login page if this is a manual logout
+    // For automatic logouts (like token verification failures), just show login form
+    if (isManual) {
+      window.location.reload();
+    } else {
+      // Just show the login form without reloading
+      this.setupLoginForm();
+    }
   }
 
   // Show message
@@ -3786,6 +3982,326 @@ class AdminPortal {
       console.error('Error checking for auto-advancement:', error);
     }
   }
+
+  // Email Template Management Functions
+  async showEmailTemplates() {
+    console.log('Showing email templates section...');
+    this.showSection('email-templates');
+    
+    // Check if section is visible after showSection
+    setTimeout(() => {
+      const section = document.getElementById('email-templates');
+      console.log('Email templates section:', section);
+      console.log('Has active class:', section?.classList.contains('active'));
+      console.log('Computed display:', section ? window.getComputedStyle(section).display : 'null');
+      console.log('Section offsetHeight:', section?.offsetHeight);
+      console.log('Section innerHTML length:', section?.innerHTML.length);
+      
+      // Check container visibility
+      const container = document.querySelector('.template-manager-container');
+      console.log('Container offsetHeight:', container?.offsetHeight);
+    }, 100);
+    
+    await this.loadEmailTemplates();
+  }
+
+  async loadEmailTemplates() {
+    try {
+      console.log('Loading email templates...');
+      const response = await this.fetchWithAuth(`${this.apiUrl}/email-preview/templates`);
+      const data = await response.json();
+      
+      console.log('Email templates response:', response.status, data);
+      
+      if (response.ok) {
+        console.log('Rendering templates:', data.templates);
+        this.renderEmailTemplatesList(data.templates);
+      } else {
+        throw new Error(data.error || 'Failed to load templates');
+      }
+    } catch (error) {
+      console.error('Error loading email templates:', error);
+      this.showMessage('Failed to load email templates', 'error');
+    }
+  }
+
+  renderEmailTemplatesList(templates) {
+    const templateList = document.getElementById('template-list');
+    console.log('Template list element:', templateList);
+    console.log('Templates to render:', templates);
+    
+    if (!templateList) {
+      console.error('Template list element not found!');
+      return;
+    }
+    
+    if (!templates || templates.length === 0) {
+      templateList.innerHTML = '<p>No templates found</p>';
+      return;
+    }
+
+    templateList.innerHTML = templates.map(template => `
+      <div class="template-item" onclick="window.adminPortal.selectEmailTemplate('${template.id}', event)">
+        <h4>${this.escapeHtml(template.name)}</h4>
+        <p>${this.escapeHtml(template.subject)}</p>
+      </div>
+    `).join('');
+    
+    console.log('Templates rendered successfully');
+  }
+
+  async selectEmailTemplate(templateId, evt) {
+    try {
+      // Update UI to show selected template
+      document.querySelectorAll('.template-item').forEach(item => {
+        item.classList.remove('active');
+      });
+      if (evt && evt.currentTarget) {
+        evt.currentTarget.classList.add('active');
+      }
+
+      // Load template details
+      const response = await this.fetchWithAuth(`${this.apiUrl}/email-preview/template/${templateId}`);
+      const data = await response.json();
+      
+      if (response.ok) {
+        this.currentTemplate = data;
+        this.displayEmailTemplate(data);
+      } else {
+        throw new Error(data.error || 'Failed to load template');
+      }
+    } catch (error) {
+      console.error('Error loading template:', error);
+      this.showMessage('Failed to load template', 'error');
+    }
+  }
+
+  displayEmailTemplate(template) {
+    // Update template name
+    document.getElementById('template-name').textContent = template.id
+      .split('-')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
+
+    // Show template info
+    const templateInfo = document.getElementById('template-info');
+    templateInfo.style.display = 'block';
+
+    // Update subject
+    document.getElementById('template-subject').value = template.subject || '';
+
+    // Show available variables
+    const variablesList = document.getElementById('template-variables');
+    variablesList.innerHTML = (template.variables || []).map(variable => {
+      const varName = typeof variable === 'object' ? variable.name : variable;
+      const varLabel = typeof variable === 'object' ? variable.label : variable;
+      const varDesc = typeof variable === 'object' ? variable.description : '';
+      
+      return `<span class="variable-tag" 
+        title="${this.escapeHtml(varDesc || 'Click to insert')}" 
+        onclick="window.adminPortal.copyVariable('${varName}')"
+        data-variable="${varName}">
+        [${varLabel}]
+      </span>`;
+    }).join('');
+
+    // Update editor content
+    const editor = document.getElementById('template-editor');
+    editor.value = template.content;
+
+    // Enable buttons and add event listener
+    const previewBtn = document.getElementById('preview-btn');
+    const saveBtn = document.getElementById('save-template-btn');
+    
+    previewBtn.disabled = false;
+    saveBtn.disabled = false;
+    
+    // Remove any existing listeners and add new one
+    const newPreviewBtn = previewBtn.cloneNode(true);
+    previewBtn.parentNode.replaceChild(newPreviewBtn, previewBtn);
+    newPreviewBtn.addEventListener('click', () => {
+      console.log('Preview button clicked via event listener');
+      this.previewEmailTemplate();
+    });
+  }
+
+  copyVariable(variable) {
+    const editor = document.getElementById('template-editor');
+    const cursorPos = editor.selectionStart;
+    const textBefore = editor.value.substring(0, cursorPos);
+    const textAfter = editor.value.substring(cursorPos);
+    
+    editor.value = textBefore + `{{${variable}}}` + textAfter;
+    editor.focus();
+    editor.selectionStart = editor.selectionEnd = cursorPos + variable.length + 4;
+    
+    this.showMessage(`Inserted {{${variable}}}`, 'success');
+  }
+
+  insertEmailElement(type) {
+    const editor = document.getElementById('template-editor');
+    const cursorPos = editor.selectionStart;
+    const textBefore = editor.value.substring(0, cursorPos);
+    const textAfter = editor.value.substring(cursorPos);
+    
+    let insertText = '';
+    let cursorOffset = 0;
+    
+    switch(type) {
+      case 'heading':
+        insertText = '<h2 style="margin-top: 24px; margin-bottom: 16px; font-size: 24px; font-weight: bold;">Heading Text</h2>\n';
+        cursorOffset = 83; // Position cursor at "Heading Text"
+        break;
+      
+      case 'paragraph':
+        insertText = '<p style="margin: 16px 0; line-height: 1.6;">Your paragraph text here.</p>\n';
+        cursorOffset = 46; // Position cursor at paragraph text
+        break;
+      
+      case 'button':
+        insertText = '<div style="text-align: center; margin: 32px 0;">\n  <a href="{{projectUrl}}" style="display: inline-block; background-color: #333333; color: #FCFAF7; padding: 12px 32px; text-decoration: none; border-radius: 6px; font-weight: bold;">Click Here</a>\n</div>\n';
+        cursorOffset = 60; // Position cursor at href
+        break;
+      
+      case 'divider':
+        insertText = '<hr style="margin: 32px 0; border: none; border-top: 1px solid #F2EDE6;">\n';
+        break;
+      
+      case 'loop':
+        insertText = '{{#each items}}\n  <p>{{this.name}}</p>\n{{/each}}\n';
+        cursorOffset = 8; // Position cursor at "items"
+        break;
+      
+      case 'condition':
+        insertText = '{{#if condition}}\n  <p>Content when true</p>\n{{else}}\n  <p>Content when false</p>\n{{/if}}\n';
+        cursorOffset = 6; // Position cursor at "condition"
+        break;
+      
+      case 'date':
+        insertText = '{{formatDate dateVariable}}';
+        cursorOffset = 13; // Position cursor at "dateVariable"
+        break;
+      
+      case 'currency':
+        insertText = '{{formatCurrency amountVariable}}';
+        cursorOffset = 17; // Position cursor at "amountVariable"
+        break;
+    }
+    
+    editor.value = textBefore + insertText + textAfter;
+    editor.focus();
+    
+    if (cursorOffset > 0) {
+      editor.selectionStart = cursorPos + cursorOffset;
+      editor.selectionEnd = cursorPos + cursorOffset + (type === 'heading' ? 12 : type === 'paragraph' ? 25 : 10);
+    } else {
+      editor.selectionStart = editor.selectionEnd = cursorPos + insertText.length;
+    }
+  }
+
+  async previewEmailTemplate() {
+    console.log('Preview button clicked');
+    console.log('Current template:', this.currentTemplate);
+    
+    if (!this.currentTemplate) {
+      console.error('No template selected');
+      return;
+    }
+
+    try {
+      console.log('Fetching preview for:', this.currentTemplate.id);
+      const response = await this.fetchWithAuth(`${this.apiUrl}/email-preview/render`, {
+        method: 'POST',
+        body: JSON.stringify({
+          templateId: this.currentTemplate.id,
+          data: this.currentTemplate.sampleData || {}
+        })
+      });
+
+      const data = await response.json();
+      console.log('Preview response:', response.status, data);
+      
+      if (response.ok) {
+        this.showEmailPreview(data.html);
+      } else {
+        throw new Error(data.error || 'Failed to render preview');
+      }
+    } catch (error) {
+      console.error('Error previewing template:', error);
+      this.showMessage('Failed to preview template', 'error');
+    }
+  }
+
+  showEmailPreview(html) {
+    const container = document.querySelector('.template-manager-container');
+    const previewPanel = document.getElementById('template-preview-panel');
+    const previewFrame = document.getElementById('email-preview-frame');
+    
+    console.log('Preview HTML:', html);
+    console.log('HTML type:', typeof html);
+    
+    container.classList.add('preview-open');
+    previewPanel.style.display = 'flex';
+    
+    // Write HTML to iframe
+    const iframeDoc = previewFrame.contentDocument || previewFrame.contentWindow.document;
+    iframeDoc.open();
+    iframeDoc.write(html);
+    iframeDoc.close();
+  }
+
+  closeEmailPreview() {
+    const container = document.querySelector('.template-manager-container');
+    const previewPanel = document.getElementById('template-preview-panel');
+    
+    container.classList.remove('preview-open');
+    previewPanel.style.display = 'none';
+  }
+
+  updateEmailPreview() {
+    const mode = document.getElementById('preview-mode').value;
+    const frameContainer = document.querySelector('.preview-frame-container');
+    
+    if (mode === 'mobile') {
+      frameContainer.classList.add('mobile');
+    } else {
+      frameContainer.classList.remove('mobile');
+    }
+  }
+
+  async saveEmailTemplate() {
+    if (!this.currentTemplate) return;
+
+    try {
+      const editor = document.getElementById('template-editor');
+      const content = editor.value;
+
+      const response = await this.fetchWithAuth(`${this.apiUrl}/email-preview/template/${this.currentTemplate.id}`, {
+        method: 'PUT',
+        body: JSON.stringify({ content })
+      });
+
+      const data = await response.json();
+      
+      if (response.ok) {
+        this.showMessage('Template saved successfully', 'success');
+        if (data.backupCreated) {
+          console.log('Backup created:', data.backupCreated);
+        }
+        
+        // Update the stored template content
+        this.currentTemplate.content = content;
+        
+        // Refresh the preview with the new content
+        await this.previewEmailTemplate();
+      } else {
+        throw new Error(data.error || 'Failed to save template');
+      }
+    } catch (error) {
+      console.error('Error saving template:', error);
+      this.showMessage('Failed to save template', 'error');
+    }
+  }
 }
 
 // Global functions for onclick handlers
@@ -3810,6 +4326,27 @@ function composeMessage() {
 }
 
 // Initialize admin portal when DOM is loaded
-document.addEventListener('DOMContentLoaded', () => {
-  window.adminPortal = new AdminPortal();
-});
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', () => {
+    try {
+      console.log('DOMContentLoaded - Initializing AdminPortal...');
+      
+      // Create instance and then initialize
+      window.adminPortal = new AdminPortal();
+      window.adminPortal.init();
+      console.log('AdminPortal initialized successfully');
+    } catch (error) {
+      console.error('Failed to initialize AdminPortal:', error);
+    }
+  });
+} else {
+  // DOM is already loaded
+  console.log('DOM already loaded - Initializing AdminPortal...');
+  try {
+    window.adminPortal = new AdminPortal();
+    window.adminPortal.init();
+    console.log('AdminPortal initialized successfully');
+  } catch (error) {
+    console.error('Failed to initialize AdminPortal:', error);
+  }
+}
