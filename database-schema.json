@@ -1,0 +1,15 @@
+{
+  "tables": {
+    "undefined": {
+      "columns": [],
+      "constraints": [],
+      "foreignKeys": []
+    }
+  },
+  "relationships": [],
+  "generatedAt": "2025-08-07T02:47:42.335Z",
+  "stats": {
+    "tableCount": 1,
+    "relationshipCount": 0
+  }
+}

@@ -1,0 +1,17 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width">
+<link rel="stylesheet" href="../styles/pdf.css"><title>Sign • [RE]Print Studios</title></head>
+<body><div class="container">
+  <div class="header"><div class="brand">[RE]Print Studios</div><div class="forby">/for/ <span id="clientName"></span> /by/ Kendrick&nbsp;Forrest</div></div>
+  <h1>Sign Document</h1>
+  <p>Project: <span id="projectName"></span></p>
+  <div>
+    <label>Name</label><br>
+    <input id="typedName" placeholder="Type your full name" style="padding:8px;border:1px solid #ddd;width:320px">
+  </div>
+  <p>Draw signature:</p>
+  <canvas id="pad" width="520" height="180" style="background:#fff;border:1px solid #ddd"></canvas><br>
+  <button id="clearBtn">Clear</button>
+  <button id="submitBtn" class="badge">Submit Signature</button>
+  <p class="small">Your IP and user-agent are recorded for ESIGN compliance.</p>
+  <script src="./sign.js" type="module"></script>
+</div></body></html>

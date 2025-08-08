@@ -23,13 +23,13 @@ const REFRESH_TOKEN_EXPIRES_IN = '7d';
 // Generate tokens
 const generateTokens = (userId, email, role) => {
   const accessToken = jwt.sign(
-    { id: userId, userId, email, role },  // Include both id and userId for compatibility
+    { userId, email, role },
     JWT_SECRET,
     { expiresIn: JWT_EXPIRES_IN }
   );
   
   const refreshToken = jwt.sign(
-    { id: userId, userId, email, role, type: 'refresh' },  // Include both id and userId for compatibility
+    { userId, email, role, type: 'refresh' },
     JWT_SECRET,
     { expiresIn: REFRESH_TOKEN_EXPIRES_IN }
   );
@@ -233,7 +233,6 @@ router.post('/login', userValidations.login, handleValidationErrors, async (req,
         name: `${user.first_name} ${user.last_name}`,
         role: user.role
       },
-      token: accessToken,  // For backward compatibility
       accessToken,
       refreshToken
     });

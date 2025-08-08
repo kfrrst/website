@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Test Client Login</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; max-width: 600px; margin: 0 auto; }
+        .section { margin: 20px 0; padding: 20px; border: 1px solid #ddd; border-radius: 5px; }
+        button { padding: 10px 20px; margin: 5px; cursor: pointer; }
+        .success { color: green; }
+        .error { color: red; }
+        pre { background: #f4f4f4; padding: 10px; overflow: auto; }
+    </style>
+</head>
+<body>
+    <h1>Client Portal Login Test</h1>
+    
+    <div class="section">
+        <h2>1. Clear Browser Storage</h2>
+        <p>This will clear any old/invalid tokens</p>
+        <button onclick="clearStorage()">Clear Storage</button>
+        <div id="clearResult"></div>
+    </div>
+    
+    <div class="section">
+        <h2>2. Login with Correct Credentials</h2>
+        <p>Email: client@example.com / Password: client123</p>
+        <button onclick="doLogin()">Login</button>
+        <div id="loginResult"></div>
+    </div>
+    
+    <div class="section">
+        <h2>3. Test Dashboard API</h2>
+        <button onclick="testDashboard()">Test Dashboard Stats</button>
+        <button onclick="testProjects()">Test Projects</button>
+        <div id="apiResult"></div>
+    </div>
+    
+    <div class="section">
+        <h2>4. Go to Client Portal</h2>
+        <button onclick="window.location.href='/portal.html'">Open Client Portal</button>
+    </div>
+
+    <script>
+        function clearStorage() {
+            localStorage.clear();
+            sessionStorage.clear();
+            document.getElementById('clearResult').innerHTML = '<p class="success">✓ Storage cleared!</p>';
+        }
+        
+        async function doLogin() {
+            try {
+                const response = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        email: 'client@example.com',
+                        password: 'client123'
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.token) {
+                    localStorage.setItem('authToken', data.token);
+                    localStorage.setItem('userRole', data.user.role);
+                    localStorage.setItem('userName', data.user.firstName + ' ' + data.user.lastName);
+                    
+                    document.getElementById('loginResult').innerHTML = `
+                        <p class="success">✓ Login successful!</p>
+                        <p>User ID: ${data.user.id}</p>
+                        <p>Name: ${data.user.firstName} ${data.user.lastName}</p>
+                        <p>Role: ${data.user.role}</p>
+                    `;
+                } else {
+                    throw new Error(data.error || 'Login failed');
+                }
+            } catch (error) {
+                document.getElementById('loginResult').innerHTML = `
+                    <p class="error">✗ Login failed: ${error.message}</p>
+                `;
+            }
+        }
+        
+        async function testDashboard() {
+            const token = localStorage.getItem('authToken');
+            if (!token) {
+                document.getElementById('apiResult').innerHTML = '<p class="error">Please login first!</p>';
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/dashboard/stats', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                const data = await response.json();
+                document.getElementById('apiResult').innerHTML = `
+                    <h3>Dashboard Stats:</h3>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                `;
+            } catch (error) {
+                document.getElementById('apiResult').innerHTML = `
+                    <p class="error">API Error: ${error.message}</p>
+                `;
+            }
+        }
+        
+        async function testProjects() {
+            const token = localStorage.getItem('authToken');
+            if (!token) {
+                document.getElementById('apiResult').innerHTML = '<p class="error">Please login first!</p>';
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/projects', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                const data = await response.json();
+                document.getElementById('apiResult').innerHTML = `
+                    <h3>Projects:</h3>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                `;
+            } catch (error) {
+                document.getElementById('apiResult').innerHTML = `
+                    <p class="error">API Error: ${error.message}</p>
+                `;
+            }
+        }
+    </script>
+</body>
+</html>

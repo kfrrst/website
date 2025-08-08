@@ -1,0 +1,20 @@
+<!doctype html><html><head><meta charset="utf-8">
+<link rel="stylesheet" href="../styles/pdf.css"><title>Change Order</title></head><body>
+<div class="container">
+  <div class="header">
+    <div class="brand">[RE]Print Studios</div>
+    <div class="forby">/for/ {client.displayName} /by/ Kendrick&nbsp;Forrest</div>
+  </div>
+  
+<h1>Change Order</h1>
+<p>Project: {{project.name}}</p>
+<table class="table">
+  <tr><th>Change</th><th>Impact</th><th>Cost</th></tr>
+  {{#each changes}}<tr><td>{{desc}}</td><td>{{impact}}</td><td>{{cost}}</td></tr>{{/each}}
+</table>
+<p class="note">Accepted by:</p>
+<div class="sigline"></div>
+
+  <hr/>
+  <p class="small">Generated 2025-08-08 • Project: {project.name} • ID: {project.id}</p>
+</div></body></html>

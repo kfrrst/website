@@ -1,0 +1,4 @@
+<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="../styles/pdf.css"><title>Invoice</title></head><body>
+<div class="container"><div class="header"><div class="brand">[RE]Print Studios</div><div class="forby">/for/ {{client.displayName}} /by/ Kendrick&nbsp;Forrest</div></div>
+<h1>Invoice #{{invoice.number}}</h1><table class="table"><tr><th>Description</th><th>Qty</th><th>Rate</th><th>Amount</th></tr>{{#each invoice.items}}<tr><td>{{label}}</td><td>{{qty}}</td><td>{{rate}}</td><td>{{amount}}</td></tr>{{/each}}<tr><th colspan="3">Total</th><th>{{invoice.total}}</th></tr></table>
+</div></body></html>

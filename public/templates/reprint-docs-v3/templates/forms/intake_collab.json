@@ -1,0 +1,40 @@
+{
+  "id": "intake_collab",
+  "version": "1.0.0",
+  "serviceFilter": [
+    "COL"
+  ],
+  "schema": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Collaboration Brief",
+    "type": "object",
+    "properties": {
+      "goal": {
+        "type": "string"
+      },
+      "stakeholders": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "availability": {
+        "type": "string"
+      },
+      "comms": {
+        "type": "string",
+        "enum": [
+          "Email",
+          "Slack",
+          "Phone",
+          "Portal Only"
+        ]
+      }
+    }
+  },
+  "uiSchema": {
+    "goal": {
+      "ui:widget": "textarea"
+    }
+  }
+}

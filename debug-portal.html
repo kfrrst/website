@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Debug Portal Loading</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; }
+    .section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; }
+    .success { color: green; }
+    .error { color: red; }
+    .info { color: blue; }
+    pre { background: #f5f5f5; padding: 10px; overflow: auto; }
+  </style>
+</head>
+<body>
+  <h1>Portal Debug</h1>
+  <div id="results"></div>
+
+  <script type="module">
+    const results = document.getElementById('results');
+    
+    function log(message, type = 'info') {
+      const div = document.createElement('div');
+      div.className = type;
+      div.innerHTML = `[${new Date().toLocaleTimeString()}] ${message}`;
+      results.appendChild(div);
+    }
+
+    async function debugPortal() {
+      log('Starting portal debug...');
+      
+      try {
+        // Test login
+        const loginResponse = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: 'test@example.com',
+            password: 'password123'
+          })
+        });
+        
+        const loginData = await loginResponse.json();
+        if (!loginData.success) {
+          log('Login failed: ' + loginData.error, 'error');
+          return;
+        }
+        
+        log('Login successful!', 'success');
+        
+        // Now load the portal page and check what happens
+        const portalResponse = await fetch('/portal.html');
+        const portalHtml = await portalResponse.text();
+        
+        // Check if portal HTML loads
+        log('Portal HTML loaded: ' + (portalHtml.length > 1000 ? 'Yes' : 'No'), portalHtml.length > 1000 ? 'success' : 'error');
+        
+        // Open portal in new window to observe console
+        log('\nOpening portal in new window to check console errors...');
+        const win = window.open('/portal.html', '_blank', 'width=1200,height=800');
+        
+        // Wait and check the console
+        setTimeout(() => {
+          log('\nCheck the browser console in the new window for errors!', 'info');
+          log('Common issues to look for:', 'info');
+          log('- Module not found errors', 'info');
+          log('- DOM element not found errors', 'info');
+          log('- API request failures', 'info');
+          log('- JavaScript syntax errors', 'info');
+        }, 2000);
+        
+      } catch (error) {
+        log('Debug failed: ' + error.message, 'error');
+      }
+    }
+    
+    debugPortal();
+  </script>
+</body>
+</html>

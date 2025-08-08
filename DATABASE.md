@@ -1,8 +1,8 @@
-# Kendrick Forrest Client Portal - Database Documentation
+# [RE]Print Studios Client and Admin portals - Database Documentation
 
 ## Overview
 
-The [RE]Print Studios Client Portal uses PostgreSQL as its primary database system. This document outlines the database schema, setup instructions, and usage guidelines.
+The [RE]Print Studios Client and Admin portals use PostgreSQL as their primary database system. This document outlines the database schema, setup instructions, and usage guidelines.
 
 ## Database Setup
 

@@ -1,0 +1,53 @@
+{
+  "id": "intake_python",
+  "version": "1.0.0",
+  "serviceFilter": [
+    "PY"
+  ],
+  "schema": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Python Automation Intake",
+    "type": "object",
+    "properties": {
+      "targets": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "title": "What needs automating?"
+      },
+      "dataSources": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "title": "Data sources/APIs"
+      },
+      "schedule": {
+        "type": "string",
+        "enum": [
+          "On demand",
+          "Hourly",
+          "Daily",
+          "Weekly"
+        ]
+      },
+      "runtime": {
+        "type": "string",
+        "enum": [
+          "Local",
+          "Server",
+          "Cloud Function"
+        ]
+      },
+      "security": {
+        "type": "string"
+      }
+    }
+  },
+  "uiSchema": {
+    "security": {
+      "ui:widget": "textarea"
+    }
+  }
+}

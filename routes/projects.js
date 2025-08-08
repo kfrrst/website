@@ -38,10 +38,12 @@ const canAccessProject = async (projectId, userId, userRole) => {
     return true;
   }
   
-  // Client users can only access projects where they are the client
+  // Client users can only access projects for their client company
   const result = await dbQuery(
     `SELECT p.id FROM projects p 
-     WHERE p.id = $1 AND p.client_id = $2 AND p.is_active = true`,
+     JOIN clients c ON p.client_id = c.id
+     JOIN users u ON u.client_id = c.id 
+     WHERE p.id = $1 AND u.id = $2 AND p.is_active = true`,
     [projectId, userId]
   );
   return result.rows.length > 0;
@@ -84,7 +86,7 @@ router.get('/',
       // Non-admin users can only see projects for their client
       if (!isAdmin) {
         paramCount++;
-        whereClause += ` AND p.client_id = $${paramCount}`;
+        whereClause += ` AND p.client_id = (SELECT client_id FROM users WHERE id = $${paramCount})`;
         queryParams.push(userId);
       }
 
@@ -117,7 +119,7 @@ router.get('/',
       const countQuery = `
         SELECT COUNT(*) as total
         FROM projects p
-        LEFT JOIN users u ON p.client_id = u.id
+        LEFT JOIN clients c ON p.client_id = c.id
         ${whereClause}
       `;
       const countResult = await dbQuery(countQuery, queryParams);
@@ -146,9 +148,9 @@ router.get('/',
           p.project_type,
           p.created_at,
           p.updated_at,
-          u.first_name || ' ' || u.last_name as client_name,
-          u.email as client_email,
-          u.company_name,
+          c.contact_person as client_name,
+          c.email as client_email,
+          c.company_name,
           (SELECT COUNT(*) FROM project_milestones m WHERE m.project_id = p.id) as total_milestones,
           (SELECT COUNT(*) FROM project_milestones m WHERE m.project_id = p.id AND m.is_completed = true) as completed_milestones,
           (SELECT COUNT(*) FROM files f WHERE f.project_id = p.id AND f.is_active = true) as file_count,
@@ -156,36 +158,9 @@ router.get('/',
           CASE 
             WHEN p.due_date < CURRENT_DATE AND p.status NOT IN ('completed', 'cancelled') THEN true
             ELSE false
-          END as is_overdue,
-          -- Calculate current phase index based on progress_percentage
-          CASE 
-            WHEN p.progress_percentage >= 100 THEN 7  -- Delivery (Phase 8, index 7)
-            WHEN p.progress_percentage >= 88 THEN 6   -- Sign-off (Phase 7, index 6)
-            WHEN p.progress_percentage >= 75 THEN 5   -- Payment (Phase 6, index 5)
-            WHEN p.progress_percentage >= 63 THEN 4   -- Production (Phase 5, index 4)
-            WHEN p.progress_percentage >= 50 THEN 3   -- Review (Phase 4, index 3)
-            WHEN p.progress_percentage >= 38 THEN 2   -- Design (Phase 3, index 2)
-            WHEN p.progress_percentage >= 25 THEN 1   -- Ideation (Phase 2, index 1)
-            WHEN p.progress_percentage >= 13 THEN 1   -- Still Ideation
-            ELSE 0                                     -- Onboarding (Phase 1, index 0)
-          END as current_phase_index,
-          -- Also try to get phase tracking data if it exists
-          COALESCE(pt.current_phase_index, 
-            CASE 
-              WHEN p.progress_percentage >= 100 THEN 7
-              WHEN p.progress_percentage >= 88 THEN 6
-              WHEN p.progress_percentage >= 75 THEN 5
-              WHEN p.progress_percentage >= 63 THEN 4
-              WHEN p.progress_percentage >= 50 THEN 3
-              WHEN p.progress_percentage >= 38 THEN 2
-              WHEN p.progress_percentage >= 25 THEN 1
-              WHEN p.progress_percentage >= 13 THEN 1
-              ELSE 0
-            END
-          ) as calculated_phase_index
+          END as is_overdue
         FROM projects p
-        LEFT JOIN users u ON p.client_id = u.id
-        LEFT JOIN project_phase_tracking pt ON pt.project_id = p.id
+        LEFT JOIN clients c ON p.client_id = c.id
         ${whereClause}
         ORDER BY ${sortField} ${order.toUpperCase()}
         LIMIT $${paramCount + 1} OFFSET $${paramCount + 2}
@@ -229,18 +204,6 @@ router.get('/',
 );
 
 // =============================================================================
-// GET /api/projects/debug/user - Debug endpoint to check current user
-// =============================================================================
-router.get('/debug/user', authenticateToken, (req, res) => {
-  res.json({
-    user: req.user,
-    userId: req.user?.id || req.user?.userId,
-    email: req.user?.email,
-    role: req.user?.role
-  });
-});
-
-// =============================================================================
 // GET /api/projects/:id - Get project details with milestones
 // =============================================================================
 router.get('/:id',
@@ -278,16 +241,16 @@ router.get('/:id',
           p.project_type,
           p.created_at,
           p.updated_at,
-          u.company_name,
-          u.first_name || ' ' || u.last_name as client_name,
-          u.email as client_email,
-          u.phone as client_phone,
+          c.company_name,
+          c.contact_person as client_name,
+          c.email as client_email,
+          c.phone as client_phone,
           CASE 
             WHEN p.due_date < CURRENT_DATE AND p.status NOT IN ('completed', 'cancelled') THEN true
             ELSE false
           END as is_overdue
         FROM projects p
-        LEFT JOIN users u ON p.client_id = u.id
+        LEFT JOIN clients c ON p.client_id = c.id
         WHERE p.id = $1 AND p.is_active = true
       `;
 
@@ -347,166 +310,82 @@ router.get('/:id/phases/:phaseNumber', authenticateToken, async (req, res) => {
   try {
     const { id: projectId, phaseNumber } = req.params;
     const userId = req.user.id || req.user.userId;
-    
-    console.log('Phase endpoint called:', { projectId, phaseNumber, userId });
-    
-    // Simple phase data without complex database queries
-    const phaseNames = [
-      'Onboarding', 'Ideation', 'Design', 'Review & Feedback',
-      'Production/Print', 'Payment', 'Sign-off & Docs', 'Delivery'
-    ];
-    
-    const phaseDescriptions = {
-      'Onboarding': 'Initial project setup and requirements gathering',
-      'Ideation': 'Concept development and creative brainstorming', 
-      'Design': 'Creating initial designs and mockups',
-      'Review & Feedback': 'Client review and feedback incorporation',
-      'Production/Print': 'Final production and printing',
-      'Payment': 'Payment collection and processing',
-      'Sign-off & Docs': 'Final approvals and documentation',
-      'Delivery': 'Final deliverables and handover'
-    };
-    
-    const phaseIndex = parseInt(phaseNumber) - 1;
-    
-    if (phaseIndex < 0 || phaseIndex >= phaseNames.length) {
-      return res.status(404).json({ error: 'Invalid phase number' });
-    }
-    
-    const phaseName = phaseNames[phaseIndex];
-    
-    // Return simple phase response
-    res.json({
-      phase: {
-        id: `${projectId}-phase-${phaseNumber}`,
-        project_id: projectId,
-        phase_number: parseInt(phaseNumber),
-        phase_name: phaseName,
-        phase_key: phaseName.toLowerCase().replace(/[^a-z0-9]/g, ''),
-        status: phaseIndex === 0 ? 'in_progress' : 'pending',
-        description: phaseDescriptions[phaseName],
-        started_at: phaseIndex === 0 ? new Date().toISOString() : null,
-        completed_at: null
-      },
-      actions: [],
-      files: [],
-      activity: [],
-      deliverables: [],
-      statistics: {
-        total_actions: 0,
-        completed_actions: 0,
-        pending_actions: 0,
-        file_count: 0
-      }
-    });
-    
-  } catch (error) {
-    console.error('Phase endpoint error:', error);
-    res.status(500).json({ error: 'Failed to fetch phase details' });
-  }
-});
-
-// OLD COMPLEX VERSION - COMMENTING OUT FOR NOW
-/*
-router.get('/:id/phases/:phaseNumber-old', authenticateToken, async (req, res) => {
-  try {
-    const { id: projectId, phaseNumber } = req.params;
-    const userId = req.user.id || req.user.userId;
-    
-    console.log('Phase endpoint called:', { projectId, phaseNumber, userId });
 
     // Verify user has access to this project
     const accessQuery = `
-      SELECT p.*, u.company_name 
+      SELECT p.*, c.company_name, pt.* 
       FROM projects p
-      JOIN users u ON p.client_id = u.id
+      JOIN clients c ON p.client_id = c.id
+      JOIN users u ON u.client_id = c.id
+      JOIN project_phase_tracking pt ON pt.project_id = p.id
       WHERE p.id = $1 
-        AND p.client_id = $2 
+        AND u.id = $2 
+        AND pt.phase_number = $3
         AND p.is_active = true
     `;
 
-    const result = await dbQuery(accessQuery, [projectId, userId]);
+    const result = await dbQuery(accessQuery, [projectId, userId, phaseNumber]);
 
     if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Project not found or access denied' });
+      return res.status(404).json({ error: 'Phase not found or access denied' });
     }
-    
-    const project = result.rows[0];
-    
-    // Try to get phase tracking data if it exists
-    const phaseQuery = `
-      SELECT * FROM project_phase_tracking 
-      WHERE project_id = $1 AND phase_number = $2
+
+    const phase = result.rows[0];
+
+    // Get client actions for this phase
+    const actionsQuery = `
+      SELECT ca.*, 
+             u.first_name || ' ' || u.last_name as completed_by_name
+      FROM client_actions ca
+      LEFT JOIN users u ON ca.completed_by = u.id
+      WHERE ca.project_id = $1 AND ca.phase_id = $2
+      ORDER BY ca.created_at ASC
     `;
-    
-    const phaseResult = await dbQuery(phaseQuery, [projectId, phaseNumber]);
-    const phaseTracking = phaseResult.rows[0] || {};
 
-    // Get client actions for this phase (if table exists)
-    let actionsResult = { rows: [] };
-    try {
-      const actionsQuery = `
-        SELECT ca.*
-        FROM client_actions ca
-        WHERE ca.project_id = $1 AND ca.phase_number = $2
-        ORDER BY ca.created_at ASC
-      `;
-      actionsResult = await dbQuery(actionsQuery, [projectId, phaseNumber]);
-    } catch (err) {
-      console.log('Client actions table not found or error:', err.message);
-    }
+    const actionsResult = await dbQuery(actionsQuery, [projectId, phase.id]);
 
-    // Get files for this phase (if any) - just get all project files for now
-    let filesResult = { rows: [] };
-    try {
-      const filesQuery = `
-        SELECT f.*, u.first_name || ' ' || u.last_name as uploader_name
-        FROM files f
-        LEFT JOIN users u ON f.uploader_id = u.id
-        WHERE f.project_id = $1 
-          AND f.is_active = true
-        ORDER BY f.created_at DESC
-      `;
-      filesResult = await dbQuery(filesQuery, [projectId]);
-    } catch (err) {
-      console.log('Files query error:', err.message);
-    }
+    // Get files for this phase (if any)
+    const filesQuery = `
+      SELECT f.*, u.first_name || ' ' || u.last_name as uploader_name
+      FROM files f
+      LEFT JOIN users u ON f.uploader_id = u.id
+      WHERE f.project_id = $1 
+        AND f.phase_number = $2
+        AND f.is_active = true
+      ORDER BY f.created_at DESC
+    `;
+
+    const filesResult = await dbQuery(filesQuery, [projectId, phaseNumber]);
 
     // Get activity for this phase
     const activityQuery = `
       SELECT al.*, u.first_name || ' ' || u.last_name as user_name
       FROM activity_log al
       LEFT JOIN users u ON al.user_id = u.id
-      WHERE al.project_id = $1
-        AND al.metadata->>'phase_number' = $2
+      WHERE al.entity_type = 'phase' 
+        AND al.entity_id = $1
       ORDER BY al.created_at DESC
       LIMIT 10
     `;
 
-    const activityResult = await dbQuery(activityQuery, [projectId, phaseNumber.toString()]);
-    
-    // Define phase names
-    const phaseNames = [
-      'Onboarding', 'Ideation', 'Design', 'Review & Feedback',
-      'Production/Print', 'Payment', 'Sign-off & Docs', 'Delivery'
-    ];
+    const activityResult = await dbQuery(activityQuery, [phase.id]);
 
     res.json({
       phase: {
-        id: phaseTracking.id || `${projectId}-phase-${phaseNumber}`,
-        project_id: projectId,
-        phase_number: parseInt(phaseNumber),
-        phase_name: phaseTracking.phase_name || phaseNames[parseInt(phaseNumber) - 1] || `Phase ${phaseNumber}`,
-        phase_key: phaseTracking.phase_key || phaseNames[parseInt(phaseNumber) - 1]?.toLowerCase().replace(/[^a-z0-9]/g, '') || `phase${phaseNumber}`,
-        status: phaseTracking.status || 'pending',
-        started_at: phaseTracking.started_at || null,
-        completed_at: phaseTracking.completed_at || null,
-        approved_at: phaseTracking.approved_at || null,
-        approved_by: phaseTracking.approved_by || null,
-        approval_notes: phaseTracking.approval_notes || null,
-        estimated_hours: phaseTracking.estimated_hours || null,
-        actual_hours: phaseTracking.actual_hours || null,
-        notes: phaseTracking.notes || null
+        id: phase.id,
+        project_id: phase.project_id,
+        phase_number: phase.phase_number,
+        phase_name: phase.phase_name,
+        phase_key: phase.phase_key,
+        status: phase.status,
+        started_at: phase.started_at,
+        completed_at: phase.completed_at,
+        approved_at: phase.approved_at,
+        approved_by: phase.approved_by,
+        approval_notes: phase.approval_notes,
+        estimated_hours: phase.estimated_hours,
+        actual_hours: phase.actual_hours,
+        notes: phase.notes
       },
       actions: actionsResult.rows,
       files: filesResult.rows,
@@ -524,24 +403,33 @@ router.get('/:id/phases/:phaseNumber-old', authenticateToken, async (req, res) =
     res.status(500).json({ error: 'Failed to fetch phase details' });
   }
 });
-*/
 
 // =============================================================================
 // GET /api/projects/:id/details - Get comprehensive project details with phases
 // =============================================================================
 router.get('/:id/details',
   authenticateToken,
+  [
+    param('id').isUUID().withMessage('Invalid project ID format')
+  ],
+  validateRequest,
   async (req, res) => {
-    // PRODUCTION-READY VERSION - NO MOCK DATA
     try {
       const projectId = req.params.id;
-      const userId = req.user.id || req.user.userId;  // Handle both id and userId
-      const userRole = req.user.role || 'client';  // Default to client if no role
+      const userId = req.user.id;
+      const userRole = req.user.role;
       
       console.log('GET /details - projectId:', projectId, 'userId:', userId, 'role:', userRole);
-      console.log('Full user object:', req.user);
+
+      // Check access permissions
+      const hasAccess = await canAccessProject(projectId, userId, userRole);
+      if (!hasAccess) {
+        return res.status(403).json({ error: 'Access denied. You can only view your own projects.' });
+      }
       
-      // REAL PROJECT QUERY - Simplified without role check
+      console.log('Access granted, fetching project details...');
+
+      // Get project details
       const projectQuery = `
         SELECT 
           p.id,
@@ -558,74 +446,91 @@ router.get('/:id/details',
           p.project_type,
           p.created_at,
           p.updated_at,
-          u.company_name,
-          u.first_name || ' ' || u.last_name as client_name,
-          u.email as client_email,
-          u.phone as client_phone,
+          c.company_name,
+          c.contact_person as client_name,
+          c.email as client_email,
+          c.phone as client_phone,
           CASE 
             WHEN p.due_date < CURRENT_DATE AND p.status NOT IN ('completed', 'cancelled') THEN true
             ELSE false
           END as is_overdue
         FROM projects p
-        LEFT JOIN users u ON p.client_id = u.id
+        LEFT JOIN clients c ON p.client_id = c.id
         WHERE p.id = $1 AND p.is_active = true
-          AND p.client_id = $2
       `;
-      
-      const projectResult = await dbQuery(projectQuery, [projectId, userId]);
-      
+
+      const projectResult = await dbQuery(projectQuery, [projectId]);
+      console.log('Project query returned', projectResult.rows.length, 'rows');
+
       if (projectResult.rows.length === 0) {
-        return res.status(404).json({ error: 'Project not found or access denied' });
+        return res.status(404).json({ error: 'Project not found' });
       }
-      
+
       const project = projectResult.rows[0];
-      
-      // REAL PHASES QUERY
+      console.log('Got project:', project.name);
+
+      // Get phase tracking information
       const phasesQuery = `
         SELECT 
-          COALESCE(pt.phase_number, pp.phase_number) as number,
-          COALESCE(pt.phase_name, pp.name) as name,
-          COALESCE(pt.status, 'pending') as status,
+          pt.id,
+          pt.phase_number,
+          pt.phase_name,
+          pt.status,
           pt.started_at,
-          pt.created_at as completed_at,
-          pp.phase_key as key
-        FROM (
-          VALUES 
-            (1, 'Onboarding', 'onboarding'),
-            (2, 'Ideation', 'ideation'),
-            (3, 'Design', 'design'),
-            (4, 'Review & Feedback', 'review'),
-            (5, 'Production/Print', 'production'),
-            (6, 'Payment', 'payment'),
-            (7, 'Sign-off & Docs', 'signoff'),
-            (8, 'Delivery', 'delivery')
-        ) AS pp(phase_number, name, phase_key)
-        LEFT JOIN project_phase_tracking pt 
-          ON pt.project_id = $1 
-          AND pt.phase_number = pp.phase_number
-        ORDER BY pp.phase_number
+          pt.completed_at,
+          pt.approved_at,
+          pt.notes,
+          u.first_name || ' ' || u.last_name as approved_by_name,
+          COALESCE(
+            (SELECT COUNT(*) 
+             FROM client_actions ca 
+             WHERE ca.phase_id = pt.id AND ca.is_required = true),
+            0
+          ) as total_actions,
+          COALESCE(
+            (SELECT COUNT(*) 
+             FROM client_actions ca 
+             WHERE ca.phase_id = pt.id AND ca.is_required = true AND ca.status = 'completed'),
+            0
+          ) as completed_actions
+        FROM project_phase_tracking pt
+        LEFT JOIN users u ON pt.approved_by = u.id
+        WHERE pt.project_id = $1
+        ORDER BY pt.phase_number ASC
       `;
-      
-      let phases = [];
+
+      let phasesResult;
       try {
-        const phasesResult = await dbQuery(phasesQuery, [projectId]);
-        phases = phasesResult.rows;
-      } catch (err) {
-        console.error('Phases query error:', err);
-        // Default phases if query fails
-        phases = [
-          { number: 1, name: 'Onboarding', status: 'pending', key: 'onboarding' },
-          { number: 2, name: 'Ideation', status: 'pending', key: 'ideation' },
-          { number: 3, name: 'Design', status: 'pending', key: 'design' },
-          { number: 4, name: 'Review & Feedback', status: 'pending', key: 'review' },
-          { number: 5, name: 'Production/Print', status: 'pending', key: 'production' },
-          { number: 6, name: 'Payment', status: 'pending', key: 'payment' },
-          { number: 7, name: 'Sign-off & Docs', status: 'pending', key: 'signoff' },
-          { number: 8, name: 'Delivery', status: 'pending', key: 'delivery' }
-        ];
+        phasesResult = await dbQuery(phasesQuery, [projectId]);
+        console.log('Phases query successful, got', phasesResult.rows.length, 'phases');
+      } catch (phaseError) {
+        console.error('Phases query failed:', phaseError.message);
+        throw phaseError;
       }
-      
-      // REAL MILESTONES QUERY
+
+      // Define all 8 phases
+      const allPhases = [
+        { number: 1, name: 'Onboarding', key: 'onboarding' },
+        { number: 2, name: 'Ideation', key: 'ideation' },
+        { number: 3, name: 'Design', key: 'design' },
+        { number: 4, name: 'Review & Feedback', key: 'review' },
+        { number: 5, name: 'Production/Print', key: 'production' },
+        { number: 6, name: 'Payment', key: 'payment' },
+        { number: 7, name: 'Sign-off & Docs', key: 'signoff' },
+        { number: 8, name: 'Delivery', key: 'delivery' }
+      ];
+
+      // Create phase tracking map
+      const phaseTrackingMap = {};
+      if (phasesResult && phasesResult.rows) {
+        phasesResult.rows.forEach(phase => {
+          phaseTrackingMap[phase.phase_number] = phase;
+        });
+      }
+
+      // Phase building is now handled later in the safe section
+
+      // Get project milestones
       const milestonesQuery = `
         SELECT 
           id,
@@ -639,16 +544,15 @@ router.get('/:id/details',
         WHERE project_id = $1
         ORDER BY order_index ASC, created_at ASC
       `;
-      
-      let milestones = [];
+
+      let milestonesResult = { rows: [] };
       try {
-        const milestonesResult = await dbQuery(milestonesQuery, [projectId]);
-        milestones = milestonesResult.rows;
-      } catch (err) {
-        console.error('Milestones query error:', err);
+        milestonesResult = await dbQuery(milestonesQuery, [projectId]);
+      } catch (milestoneError) {
+        console.error('Milestones query error:', milestoneError.message);
       }
-      
-      // REAL ACTIVITY QUERY
+
+      // Get recent activity related to this project
       const activityQuery = `
         SELECT 
           al.action,
@@ -661,88 +565,106 @@ router.get('/:id/details',
         ORDER BY al.created_at DESC
         LIMIT 10
       `;
-      
-      let recentActivity = [];
+
+      let activityResult = { rows: [] };
       try {
-        const activityResult = await dbQuery(activityQuery, [projectId]);
-        recentActivity = activityResult.rows;
-      } catch (err) {
-        console.error('Activity query error:', err);
+        activityResult = await dbQuery(activityQuery, [projectId]);
+      } catch (activityError) {
+        console.error('Activity query error:', activityError.message);
       }
-      
-      // REAL STATISTICS QUERY
+
+      // Get project statistics
       const statsQuery = `
         SELECT 
           (SELECT COUNT(*) FROM files WHERE project_id = $1 AND is_active = true) as file_count,
           (SELECT COUNT(*) FROM messages WHERE project_id = $1) as message_count,
           (SELECT COUNT(*) FROM invoices WHERE project_id = $1) as invoice_count,
-          (SELECT COALESCE(SUM(total_amount), 0) FROM invoices WHERE project_id = $1 AND status = 'paid') as total_paid
+          (SELECT SUM(p.amount) FROM payments p JOIN invoices i ON p.invoice_id = i.id WHERE i.project_id = $1 AND p.status = 'completed') as total_paid
       `;
-      
-      let statistics = { file_count: 0, message_count: 0, invoice_count: 0, total_paid: 0 };
+
+      let statsResult = { rows: [{ file_count: 0, message_count: 0, invoice_count: 0, total_paid: null }] };
       try {
-        const statsResult = await dbQuery(statsQuery, [projectId]);
-        if (statsResult.rows.length > 0) {
-          statistics = statsResult.rows[0];
-        }
-      } catch (err) {
-        console.error('Stats query error:', err);
+        statsResult = await dbQuery(statsQuery, [projectId]);
+      } catch (statsError) {
+        console.error('Stats query error:', statsError.message);
       }
-      
-      // Determine current phase from phase tracking if available
+
+      // Build response - ensure all variables are defined
+      let phases = [];
       let currentPhase = 1;
-      let currentPhaseIndex = 0;
-      
-      // First check if we have phase tracking data
-      const phaseTrackingQuery = `
-        SELECT current_phase_index, phase_number
-        FROM project_phase_tracking
-        WHERE project_id = $1
-        LIMIT 1
-      `;
       
       try {
-        const trackingResult = await dbQuery(phaseTrackingQuery, [projectId]);
-        if (trackingResult.rows.length > 0) {
-          const tracking = trackingResult.rows[0];
-          currentPhase = tracking.phase_number || 2;  // Default to Ideation
-          currentPhaseIndex = tracking.current_phase_index || 1;
-          
-          // Update phases array to reflect current status
-          phases = phases.map((phase, idx) => {
-            if (idx < currentPhaseIndex) {
-              phase.status = 'completed';
-            } else if (idx === currentPhaseIndex) {
-              phase.status = 'in_progress';
-            } else {
-              phase.status = 'pending';
-            }
-            return phase;
+        // Build phases array safely
+        if (phasesResult && Array.isArray(allPhases)) {
+          phases = allPhases.map(phaseTemplate => {
+            const tracking = phaseTrackingMap[phaseTemplate.number];
+            return {
+              number: phaseTemplate.number,
+              name: phaseTemplate.name,
+              key: phaseTemplate.key,
+              status: tracking ? tracking.status : 'pending',
+              started_at: tracking ? tracking.started_at : null,
+              completed_at: tracking ? tracking.completed_at : null,
+              approved_at: tracking ? tracking.approved_at : null,
+              approved_by_name: tracking ? tracking.approved_by_name : null,
+              notes: tracking ? tracking.notes : null,
+              total_actions: tracking ? parseInt(tracking.total_actions) : 0,
+              completed_actions: tracking ? parseInt(tracking.completed_actions) : 0,
+              is_current: tracking && tracking.status === 'in_progress',
+              is_completed: tracking && tracking.status === 'completed'
+            };
           });
+          
+          // Determine current phase
+          for (let i = phases.length - 1; i >= 0; i--) {
+            if (phases[i].status === 'in_progress') {
+              currentPhase = phases[i].number;
+              break;
+            } else if (phases[i].status === 'completed') {
+              currentPhase = Math.min(phases[i].number + 1, 8);
+              break;
+            }
+          }
         }
-      } catch (err) {
-        console.log('No phase tracking data, using defaults');
+      } catch (phaseProcessingError) {
+        console.error('Error processing phases:', phaseProcessingError);
+        // Continue with empty phases
       }
       
-      // RETURN REAL DATA
-      return res.json({
-        project: {
-          ...project,
-          phases: phases,
-          current_phase: currentPhase,
-          current_phase_index: currentPhaseIndex,  // Use actual tracked index
-          milestones: milestones,
-          recent_activity: recentActivity,
-          statistics: statistics
-        }
-      });
+      const response = {
+        id: project.id,
+        name: project.name,
+        description: project.description,
+        status: project.status,
+        priority: project.priority,
+        progress_percentage: project.progress_percentage,
+        budget_amount: project.budget_amount,
+        budget_currency: project.budget_currency,
+        start_date: project.start_date,
+        due_date: project.due_date,
+        completed_at: project.completed_at,
+        project_type: project.project_type,
+        created_at: project.created_at,
+        updated_at: project.updated_at,
+        company_name: project.company_name,
+        client_name: project.client_name,
+        client_email: project.client_email,
+        client_phone: project.client_phone,
+        is_overdue: project.is_overdue,
+        phases: phases || [],
+        current_phase: currentPhase || 1,
+        milestones: milestonesResult?.rows || [],
+        recent_activity: activityResult?.rows || [],
+        statistics: statsResult?.rows?.[0] || { file_count: 0, message_count: 0, invoice_count: 0, total_paid: null }
+      };
       
+      console.log('Sending response with', response.phases.length, 'phases');
+      res.json(response);
+
     } catch (error) {
       console.error('Error fetching project details:', error);
-      res.status(500).json({ 
-        error: 'Failed to fetch project details',
-        message: error.message 
-      });
+      console.error('Error stack:', error.stack);
+      res.status(500).json({ error: 'Failed to fetch project details', details: error.message });
     }
   }
 );
@@ -785,8 +707,8 @@ router.post('/',
 
       // Verify client exists and is active
       const clientCheck = await dbQuery(
-        'SELECT id, company_name, first_name || \' \' || last_name as contact_person FROM users WHERE id = $1 AND role = $2',
-        [client_id, 'client']
+        'SELECT id, company_name, contact_person FROM clients WHERE id = $1 AND status = $2',
+        [client_id, 'active']
       );
 
       if (clientCheck.rows.length === 0) {
@@ -1028,13 +950,13 @@ router.put('/:id',
           const projectResult = await dbQuery(
             `SELECT 
               p.*, 
-              u.email, u.first_name || ' ' || u.last_name as contact_person, u.company_name,
+              c.email, c.contact_person, c.company_name,
               COUNT(DISTINCT f.id) as total_deliverables
              FROM projects p
-             JOIN users u ON p.client_id = u.id
+             JOIN clients c ON p.client_id = c.id
              LEFT JOIN files f ON f.project_id = p.id AND f.is_active = true
              WHERE p.id = $1
-             GROUP BY p.id, u.email, u.first_name, u.last_name, u.company_name`,
+             GROUP BY p.id, c.email, c.contact_person, c.company_name`,
             [projectId]
           );
           

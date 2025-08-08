@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Verify Current User</title>
+    <style>
+        body { font-family: monospace; padding: 20px; }
+        pre { background: #f0f0f0; padding: 10px; }
+        .error { color: red; }
+        .success { color: green; }
+    </style>
+</head>
+<body>
+    <h1>Current Login Status</h1>
+    <div id="output"></div>
+    
+    <script>
+        const output = document.getElementById('output');
+        const token = localStorage.getItem('authToken');
+        
+        if (!token) {
+            output.innerHTML = '<p class="error">No auth token found in localStorage!</p>';
+        } else {
+            // Decode the token to see the user ID
+            try {
+                const parts = token.split('.');
+                const payload = JSON.parse(atob(parts[1]));
+                
+                output.innerHTML = `
+                    <h2>Token Payload:</h2>
+                    <pre>${JSON.stringify(payload, null, 2)}</pre>
+                    
+                    <h2>Testing API with this token...</h2>
+                    <div id="api-results"></div>
+                `;
+                
+                // Test the API
+                Promise.all([
+                    fetch('/api/dashboard/stats', {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    }).then(r => r.json()),
+                    fetch('/api/projects', {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    }).then(r => r.json())
+                ]).then(([stats, projects]) => {
+                    document.getElementById('api-results').innerHTML = `
+                        <h3>Dashboard Stats Response:</h3>
+                        <pre>${JSON.stringify(stats, null, 2)}</pre>
+                        
+                        <h3>Projects Response:</h3>
+                        <pre>${JSON.stringify(projects, null, 2)}</pre>
+                        
+                        <h3 class="${projects.projects && projects.projects.length > 0 ? 'success' : 'error'}">
+                            Projects Count: ${projects.projects ? projects.projects.length : 0}
+                        </h3>
+                    `;
+                }).catch(err => {
+                    document.getElementById('api-results').innerHTML = `
+                        <p class="error">API Error: ${err.message}</p>
+                    `;
+                });
+                
+            } catch (e) {
+                output.innerHTML = `<p class="error">Failed to decode token: ${e.message}</p>`;
+            }
+        }
+    </script>
+</body>
+</html>

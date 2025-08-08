@@ -1,0 +1,45 @@
+{
+  "id": "intake_ideation",
+  "version": "1.0.0",
+  "serviceFilter": [
+    "IDE"
+  ],
+  "schema": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Ideation Workshop Setup",
+    "type": "object",
+    "properties": {
+      "date": {
+        "type": "string",
+        "format": "date"
+      },
+      "participants": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "exercises": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "enum": [
+            "Crazy 8s",
+            "How Might We",
+            "Affinity Map",
+            "Lightning Demos",
+            "Sketch & Vote"
+          ]
+        }
+      },
+      "outcomes": {
+        "type": "string"
+      }
+    }
+  },
+  "uiSchema": {
+    "outcomes": {
+      "ui:widget": "textarea"
+    }
+  }
+}

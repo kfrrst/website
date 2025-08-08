@@ -12,18 +12,18 @@ test.describe('John Smith Client Portal Tests - Real Data', () => {
     // Go to homepage
     await page.goto('/');
     
-    // Click Client Login button
-    await page.click('button:has-text("Client Login")');
+    // Click Client Portal button
+    await page.click('button:has-text("Client Portal"), a:has-text("Client Portal")');
     
-    // Wait for login modal to appear
-    await page.waitForSelector('#login-modal:not(.hidden)', { state: 'visible' });
+    // Wait for login form
+    await page.waitForTimeout(1000);
     
     // Fill in John's credentials
-    await page.fill('#login-email', johnSmith.email);
-    await page.fill('#login-password', johnSmith.password);
+    await page.fill('input[type="email"], #login-email', johnSmith.email);
+    await page.fill('input[type="password"], #login-password', johnSmith.password);
     
     // Submit form
-    await page.click('#login-form button[type="submit"]');
+    await page.click('button[type="submit"]');
     
     // Should redirect to portal
     await expect(page).toHaveURL(/portal\.html/, { timeout: 10000 });

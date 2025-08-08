@@ -1,0 +1,79 @@
+{
+  "id": "intake_logo_brand",
+  "version": "1.0.0",
+  "serviceFilter": [
+    "LOGO",
+    "BRAND"
+  ],
+  "schema": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Logo & Brand Intake",
+    "type": "object",
+    "properties": {
+      "brandName": {
+        "type": "string"
+      },
+      "values": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "adjectives": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "title": "3\u20135 adjectives"
+      },
+      "useCases": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "enum": [
+            "Print",
+            "Web",
+            "App Icon",
+            "Merch",
+            "Signage",
+            "Packaging",
+            "Social"
+          ]
+        }
+      },
+      "mustHaves": {
+        "type": "string"
+      },
+      "avoid": {
+        "type": "string"
+      },
+      "deliverables": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "enum": [
+            "Primary Logo",
+            "Secondary Lockup",
+            "Monogram",
+            "Color Palette",
+            "Typography",
+            "Brand Guide PDF"
+          ]
+        },
+        "minItems": 1
+      }
+    },
+    "required": [
+      "brandName",
+      "deliverables"
+    ]
+  },
+  "uiSchema": {
+    "mustHaves": {
+      "ui:widget": "textarea"
+    },
+    "avoid": {
+      "ui:widget": "textarea"
+    }
+  }
+}

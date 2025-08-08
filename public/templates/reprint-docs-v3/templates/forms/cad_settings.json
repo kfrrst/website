@@ -1,0 +1,35 @@
+{
+  "id": "cad_settings",
+  "version": "1.0.0",
+  "serviceFilter": [
+    "WW"
+  ],
+  "schema": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "CAD/CAM Settings",
+    "type": "object",
+    "properties": {
+      "fileType": {
+        "type": "string",
+        "enum": [
+          "DXF",
+          "STL",
+          "STEP",
+          "SVG",
+          "Other"
+        ]
+      },
+      "tooling": {
+        "type": "string"
+      },
+      "tolerance": {
+        "type": "number",
+        "default": 0.125
+      },
+      "finishPass": {
+        "type": "boolean",
+        "default": true
+      }
+    }
+  }
+}

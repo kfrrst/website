@@ -1,0 +1,66 @@
+{
+  "id": "intake_lfp",
+  "version": "1.0.0",
+  "serviceFilter": [
+    "LFP"
+  ],
+  "schema": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Large\u2011Format Print Intake",
+    "type": "object",
+    "properties": {
+      "dimensions": {
+        "type": "object",
+        "properties": {
+          "width": {
+            "type": "number"
+          },
+          "height": {
+            "type": "number"
+          },
+          "units": {
+            "type": "string",
+            "enum": [
+              "in",
+              "ft",
+              "mm",
+              "cm"
+            ],
+            "default": "in"
+          }
+        }
+      },
+      "material": {
+        "type": "string",
+        "enum": [
+          "Vinyl",
+          "Foamcore",
+          "Coroplast",
+          "Acrylic",
+          "Canvas",
+          "Other"
+        ]
+      },
+      "finishes": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "enum": [
+            "Grommets",
+            "Hem",
+            "Matte Lamination",
+            "Gloss Lamination",
+            "Standoff Holes"
+          ]
+        }
+      },
+      "installLocation": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "dimensions",
+      "material"
+    ]
+  }
+}

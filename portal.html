@@ -16,146 +16,6 @@
   <link rel="stylesheet" href="styles/project-modal-enhanced.css" />
   <link rel="stylesheet" href="styles/phase-transitions.css" />
   <link rel="stylesheet" href="styles/project-detail.css" />
-  <link rel="stylesheet" href="styles/progress-tracker-fix.css?v=2" />
-  <style>
-    /* Emergency fixes for dark backgrounds */
-    .progress-tracker-container,
-    .progress-tracker,
-    .phase-timeline,
-    .phase-details,
-    .phase-tabs-container,
-    .phase-tabs-content,
-    .phase-tab-content,
-    .phase-tabs-nav {
-      background: transparent !important;
-      background-color: transparent !important;
-    }
-    
-    /* Fix for floating action button */
-    .fab-main {
-      width: 60px !important;
-      height: 60px !important;
-      max-width: 60px !important;
-      max-height: 60px !important;
-      flex-shrink: 0 !important;
-    }
-    
-    /* Temporarily hide floating actions to debug blue square */
-    .floating-actions {
-      display: none !important;
-    }
-    
-    /* Fix any overflow issues */
-    .projects-content {
-      overflow: visible !important;
-    }
-    
-    /* Ensure project cards don't have overflow issues */
-    .project-card {
-      overflow: hidden !important;
-    }
-    
-    /* Fix progress bar containment */
-    .progress-bar {
-      overflow: hidden !important;
-      max-width: 100% !important;
-      position: relative !important;
-    }
-    
-    .progress-fill {
-      position: absolute !important;
-      top: 0 !important;
-      left: 0 !important;
-      height: 100% !important;
-    }
-    
-    /* Fix inline progress fill overflow */
-    .inline-progress-fill {
-      height: 8px !important;
-      max-height: 8px !important;
-    }
-    
-    /* Hide any oversized blue elements - temporary debug */
-    *[style*="background: #0057FF"]:not(.fab-main):not(.btn):not(.btn-primary):not(.progress-fill):not(.phase-tab) {
-      max-height: 200px !important;
-      overflow: hidden !important;
-    }
-    
-    /* Ensure phase content area is white */
-    #phase-tab-content,
-    .phase-card-wrapper,
-    .error-state {
-      background: #ffffff !important;
-      background-color: #ffffff !important;
-      color: #333333 !important;
-      padding: 1.5rem;
-      border-radius: 8px;
-      border: 1px solid #e9ecef;
-    }
-    
-    /* Fix phase tabs background */
-    .phase-tabs-nav {
-      background: transparent !important;
-      padding: 0 !important;
-      margin-bottom: 1rem !important;
-    }
-    
-    /* Individual phase tabs */
-    .phase-tab {
-      background: #ffffff !important;
-      color: #333333 !important;
-      border: 1px solid #e9ecef !important;
-      padding: 0.75rem 1rem !important;
-      margin: 0 0.25rem !important;
-      border-radius: 6px !important;
-      cursor: pointer !important;
-    }
-    
-    .phase-tab.active {
-      background: #0057FF !important;
-      color: #ffffff !important;
-      border-color: #0057FF !important;
-    }
-    
-    .phase-tab.completed {
-      background: #27AE60 !important;
-      color: #ffffff !important;
-      border-color: #27AE60 !important;
-    }
-    
-    .phase-tab.locked {
-      background: #f5f5f5 !important;
-      color: #999999 !important;
-      border-color: #e9ecef !important;
-      cursor: not-allowed !important;
-    }
-    
-    /* Fix the phase tabs container */
-    #phase-tabs {
-      display: flex !important;
-      gap: 0.5rem !important;
-      padding: 1rem 0 !important;
-      background: transparent !important;
-      overflow-x: auto !important;
-    }
-    
-    /* Remove dark backgrounds from all nested elements */
-    .progress-tracker * {
-      background-color: inherit !important;
-    }
-    
-    /* Progress nodes styling */
-    .phase-node,
-    .node-icon {
-      background: #ffffff !important;
-      color: #666666 !important;
-    }
-    
-    .phase-node.current {
-      background: #0057FF !important;
-      color: #ffffff !important;
-    }
-  </style>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -264,9 +124,108 @@
     
     <!-- DASHBOARD SECTION -->
     <section id="dashboard" class="portal-section active">
-      <div class="dashboard-content">
-        <!-- Dashboard content will be loaded dynamically by DashboardModule.js -->
-        <div class="loading-message">Loading dashboard...</div>
+      <div class="section-header">
+        <h2>[Dashboard Overview]</h2>
+        <p>Your projects, updates, and important information at a glance.</p>
+      </div>
+
+      <!-- STATS GRID -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-content">
+            <h3>2</h3>
+            <p>Active Projects</p>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-content">
+            <h3>24</h3>
+            <p>Files Shared</p>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-content">
+            <h3>8</h3>
+            <p>New Messages</p>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-content">
+            <h3>$2,450</h3>
+            <p>Pending Invoice</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- RECENT ACTIVITY -->
+      <div class="dashboard-grid">
+        <div class="activity-panel">
+          <h3>[Recent Activity]</h3>
+          <div class="activity-list">
+            <div class="activity-item">
+              <div class="activity-content">
+                <p><strong>Logo concepts v2</strong> uploaded</p>
+                <span class="activity-time">2 hours ago</span>
+              </div>
+            </div>
+            <div class="activity-item">
+              <div class="activity-content">
+                <p><strong>Kendrick</strong> sent a message</p>
+                <span class="activity-time">4 hours ago</span>
+              </div>
+            </div>
+            <div class="activity-item">
+              <div class="activity-content">
+                <p><strong>Website wireframes</strong> approved</p>
+                <span class="activity-time">1 day ago</span>
+              </div>
+            </div>
+            <div class="activity-item">
+              <div class="activity-content">
+                <p><strong>Invoice #1024</strong> generated</p>
+                <span class="activity-time">2 days ago</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- PROJECT STATUS -->
+        <div class="projects-panel">
+          <h3>[Active Projects]</h3>
+          <div class="project-cards">
+            <div class="project-card">
+              <div class="project-header">
+                <h4>Brand Identity Redesign</h4>
+                <span class="project-status in-progress">In Progress</span>
+              </div>
+              <div class="progress-bar">
+                <div class="progress-fill" data-progress="65"></div>
+              </div>
+              <p class="progress-text">65% Complete</p>
+              <div class="project-meta">
+                <span>Due: Feb 15, 2025</span>
+                <span>•</span>
+                <span>12 files</span>
+              </div>
+            </div>
+
+            <div class="project-card">
+              <div class="project-header">
+                <h4>Website Development</h4>
+                <span class="project-status planning">Planning</span>
+              </div>
+              <div class="progress-bar">
+                <div class="progress-fill" data-progress="25"></div>
+              </div>
+              <p class="progress-text">25% Complete</p>
+              <div class="project-meta">
+                <span>Due: Mar 1, 2025</span>
+                <span>•</span>
+                <span>8 files</span>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </section>
 

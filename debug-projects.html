@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Projects Module</title>
+    <link rel="stylesheet" href="/portal.css">
+    <style>
+        body {
+            background: #F9F6F1;
+            padding: 20px;
+        }
+        .debug-panel {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .debug-button {
+            background: #0057FF;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            margin: 5px;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+        .debug-button:hover {
+            background: #F7C600;
+        }
+        .console-output {
+            background: #000;
+            color: #0f0;
+            padding: 10px;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+            margin: 10px 0;
+        }
+        #projects {
+            display: block !important;
+        }
+    </style>
+</head>
+<body>
+    <h1>Debug Projects Module</h1>
+    
+    <div class="debug-panel">
+        <h2>Console Output</h2>
+        <div id="console" class="console-output"></div>
+    </div>
+    
+    <div class="debug-panel">
+        <h2>Test Controls</h2>
+        <button class="debug-button" onclick="testLogin()">1. Login</button>
+        <button class="debug-button" onclick="testProjectsAPI()">2. Test Projects API</button>
+        <button class="debug-button" onclick="initProjectsModule()">3. Init Projects Module</button>
+        <button class="debug-button" onclick="showProjectsSection()">4. Show Projects Section</button>
+        <button class="debug-button" onclick="clearConsole()">Clear Console</button>
+    </div>
+    
+    <div class="debug-panel">
+        <h2>Projects Section</h2>
+        <section id="projects" class="portal-section">
+            <div class="section-header">
+                <h2>[Your Projects]</h2>
+                <p>Track progress, view deliverables, and manage project details.</p>
+            </div>
+            <div class="projects-list">
+                <p class="loading-message">Loading projects...</p>
+            </div>
+        </section>
+    </div>
+
+    <script type="module">
+        import { ProjectsModule } from './components/portal/ProjectsModule.js';
+        
+        // Override console to capture output
+        const consoleDiv = document.getElementById('console');
+        const originalLog = console.log;
+        const originalError = console.error;
+        
+        console.log = function(...args) {
+            originalLog(...args);
+            const msg = args.map(arg => 
+                typeof arg === 'object' ? JSON.stringify(arg, null, 2) : arg
+            ).join(' ');
+            consoleDiv.innerHTML += `<div style="color: #0f0">[LOG] ${msg}</div>`;
+            consoleDiv.scrollTop = consoleDiv.scrollHeight;
+        };
+        
+        console.error = function(...args) {
+            originalError(...args);
+            const msg = args.map(arg => 
+                typeof arg === 'object' ? JSON.stringify(arg, null, 2) : arg
+            ).join(' ');
+            consoleDiv.innerHTML += `<div style="color: #f00">[ERROR] ${msg}</div>`;
+            consoleDiv.scrollTop = consoleDiv.scrollHeight;
+        };
+        
+        window.testLogin = async function() {
+            console.log('Testing login...');
+            try {
+                const response = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        email: 'client@example.com',
+                        password: 'client123'
+                    })
+                });
+                
+                const data = await response.json();
+                if (response.ok) {
+                    window.authToken = data.token || data.accessToken;
+                    localStorage.setItem('authToken', window.authToken);
+                    localStorage.setItem('user', JSON.stringify(data.user));
+                    console.log('Login successful!');
+                    console.log('User:', data.user);
+                    console.log('Token stored:', window.authToken.substring(0, 50) + '...');
+                } else {
+                    console.error('Login failed:', data);
+                }
+            } catch (error) {
+                console.error('Login error:', error);
+            }
+        };
+        
+        window.testProjectsAPI = async function() {
+            console.log('Testing Projects API...');
+            const token = window.authToken || localStorage.getItem('authToken');
+            if (!token) {
+                console.error('No auth token found. Please login first.');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/projects', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                console.log('API Response status:', response.status);
+                const data = await response.json();
+                console.log('API Response data:', data);
+                
+                if (data.projects) {
+                    console.log('Found', data.projects.length, 'projects');
+                    data.projects.forEach((p, i) => {
+                        console.log(`Project ${i + 1}:`, p.name, '- Status:', p.status);
+                    });
+                } else {
+                    console.error('No projects in response');
+                }
+            } catch (error) {
+                console.error('API test error:', error);
+            }
+        };
+        
+        window.projectsModule = null;
+        
+        window.initProjectsModule = async function() {
+            console.log('Initializing ProjectsModule...');
+            
+            const token = window.authToken || localStorage.getItem('authToken');
+            if (!token) {
+                console.error('No auth token found. Please login first.');
+                return;
+            }
+            
+            try {
+                // Create a mock portal object with necessary methods
+                const mockPortal = {
+                    authToken: token,
+                    currentUser: JSON.parse(localStorage.getItem('user') || '{}'),
+                    showSection: (name) => console.log('showSection called:', name),
+                    modules: {}
+                };
+                
+                console.log('Creating ProjectsModule instance...');
+                window.projectsModule = new ProjectsModule(mockPortal);
+                mockPortal.modules.projects = window.projectsModule;
+                
+                console.log('Calling init()...');
+                await window.projectsModule.init();
+                
+                console.log('ProjectsModule initialized successfully');
+                console.log('Module element:', window.projectsModule.element);
+                console.log('Projects loaded:', window.projectsModule.projects.length);
+                
+            } catch (error) {
+                console.error('Module init error:', error);
+                console.error('Error stack:', error.stack);
+            }
+        };
+        
+        window.showProjectsSection = function() {
+            console.log('Showing projects section...');
+            const section = document.getElementById('projects');
+            if (section) {
+                section.style.display = 'block';
+                console.log('Projects section displayed');
+                
+                const projectsList = section.querySelector('.projects-list');
+                console.log('Projects list element:', projectsList);
+                console.log('Current innerHTML:', projectsList.innerHTML.substring(0, 100));
+            } else {
+                console.error('Projects section not found');
+            }
+        };
+        
+        window.clearConsole = function() {
+            consoleDiv.innerHTML = '';
+        };
+        
+        console.log('Debug page loaded. Click buttons in order to test.');
+    </script>
+</body>
+</html>

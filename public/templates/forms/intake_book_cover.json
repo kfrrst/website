@@ -1,0 +1,111 @@
+{
+  "id": "intake_book_cover",
+  "version": "1.0.0",
+  "serviceFilter": [
+    "BOOK"
+  ],
+  "schema": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Book Cover Intake",
+    "type": "object",
+    "properties": {
+      "title": {
+        "type": "string"
+      },
+      "subtitle": {
+        "type": "string"
+      },
+      "author": {
+        "type": "string"
+      },
+      "genre": {
+        "type": "string"
+      },
+      "audience": {
+        "type": "string"
+      },
+      "trimSize": {
+        "type": "string",
+        "enum": [
+          "5x8",
+          "5.5x8.5",
+          "6x9",
+          "7x10",
+          "Custom"
+        ]
+      },
+      "printPlatform": {
+        "type": "string",
+        "enum": [
+          "KDP",
+          "IngramSpark",
+          "Both",
+          "Other"
+        ]
+      },
+      "printSpecs": {
+        "type": "object",
+        "properties": {
+          "dpi": {
+            "type": "integer",
+            "default": 300
+          },
+          "bleed": {
+            "type": "boolean",
+            "default": true
+          },
+          "finish": {
+            "type": "string",
+            "enum": [
+              "Matte",
+              "Gloss"
+            ]
+          }
+        }
+      },
+      "deliverables": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "enum": [
+            "Front",
+            "Spine",
+            "Back",
+            "Full Wrap PDF",
+            "3D Mockups",
+            "Social Teasers"
+          ]
+        },
+        "minItems": 1
+      },
+      "backCoverBlurb": {
+        "type": "string"
+      },
+      "isbn": {
+        "type": "string"
+      },
+      "barcode": {
+        "type": "boolean",
+        "default": true
+      },
+      "references": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "format": "uri"
+        }
+      }
+    },
+    "required": [
+      "title",
+      "author",
+      "trimSize",
+      "deliverables"
+    ]
+  },
+  "uiSchema": {
+    "backCoverBlurb": {
+      "ui:widget": "textarea"
+    }
+  }
+}

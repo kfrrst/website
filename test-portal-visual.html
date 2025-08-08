@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Portal Visual Test</title>
+  <style>
+    body {
+      font-family: 'Montserrat', sans-serif;
+      background: #F9F6F1;
+      padding: 2rem;
+      color: #333;
+    }
+    
+    .test-section {
+      background: white;
+      padding: 2rem;
+      margin-bottom: 2rem;
+      border-radius: 8px;
+      border: 1px solid #e9ecef;
+    }
+    
+    h2 {
+      color: #333;
+      margin-bottom: 1rem;
+    }
+    
+    .project-card-test {
+      background: #ffffff;
+      border: 1px solid #e9ecef;
+      padding: 1.5rem;
+      border-radius: 8px;
+      margin-bottom: 1rem;
+    }
+    
+    .project-title {
+      color: #333333;
+      font-size: 1.25rem;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+    }
+    
+    .project-description {
+      background: #f8f9fa;
+      padding: 1rem;
+      border-radius: 6px;
+      margin: 1rem 0;
+      color: #666666;
+    }
+    
+    .phase-tracker-test {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      flex-wrap: wrap;
+      margin-top: 1rem;
+    }
+    
+    .phase-item {
+      display: flex;
+      align-items: center;
+      gap: 0.25rem;
+    }
+    
+    .phase-dot {
+      font-size: 1.25rem;
+      line-height: 1;
+    }
+    
+    .phase-dot.completed {
+      color: #27AE60;
+    }
+    
+    .phase-dot.current {
+      color: #0057FF;
+    }
+    
+    .phase-dot.upcoming {
+      color: #e9ecef;
+    }
+    
+    .phase-label {
+      font-size: 0.75rem;
+      white-space: nowrap;
+    }
+    
+    .phase-label.completed {
+      color: #27AE60;
+    }
+    
+    .phase-label.current {
+      color: #0057FF;
+    }
+    
+    .phase-label.upcoming {
+      color: #999999;
+    }
+    
+    .buttons-test {
+      display: flex;
+      gap: 0.5rem;
+      margin-top: 1rem;
+    }
+    
+    .btn {
+      background: #ffffff;
+      border: 1px solid #e9ecef;
+      color: #333333;
+      padding: 0.5rem 1rem;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.875rem;
+    }
+    
+    .btn:hover {
+      background: #f8f9fa;
+    }
+    
+    .phase-tabs-test {
+      display: flex;
+      gap: 0.5rem;
+      padding: 1rem 0;
+      overflow-x: auto;
+    }
+    
+    .phase-tab {
+      background: #ffffff;
+      color: #333333;
+      border: 1px solid #e9ecef;
+      padding: 0.75rem 1rem;
+      border-radius: 6px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    
+    .phase-tab.active {
+      background: #0057FF;
+      color: #ffffff;
+      border-color: #0057FF;
+    }
+    
+    .phase-tab.completed {
+      background: #27AE60;
+      color: #ffffff;
+      border-color: #27AE60;
+    }
+    
+    .phase-tab.locked {
+      background: #f5f5f5;
+      color: #999999;
+      border-color: #e9ecef;
+      cursor: not-allowed;
+    }
+    
+    .phase-number {
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+  <h1>Portal Visual Test - Verifying Fixes</h1>
+  
+  <div class="test-section">
+    <h2>1. Project Card - Should have white background</h2>
+    <div class="project-card-test">
+      <div class="project-title">Dashboard Test Project 1</div>
+      <div class="project-description">
+        Test project for dashboard
+      </div>
+      <div class="phase-tracker-test">
+        <div class="phase-item">
+          <span class="phase-dot current">●</span>
+          <span class="phase-label current">Onboarding</span>
+        </div>
+        <div class="phase-item">
+          <span class="phase-dot upcoming">○</span>
+          <span class="phase-label upcoming">Ideation</span>
+        </div>
+        <div class="phase-item">
+          <span class="phase-dot upcoming">○</span>
+          <span class="phase-label upcoming">Design</span>
+        </div>
+        <div class="phase-item">
+          <span class="phase-dot upcoming">○</span>
+          <span class="phase-label upcoming">Review</span>
+        </div>
+        <div class="phase-item">
+          <span class="phase-dot upcoming">○</span>
+          <span class="phase-label upcoming">Production</span>
+        </div>
+        <div class="phase-item">
+          <span class="phase-dot upcoming">○</span>
+          <span class="phase-label upcoming">Payment</span>
+        </div>
+        <div class="phase-item">
+          <span class="phase-dot upcoming">○</span>
+          <span class="phase-label upcoming">Sign-off</span>
+        </div>
+        <div class="phase-item">
+          <span class="phase-dot upcoming">○</span>
+          <span class="phase-label upcoming">Delivery</span>
+        </div>
+      </div>
+      <div class="buttons-test">
+        <button class="btn">Files</button>
+        <button class="btn">Chat</button>
+      </div>
+    </div>
+  </div>
+  
+  <div class="test-section">
+    <h2>2. Phase Tabs - Should have proper colors</h2>
+    <div class="phase-tabs-test">
+      <button class="phase-tab active">
+        <span class="phase-number">1</span>
+        <span>Onboarding</span>
+      </button>
+      <button class="phase-tab locked">
+        <span class="phase-number">2</span>
+        <span>Ideation</span>
+      </button>
+      <button class="phase-tab locked">
+        <span class="phase-number">3</span>
+        <span>Design</span>
+      </button>
+      <button class="phase-tab locked">
+        <span class="phase-number">4</span>
+        <span>Review</span>
+      </button>
+      <button class="phase-tab locked">
+        <span class="phase-number">5</span>
+        <span>Production</span>
+      </button>
+      <button class="phase-tab locked">
+        <span class="phase-number">6</span>
+        <span>Payment</span>
+      </button>
+      <button class="phase-tab locked">
+        <span class="phase-number">7</span>
+        <span>Sign-off</span>
+      </button>
+      <button class="phase-tab locked">
+        <span class="phase-number">8</span>
+        <span>Delivery</span>
+      </button>
+    </div>
+  </div>
+  
+  <div class="test-section">
+    <h2>3. Visual Check Results</h2>
+    <ul>
+      <li>✅ Project cards should have white backgrounds, not black/dark</li>
+      <li>✅ Buttons should show "Files" and "Chat", not "[FILES] Files"</li>
+      <li>✅ Phase dots should be left-aligned with labels</li>
+      <li>✅ Locked phase tabs should be light gray (#f5f5f5)</li>
+      <li>✅ Active phase tab should be blue (#0057FF)</li>
+      <li>✅ All text should be readable on white backgrounds</li>
+    </ul>
+  </div>
+</body>
+</html>

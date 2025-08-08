@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug Blue Square</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-container {
+            background: white;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .issue-found {
+            background: #ffcccc;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .potential-fix {
+            background: #ccffcc;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>Debugging Blue Square Issue</h1>
+    
+    <div class="test-container">
+        <h2>Potential Issues Identified:</h2>
+        
+        <div class="issue-found">
+            <strong>Issue 1:</strong> The floating action button (FAB) might be expanded incorrectly
+            <br>Location: portal.css line 708-721
+            <br>The FAB has a blue background and fixed positioning
+        </div>
+        
+        <div class="issue-found">
+            <strong>Issue 2:</strong> A phase tab or modal might be rendered with full width/height
+            <br>Check if any element has width: 100% or height: 100vh with blue background
+        </div>
+        
+        <div class="issue-found">
+            <strong>Issue 3:</strong> The progress bar might be overflowing its container
+            <br>Location: ProjectsModule.js line 173-174
+        </div>
+    </div>
+    
+    <div class="test-container">
+        <h2>Suggested Fixes:</h2>
+        
+        <div class="potential-fix">
+            <strong>Fix 1:</strong> Add explicit height constraint to FAB
+            <pre>
+.fab-main {
+    width: 60px !important;
+    height: 60px !important;
+    max-width: 60px !important;
+    max-height: 60px !important;
+}
+            </pre>
+        </div>
+        
+        <div class="potential-fix">
+            <strong>Fix 2:</strong> Hide any debug or development elements
+            <pre>
+/* Hide any expanded blue elements */
+.phase-tab:not(.phase-tab) {
+    display: none !important;
+}
+            </pre>
+        </div>
+        
+        <div class="potential-fix">
+            <strong>Fix 3:</strong> Ensure progress bars are contained
+            <pre>
+.progress-bar {
+    max-width: 100%;
+    overflow: hidden !important;
+    position: relative;
+}
+            </pre>
+        </div>
+    </div>
+    
+    <script>
+        // Check for any elements with large blue backgrounds
+        document.addEventListener('DOMContentLoaded', function() {
+            const allElements = document.querySelectorAll('*');
+            allElements.forEach(el => {
+                const styles = window.getComputedStyle(el);
+                if (styles.backgroundColor === 'rgb(0, 87, 255)' || 
+                    styles.backgroundColor === '#0057FF' ||
+                    styles.background.includes('0057FF')) {
+                    
+                    const rect = el.getBoundingClientRect();
+                    if (rect.width > 500 && rect.height > 500) {
+                        console.error('Large blue element found:', el, {
+                            width: rect.width,
+                            height: rect.height,
+                            class: el.className,
+                            id: el.id
+                        });
+                    }
+                }
+            });
+        });
+    </script>
+</body>
+</html>

@@ -1,323 +1,304 @@
-Below is a **developer-ready specification** you can hand straight to GitHub Copilot (or paste into a `TECH_SPEC.md`) and begin scaffolding.
-It extends the dynamic-template idea I shared earlier, but now **enumerates every service you listed, every project phase, every form/document, the DB schema, all key API routes, and the React component tree**—plus some UX notes so the build stays on-brand.
+# The \[RE]Print Studios 8-Step Project Flow
+
+*(granular, production-ready; who does what, when it advances, and why it’s set up this way)*
+
+Below is the end-to-end path for **every project** in your portal. Each step includes: purpose, what the **client** sees/does, what the **admin** (you) sees/does, **artifacts** (forms/docs), **advancement trigger** (who advances the step and how), and **best-practice notes** adopted from design studios, print shops, and software teams.
 
 ---
 
-## 0 . Reference Glossary
+## 1) Onboarding
 
-| Abbr    | Meaning                                        |
-| ------- | ---------------------------------------------- |
-| **ST**  | *Service Type* (Screen Print, SaaS Dev, etc.)  |
-| **PL**  | *Phase Library* entry (ideation, review, etc.) |
-| **FM**  | *Form Module* (JSON-schema rendered as UI)     |
-| **DM**  | *Document Module* (Handlebars/MD → PDF/HTML)   |
-| **PD**  | *Project Definition* (per-project merged JSON) |
-| **UID** | React component that renders a module          |
+**Purpose**
+Capture scope, pick services, set terms, and collect a deposit so production can actually start. Industry-standard best practice is to use a modular agreement + up-front payment to reduce risk and scope drift. ([AIGA][1])
 
----
+**Client experience**
 
-## 1. Master Service Type Matrix
+* Dashboard shows **Step 1: Onboarding** with a short intro, timeline, and your branded line: */for/ {client} /by/ Kendrick Forrest*.
+* Sees **dynamic intake forms** based on services they’re buying (e.g., Screen Print, Web, Book Cover).
+* Can review an auto-generated **Proposal** and **SOW/Service Agreement**; signs digitally in-portal; deposit invoice appears immediately.
 
-```txt
-┌── code ─────────────────────────────────────────────────────────┐
-| id | code | Display Name         | Default Phase Keys          |
-|----+------+----------------------+-----------------------------|
-| 1  | COL  | Collaboration Only   | ONB → COLLAB → WRAP         |
-| 2  | IDE  | Ideation Workshop    | ONB → IDEA  → WRAP          |
-| 3  | SP   | Screen Printing      | ONB → IDEA → PREP → PRINT → LAUNCH|
-| 4  | LFP  | Large-Format Print   | ONB → PREP → PRINT → LAUNCH |
-| 5  | GD   | Graphic Design       | ONB → IDEA → DSGN → REV  → LAUNCH|
-| 6  | WW   | Woodworking          | ONB → IDEA → CAD  → FAB  → FINISH → LAUNCH|
-| 7  | SAAS | SaaS Development     | ONB → DISC → MVP  → QA   → DEPLOY → LAUNCH|
-| 8  | WEB  | Website Design       | ONB → DISC → DSGN → DEV  → REV → DEPLOY → LAUNCH|
-| 9  | BOOK | Book Cover Design    | ONB → IDEA → DSGN → REV  → LAUNCH|
-|10  | LOGO | Logo & Brand System  | ONB → RESEARCH → DSGN → REV → LAUNCH|
-|11  | PY   | Python Automation    | ONB → DISC → DEV  → QA   → LAUNCH|
-└────────────────────────────────────────────────────────────────┘
-```
+**Admin experience**
 
-*Every code above is referenced throughout forms, docs, permissions, etc.*
+* Choose service types; portal composes the phase list + forms.
+* Adjust line items, add any constraints, then **generate proposal/SOW PDF** (Puppeteer route).
+* Optionally require 2FA for first login.
+
+**Artifacts**
+
+* Forms: `intake_base`, plus specific modules like `intake_sp`, `intake_book_cover`, `intake_website`, etc.
+* Docs: Proposal, **Service Agreement (SOW)**.
+
+**Advancement trigger**
+
+* **Automatic** when both are true: **Agreement signed** + **deposit marked paid**. (Portal listens for **Stripe `payment_intent.succeeded` / `invoice.paid`** and flips phase.) ([Stripe Docs][2])
+
+**Notes / best practice**
+
+* Use a **modular contract** (AIGA model) so you can add print-specific or interactive terms without rewriting the whole thing. ([AIGA][3], [davidberman.com][4])
 
 ---
 
-## 2. Phase Library (PL) Objects
+## 2) Ideation (or Discovery)
 
-```ts
-interface Phase {
-  key: "ONB" | "IDEA" | "DISC" | ...;
-  label: string;           // “Onboarding”
-  icon: string;            // lucide icon id
-  uids: string[];          // React UIDs to show in portal
-  formModules: string[];   // e.g. ["intake_base","intake_sp"]
-  docModules:  string[];   // e.g. ["proposal_default"]
-  permissions: RolePerms;  // CRUD rules per role
-}
-```
+**Purpose**
+Define direction: moodboards, references, constraints, and a **one-page Creative Brief**. Keep it lightweight but decisive; iterate quickly. ([Nielsen Norman Group][5])
 
-| Key          | Purpose                                                           | Core UID(s)             |
-| ------------ | ----------------------------------------------------------------- | ----------------------- |
-| **ONB**      | Kick-off / intake forms                                           | `<IntakeWizard />`      |
-| **COLLAB**   | Light collab (brain-dump board)                                   | `<MiroEmbed />`         |
-| **IDEA**     | Ideation & mood-board                                             | `<Moodboard />`         |
-| **RESEARCH** | Brand/market research dossier                                     | `<ResearchList />`      |
-| **DISC**     | Discovery workshop doc capture                                    | `<NotionEmbed />` (opt) |
-| **DSGN**     | Design production phase (Figma embeds)                            | `<FigmaPreview />`      |
-| **CAD**      | 3-D/CAM preview (STL viewer)                                      | `<ModelViewer />`       |
-| **PREP**     | Pre-Press checklist + proof approval                              | `<ProofChecklist />`    |
-| **PRINT**    | Print queue + batch tracker                                       | `<BatchStatus />`       |
-| **MVP**      | First working slice for SaaS                                      | `<StagingLink />`       |
-| **DEV**      | Web build commits (Netlify previews)                              | `<DeployCard />`        |
-| **QA**       | Bug tracker embed                                                 | `<LinearList />`        |
-| **FAB**      | Woodshop fabrication log                                          | `<FabricationLog />`    |
-| **FINISH**   | Sand / stain / lacquer stage                                      | `<FinishChecklist />`   |
-| **DEPLOY**   | Prod deploy checklist                                             | `<LaunchChecklist />`   |
-| **REV**      | Formal review & feedback cycle                                    | `<AnnotationBoard />`   |
-| **LAUNCH**   | ***new name replacing “Delivery”***: asset hand-off & celebration | `<LaunchGallery />`     |
-| **WRAP**     | Post-mortem, payment, testimonial                                 | `<WrapUp />`            |
+**Client**
+
+* Sees a **moodboard feed** and **Creative Brief** live doc.
+* Can leave comments, drop links, and select preferred directions.
+
+**Admin**
+
+* Upload inspiration, write the Creative Brief, pin 2–3 directions (not 20).
+* Run a time-boxed **critique** with the client (clear goals, not “opinions”), then lock a direction. ([Nielsen Norman Group][6])
+
+**Artifacts**
+
+* Brief (HTML/PDF), reference list.
+
+**Advancement trigger**
+
+* **Client clicks “Approve Brief.”** Admin may also advance manually with a memo if approval was verbal.
+
+**Notes / best practice**
+
+* Favor **parallel, iterative** concepting over one “big reveal”; it yields better outcomes with fewer cycles. ([Nielsen Norman Group][5])
 
 ---
 
-## 3. Form & Document Modules
+## 3) Design (Production of drafts/comps)
 
-| Module ID                | Target Phase(s) | Service Filters | Why it exists                   |
-| ------------------------ | --------------- | --------------- | ------------------------------- |
-| `intake_base.json`       | ONB             | *all*           | contact, billing, goals         |
-| `intake_sp.json`         | ONB             | SP,LFP          | garment, ink colors, qty        |
-| `intake_ww.json`         | ONB             | WW              | wood type, dims, finish         |
-| `intake_saasi.json`      | ONB             | SAAS,WEB,PY     | repo URLs, domain ideas         |
-| `proposal_default.hbs`   | IDEA,DISC       | *all*           | auto-pricing table              |
-| `sow_print.hbs`          | PREP            | SP,LFP          | spoilage + Pantone clause       |
-| `proof_approval.json`    | PREP,REV        | GD,SP,LFP       | checkbox: “spelling correct”    |
-| `bug_report.json`        | QA,REV          | SAAS,WEB,PY     | severity, repro-steps           |
-| `deploy_checklist.md`    | DEPLOY          | SAAS,WEB        | env vars, backups               |
-| `launch_certificate.hbs` | LAUNCH          | *all*           | “Project successfully launched” |
-| `final_invoice.hbs`      | WRAP            | *all*           | pulled from invoices table      |
-| *(+ 15 more)*            | …               | …               | …                               |
+**Purpose**
+Produce tangible drafts (artboards, wireframes, cover comps, logo explorations). Work in **rounds** with a set revision limit.
 
-*Stored in `/templates/forms` & `/templates/docs`, version-tagged.*
+**Client**
 
----
+* Sees “v1” deliverables gallery (Figma embeds, image previews) and **what’s included** (e.g., 2 rounds).
+* Can leave quick reactions, then formal feedback in next step.
 
-## 4. Database Schema (PostgreSQL)
+**Admin**
 
-```sql
--- users
-id  uuid  PK
-email  text   unique
-hash  text
-role  enum('admin','client')
-display_name text
-twofa_secret text null
-created_at   timestamptz default now()
+* Upload deliverables; tag each with **round index** (v1, v2…).
+* Declare **revision policy** (e.g., 2 rounds included; further changes → Change Order).
 
--- clients (orgs you bill)
-id    uuid PK
-display_name text
-contact_user uuid FK users(id)
+**Artifacts**
 
--- projects
-id        uuid PK
-client_id uuid FK clients(id)
-name      text
-services  text[]          -- ['SP','GD']
-phase_def jsonb           -- stored PD
-status    enum('active','archived')
-created_at timestamptz
+* Deliverable set, `design_brief` reference.
 
--- phases (flattened for quick lookup)
-id         uuid PK
-project_id uuid
-key        text    -- 'PREP'
-position   int
-status     enum('not_started','in_progress','done')
-started_at timestamptz
-done_at    timestamptz
+**Advancement trigger**
 
--- forms_data
-id       uuid PK
-phase_id uuid
-module   text
-payload  jsonb
-submitted_by uuid FK users(id)
-submitted_at timestamptz
+* **Admin** advances to **Review & Feedback** once first draft set is posted.
 
--- docs (rendered PDFs, proposals, etc.)
-id      uuid PK
-phase_id uuid
-module  text
-file_url text
-version smallint
-generated_at timestamptz
+**Notes / best practice**
 
--- invoices
-id          uuid PK
-project_id  uuid
-seq         int             -- human-friendly #
-issued_at   date
-due_at      date
-status      enum('draft','sent','paid','overdue')
-currency    char(3) default 'USD'
-total       numeric(10,2)
-
--- invoice_items
-invoice_id uuid
-label      text
-qty        int
-rate       numeric(10,2)
-
--- files (deliverables & refs)
-id        uuid PK
-project_id uuid
-phase_id   uuid
-label      text
-url        text
-mime       text
-size       int
-uploaded_by uuid
-```
-
-> *Why separate `clients` from `users`?* A company may have multiple user logins later (accounting vs creative team).
+* Limit rounds, collect **structured** feedback, then iterate—this mirrors established studio processes and keeps budgets sane. ([AIGA][1])
 
 ---
 
-## 5. REST / GraphQL API Surface
+## 4) Review & Feedback (Approval Gate)
 
-| Verb + Route                  | Auth  | Body / Params               | Resp          |
-| ----------------------------- | ----- | --------------------------- | ------------- |
-| `POST /auth/login`            | —     | email, pwd                  | JWT           |
-| `POST /auth/2fa`              | token | code                        | 200 / 401     |
-| `GET  /projects`              | token | —                           | list          |
-| `POST /projects` ‡            | admin | name, clientId, services\[] | PD json       |
-| `PATCH /projects/:id/status`  | admin | status                      | 204           |
-| `GET  /projects/:id/phases`   | token | —                           | ordered array |
-| `POST /phases/:phaseId/forms` | token | moduleId, payload           | 201           |
-| `POST /files`                 | token | phaseId + file (multipart)  | file meta     |
-| `POST /invoices` ‡            | admin | projectId, items\[]         | invoiceId     |
-| `GET  /invoices/:id`          | token | —                           | invoice data  |
-| `POST /payments/stripe-hook`  | ∅     | Stripe webhook              | 200           |
+**Purpose**
+Gather **structured** feedback and secure explicit approval. For print/graphics, also run a formal **proof approval** checklist.
 
-‡ Admin-only routes hidden in Admin UI.
+**Client**
 
----
+* For each deliverable: **Approve** ✅ or **Request changes** ✏️.
+* If **print** or **graphics for print**, must tick **proof checklist** (spelling, colors, placement, bleed) before approval. ([4OVER4.COM][7], [Disk.com][8], [thebusinesstoolkit.com][9])
 
-## 6. React Component Tree (Next.js)
+**Admin**
 
-```
-_app
- ├─ Layout
- │   ├─ SiteHeader     (public)
- │   ├─ Footer
- │   └─ PortalHeader   (+BrandedLine)
- ├─ pages/
- │   ├─ index          (Landing)
- │   ├─ inquiry
- │   ├─ login
- │   └─ portal/
- │       ├─ dashboard
- │       ├─ projects/[id]/
- │       │    ├─ index      (tabs)
- │       │    ├─ phases/[phaseKey].tsx   ← dynamic renderer
- │       │    └─ invoices
- │       └─ admin/…
- └─ components/
-     ├─ BrandedLine.tsx
-     ├─ PhaseStepper.tsx
-     ├─ FormRenderer.tsx           (jsonschema-to-formik)
-     ├─ FileCard.tsx
-     ├─ InvoiceCard.tsx
-     ├─ PaymentButton.tsx
-     └─ …per-phase UIDs
-```
+* Triages change requests into a to-do list; uploads v2/v3 as needed.
+* If revision limit is exceeded, portal generates a **Change Order** for approval.
 
-*Phase pages call `/api/projects/:id/phases` → decide which FormRenderer / UID grid to show.*
+**Artifacts**
+
+* Forms: `change_request`, `proof_approval` (print/graphics).
+* Docs: **Change Order** (if scope increase).
+
+**Advancement trigger**
+
+* **Automatic** when **all deliverables in scope are Approved** (or when client signs Change Order that defers some items).
+* Print jobs require **proof approval** before production unlocks. ([Disk.com][8])
+
+**Notes / best practice**
+
+* Treat proof approval as a **contractual sign-off** to avoid costly misprints; get it **in writing with a timestamp**. ([4OVER4.COM][7])
 
 ---
 
-## 7. UX Flows (Happy-path)
+## 5) Production / Build
 
-### Client
+*(a.k.a. Pre-Press → Print for apparel/large-format; CAD → Fabricate for wood; QA → Deploy-ready for software)*
 
-1. **ONB** – fills *intake\_base* + any ST-specific forms
-2. **IDEA** – drops Pinterest links; you upload *proposal.pdf* → auto-notify
-3. **DSGN** – views live Figma embed; clicks **Approve** → phase auto-advances
-4. **PREP/PRINT** – reviews proof checklist; marks ✓; status flips to READY TO PRINT
-5. **LAUNCH** – downloads asset bundle ZIP; sees **Launch Certificate**
-6. **WRAP** – invoice list shows *Invoice #3 Pending* → Stripe pay → success receipt
+**Purpose**
+Execute the approved work safely and predictably.
 
-### Admin
+**Client**
 
-*Admin portal shows Kanban-board of all active phases across projects (column per phase key). Drag card to move or click to open phase modal (same UI as client but with edit toggle).*
+* Sees a **live status meter** (e.g., “Screens burned / Printing / QC / Packed” or “QA / UAT / Release Candidate”).
+* Optional **press check** for high-stakes color work; optional **staging/UAT** checklist for software. ([Department of Enterprise Services][10], [Syncro][11])
 
----
+**Admin**
 
-## 8. Form Generation Algorithm (pseudo)
+* **Print/LFP:** Lock pre-press proof, burn screens, log batches, upload a couple of progress snapshots.
+* **Wood:** Log material lot, cutlist, assembly photos.
+* **Web/SaaS/Python:** Run **deployment checklist** (backups, env secrets, monitoring, rollback plan, domain), fix blocking bugs. ([Codefresh][12], [Syncro][11])
 
-```js
-function buildCompositeSchema(phase, project) {
-  const mods = phase.formModules
-    .filter(mId => serviceFilterOk(mId, project.services));
-  const merged = mods.reduce(mergeJSONSchema, baseSchema());
-  return merged;
-}
+**Artifacts**
 
-GET /forms/:phaseId => {schema, ui}
-```
+* Checklists: pre-press or deploy; fabrication/QA logs.
 
-*Client <FormRenderer> receives above, renders instantly; no redeploy needed when you add a new service.*
+**Advancement trigger**
+
+* **Admin** clicks **“Ready to Invoice”** when goods are QC’d / code passes acceptance, which creates **Final Invoice** and opens Step 6.
 
 ---
 
-## 9. Security Checklist
+## 6) Payment (Final Balance)
 
-* JWT Bearer tokens + `helmet()` middleware
-* RBAC middleware `can(user, action, resource)` on every route
-* Signed URLs (S3 pre-signed) for private file downloads
-* Stripe webhooks verify signature secret before mutating invoice status
-* CSP headers to limit embeds (Figma, Pinterest, Linear, etc.)
-* Automatic nightly DB dump to encrypted S3 bucket
+**Purpose**
+Collect remaining balance before hand-off.
 
----
+**Client**
 
-## 10. CI / CD
+* Sees **Final Invoice** (grouped by service), pays by card/ACH.
+* If payment fails, portal retries and shows clear error/help.
 
-* **GitHub Actions**
+**Admin**
 
-  * Lint, type-check, Jest
-  * Cypress smoke-run (login, project list, invoice pay test in Stripe test-mode)
-  * Deploy to Vercel with preview URL → comment \[PREVIEW] on PR
+* Waits; no manual flips needed.
 
----
+**Artifacts**
 
-## 11. Minimum PDF / Doc Export Pipeline
+* Doc: Invoice (HTML/PDF), receipt on success.
 
-```
-(next route /pdf/:docId)     (Chromium headless)
-      ↓                            ↓
- Render React doc page  →  Puppeteer → save PDF → S3
-```
+**Advancement trigger**
 
-Because docs share React component tree, they keep branding + fonts 100 % identical between HTML & PDF.
+* **Automatic via Stripe webhook** when invoice is **paid** (`invoice.paid` / `payment_intent.succeeded`). If a failure or dispute event hits, portal holds the phase and alerts admin. ([Stripe Docs][13])
+
+**Notes / best practice**
+
+* Use webhook verification and idempotency to avoid double-advances or missed flips. ([Stigg][14])
 
 ---
 
-## 12. Module Map for *All* Services
+## 7) Sign-Off & Docs (Rights & Records)
 
-| Service Type | Extra Form Modules                        | Extra Docs (outside defaults)               |
-| ------------ | ----------------------------------------- | ------------------------------------------- |
-| COL          | `collab_brief.json`                       | —                                           |
-| IDE          | `ideation_goals.json`                     | `mural_export.md`                           |
-| SP,LFP       | `intake_sp.json`, `proof_approval.json`   | `print_spec_sheet.hbs`, `ink_mix_chart.pdf` |
-| GD,BOOK,LOGO | `design_brief.json`                       | `brand_guidelines.hbs`                      |
-| WW           | `intake_ww.json`, `cad_settings.json`     | `cutlist.pdf`                               |
-| SAAS,WEB,PY  | `intake_saasi.json`, `feature_scope.json` | `api_contract.md`, `deploy_checklist.md`    |
-| BRAND        | `brand_audit.json`                        | `identity_system.pdf`                       |
+**Purpose**
+Transfer rights, ship the document bundle, and close the loop.
 
-*(If a project combines services, union the lists—duplicates auto-deduped).*
+**Client**
+
+* Downloads the **Final Assets/Docs Pack** (ZIP).
+* Signs **Completion & Rights Transfer** (notarized if required).
+* (Optional) leaves a quick testimonial.
+
+**Admin**
+
+* Prepares style guide/tech specs/care sheet; includes licenses.
+* If you require notarization for certain agreements, route to a RON provider and file the **notarial certificate** with the signed PDF.
+
+**Artifacts**
+
+* Docs: **Project Completion & Rights Transfer**, Brand Guide / Print Specs / Care Sheet, etc.
+
+**Advancement trigger**
+
+* **Automatic** upon **signed** Completion Agreement (webhook or in-house signature capture). If notarized, advance when **notary session** returns completed package.
+
+**Notes / best practice**
+
+* AIGA models emphasize clear **ownership/licensing** language at hand-off; keep this in your SOW + completion doc to prevent ambiguity. ([AIGA][3])
 
 ---
 
-### Ready to Build
+## 8) **Launch** (instead of “Delivery”)
 
-Spin up `npx create-next-app reprint-portal`, copy your existing `styles.css` palette, scaffold the tables with Prisma or Knex, then let Copilot implement one module at a time.
+**Purpose**
+Make it official: release assets, “go-live,” schedule pickup/shipping—celebrate and invite the next project.
 
-**Everything above is modular—add a new offering tomorrow by writing *one* FM JSON and updating the Service Type matrix.** The portal instantly adapts, keeping your minimalist Virgil-Abloh-meets-West-Side flair intact.
+**Client**
+
+* Sees **Launch Certificate** page with tracking links / live URL / pickup details.
+* CTA: **Start a new project** or **Re-order**.
+
+**Admin**
+
+* Triggers shipping label or schedules pickup; for software, executes the **release** and checks post-deploy monitors.
+
+**Artifacts**
+
+* Doc: Launch Certificate, tracking numbers or live links.
+
+**Advancement trigger**
+
+* **Admin** clicks **“Complete Project”** after confirming launch tasks done.
+* Portal then schedules an **automatic follow-up** (e.g., 14-day check-in and testimonial request).
+
+**Notes / best practice**
+
+* Treat launch as a **stage-gate** with a small checklist & KPIs (e.g., site uptime, order accuracy) so it’s measurable, not just ceremonial. ([Coda][15])
+
+---
+
+# Quick Reference: Who advances what?
+
+| Step                | Primary actor | Hard gate(s) to advance                                                                    |
+| ------------------- | ------------- | ------------------------------------------------------------------------------------------ |
+| 1 Onboarding        | **Automatic** | Signed SOW **and** deposit **paid** (webhook). ([AIGA][16], [Stripe Docs][2])              |
+| 2 Ideation          | **Client**    | **Approve Brief** (button). ([Nielsen Norman Group][5])                                    |
+| 3 Design            | **Admin**     | Post v1 set; move to formal review.                                                        |
+| 4 Review & Feedback | **Automatic** | **All deliverables Approved**; for print **proof approved**. ([Disk.com][8])               |
+| 5 Production/Build  | **Admin**     | Mark **Ready to Invoice** after QC/deploy-readiness (checklist). ([Syncro][11])            |
+| 6 Payment           | **Automatic** | **Invoice paid** (Stripe `invoice.paid` / `payment_intent.succeeded`). ([Stripe Docs][17]) |
+| 7 Sign-Off & Docs   | **Automatic** | Completion agreement signed (and notarized, if applicable).                                |
+| 8 Launch            | **Admin**     | Launch tasks complete → **Complete Project**; follow-ups are scheduled.                    |
+
+---
+
+## Service-specific notes (how the same flow adapts)
+
+* **Screen Printing / Large-Format** → Step 4 includes **Proof Approval**; Step 5 can optionally offer a **press check** for color-critical jobs. ([Department of Enterprise Services][10])
+* **Graphic/Logo/Book Cover** → Step 3/4 uses **limited rounds** + critiques; Step 7 bundles **print-ready PDFs** with specs. ([Nielsen Norman Group][6])
+* **Web/SaaS/Python** → Step 5 uses **deploy checklist** (backups, secrets, monitoring, rollback) and **UAT**; Step 8 includes **post-deploy checks**. ([Codefresh][12], [Syncro][11])
+* **Woodworking** → Step 5 logs **material lots** and **fabrication steps**; Step 7 adds **care sheet**.
+
+---
+
+## Why this mirrors “best practice”
+
+* **Contracts + deposits up front** reduce cancellations and scope creep; AIGA’s modular SOW is the industry baseline. ([AIGA][1])
+* **Iterative design with structured critiques** accelerates quality and avoids personal-taste debates. ([Nielsen Norman Group][5])
+* **Proof approval** before production is standard QA in print to prevent expensive rework. ([Disk.com][8], [4OVER4.COM][7])
+* **Webhook-driven phase changes** (for payments) keep human error out of billing logic. ([Stripe Docs][13])
+* **Checklists for deployment/launch** cut risk and make success measurable. ([Syncro][11], [Coda][15])
+
+---
+
+## Operational guardrails (baked into the portal)
+
+* **SLA timers** on each step (e.g., review due in 5 business days), with polite nudges.
+* **Scope guard**: if revision count hits the limit, the **Change Order** dialog opens automatically.
+* **Audit trail**: every approval/decline stores user, timestamp, IP, and a PDF snapshot of the screen state.
+* **One accent per page**, bone-white canvas, minimal icons—your vibe stays intact.
+
+If you want, I can wire these gates and triggers into your codebase now (using the Puppeteer routes and schemas we generated), so moving from **Brief → Launch** is literally a series of green checks—no guesswork, no back-and-forth chaos.
+
+[1]: https://www.aiga.org/resources/aiga-standard-form-of-agreement-for-design-services?utm_source=chatgpt.com "AIGA Standard Form of Agreement for Design Services"
+[2]: https://docs.stripe.com/payments/handling-payment-events?utm_source=chatgpt.com "Triggering actions with webhooks - Stripe Documentation"
+[3]: https://www.aiga.org/sites/default/files/2021-04/standard-form-of-agreement-for-design-services.pdf?utm_source=chatgpt.com "[PDF] Standard Form of Agreement for Design Services - AIGA"
+[4]: https://davidberman.com/wp-content/uploads/AIGA-Standard-Form-of-Agreement-for-Design-Services.pdf?utm_source=chatgpt.com "[PDF] STANDARD FORM OF AGREEMENT FOR DESIGN SERVICES"
+[5]: https://www.nngroup.com/articles/parallel-and-iterative-design/?utm_source=chatgpt.com "Parallel & Iterative Design + Competitive Testing = High Usability"
+[6]: https://www.nngroup.com/articles/design-critiques/?utm_source=chatgpt.com "Design Critiques: Encourage a Positive Culture to Improve Products"
+[7]: https://www.4over4.com/content-hub/stories/printing-checklist?srsltid=AfmBOopkE7V84Pnnko-QxkE_GP1pXTHM_J9ftRz77crnJK1qtqThCJrg&utm_source=chatgpt.com "Master Printing Checklist: Your Complete Quality Guide - 4OVER4"
+[8]: https://disk.com/resources/print-quality-control/?utm_source=chatgpt.com "Print Quality Control: Ensuring Consistency in Every Print Stage"
+[9]: https://www.thebusinesstoolkit.com/prepress-checklist-how-to-prepare-your-design-for-print/?srsltid=AfmBOoppCbUME2ttQnqCxiDqhMe6QcekSq9ROCTDC_QcYLiv9A3IOhRs&utm_source=chatgpt.com "Prepress Checklist: How to prepare your design for print"
+[10]: https://des.wa.gov/services/printing-mailing/resource-center/how-perform-press-check?utm_source=chatgpt.com "How to Perform a Press Check"
+[11]: https://syncromsp.com/blog/software-deployment-checklist/?utm_source=chatgpt.com "Software Deployment Checklist: A Guide for IT Professionals - Syncro"
+[12]: https://codefresh.io/learn/software-deployment/?utm_source=chatgpt.com "What Is Software Deployment? Checklist and Strategies - Codefresh"
+[13]: https://docs.stripe.com/webhooks?utm_source=chatgpt.com "Receive Stripe events in your webhook endpoint"
+[14]: https://www.stigg.io/blog-posts/best-practices-i-wish-we-knew-when-integrating-stripe-webhooks?utm_source=chatgpt.com "Best practices I wish we knew when integrating Stripe webhooks"
+[15]: https://coda.io/%40laila-robinson/software-deployment-checklist?utm_source=chatgpt.com "Ultimate Software Deployment Checklist [+Best Practices] - Coda"
+[16]: https://www.aiga.org/resources/payment-strategies-for-freelance-designers-and-design-firms?utm_source=chatgpt.com "Payment Strategies for Freelance Designers and Design Firms - AIGA"
+[17]: https://docs.stripe.com/api/events/types?utm_source=chatgpt.com "Types of events | Stripe API Reference"

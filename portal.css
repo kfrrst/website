@@ -520,120 +520,9 @@
 /* DASHBOARD GRID */
 .dashboard-grid {
   display: grid;
-  grid-template-columns: 2fr 1fr;
+  grid-template-columns: 1fr 1fr;
   gap: 2rem;
   background: var(--bone);
-}
-
-.dashboard-main {
-  min-width: 0;
-}
-
-.dashboard-sidebar {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-}
-
-/* Recent Activity in Sidebar */
-.dashboard-sidebar .recent-activity {
-  background: white;
-  border-radius: 8px;
-  padding: 1.5rem;
-  border: 1px solid #e9ecef;
-}
-
-.dashboard-sidebar .recent-activity .section-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1rem;
-}
-
-.dashboard-sidebar .recent-activity h3 {
-  font-size: 1.125rem;
-  margin: 0;
-  color: #333;
-}
-
-.dashboard-sidebar .recent-activity .btn-link-small {
-  font-size: 0.875rem;
-  color: #0057FF;
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 0;
-  text-decoration: none;
-}
-
-.dashboard-sidebar .recent-activity .btn-link-small:hover {
-  text-decoration: underline;
-}
-
-.dashboard-sidebar .activity-list {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-
-.dashboard-sidebar .activity-item {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.75rem;
-  padding: 0.75rem;
-  background: #f8f9fa;
-  border-radius: 6px;
-  border: none;
-  transition: background 0.2s;
-}
-
-.dashboard-sidebar .activity-item:hover {
-  background: #e9ecef;
-}
-
-.dashboard-sidebar .activity-icon {
-  font-size: 1rem;
-  color: #666;
-  min-width: 60px;
-  font-weight: 600;
-}
-
-.dashboard-sidebar .activity-content {
-  flex: 1;
-  min-width: 0;
-}
-
-.dashboard-sidebar .activity-description {
-  font-size: 0.875rem;
-  color: #333;
-  margin-bottom: 0.25rem;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.dashboard-sidebar .activity-time {
-  font-size: 0.75rem;
-  color: #999;
-}
-
-.dashboard-sidebar .activity-show-more {
-  padding-top: 0.5rem;
-  text-align: center;
-}
-
-.dashboard-sidebar .activity-show-more .btn-link {
-  font-size: 0.875rem;
-  color: #0057FF;
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 0.5rem;
-  text-decoration: none;
-}
-
-.dashboard-sidebar .activity-show-more .btn-link:hover {
-  text-decoration: underline;
 }
 
 .activity-panel,
@@ -2500,13 +2389,11 @@
 
 .project-info-card,
 .project-description-card {
-  background: #ffffff !important;
-  background-color: #ffffff !important;
+  background: #ffffff;
   border: 1px solid #e9ecef;
   border-radius: 8px;
   padding: 1.5rem;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
-  color: #333333 !important;
 }
 
 .project-info-card h3,
@@ -2630,13 +2517,11 @@
 
 /* Progress tracker container */
 .progress-tracker-container {
-  background: #ffffff !important;
-  background-color: #ffffff !important;
+  background: #ffffff;
   border: 1px solid #e9ecef;
   border-radius: 8px;
   padding: 2rem;
   margin-bottom: 2rem;
-  color: #333333 !important;
 }
 
 .project-details-content {

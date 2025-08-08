@@ -1,0 +1,778 @@
+erDiagram
+    %% =============================================================================
+    %% RE PRINT STUDIOS - COMPLETE DATABASE ERD
+    %% 42 Tables - Production Ready Schema
+    %% Last Updated: January 2025
+    %% =============================================================================
+
+    %% CORE BUSINESS ENTITIES
+    CLIENTS {
+        uuid id PK
+        string company_name
+        string contact_person
+        string email UK
+        string phone
+        string address_line1
+        string address_line2
+        string city
+        string state
+        string postal_code
+        string country
+        string website
+        string industry
+        string company_size
+        decimal annual_revenue
+        string tax_id
+        string billing_email
+        string preferred_contact_method
+        string time_zone
+        string status
+        string stripe_customer_id
+        int payment_terms
+        decimal credit_limit
+        text notes
+        datetime created_at
+        datetime updated_at
+    }
+    
+    USERS {
+        uuid id PK
+        string email UK
+        string password_hash
+        string first_name
+        string last_name
+        string role
+        uuid client_id FK
+        string phone
+        string company_name
+        string avatar_url
+        boolean is_active
+        boolean email_verified
+        datetime last_login_at
+        datetime created_at
+        datetime updated_at
+    }
+
+    TEAM_MEMBERS {
+        uuid id PK
+        uuid user_id FK
+        string specialization
+        text bio
+        string linkedin_url
+        string portfolio_url
+        decimal hourly_rate
+        string availability_status
+        json skills
+        string department
+        date hire_date
+        string employee_id
+        boolean is_contractor
+        datetime created_at
+        datetime updated_at
+    }
+    
+    PROJECT_CATEGORIES {
+        uuid id PK
+        string name UK
+        text description
+        string color_hex
+        string icon
+        boolean is_active
+        int sort_order
+        datetime created_at
+    }
+    
+    PROJECT_TYPES {
+        uuid id PK
+        uuid category_id FK
+        string name
+        text description
+        json default_phases
+        int estimated_duration_days
+        decimal base_price
+        boolean is_active
+        datetime created_at
+    }
+
+    PROJECT_TEMPLATES {
+        uuid id PK
+        string name
+        text description
+        uuid type_id FK
+        json phase_templates
+        json default_team
+        json required_documents
+        decimal estimated_budget
+        int estimated_days
+        uuid created_by FK
+        datetime created_at
+        datetime updated_at
+    }
+    
+    PROJECTS {
+        uuid id PK
+        uuid client_id FK
+        uuid category_id FK
+        uuid project_type_id FK
+        uuid template_id FK
+        string name
+        text description
+        string status
+        string priority
+        int progress_percentage
+        decimal budget_amount
+        string budget_currency
+        date start_date
+        date due_date
+        datetime completed_at
+        string external_reference
+        decimal estimated_hours
+        decimal actual_hours
+        decimal hourly_rate
+        boolean is_active
+        datetime created_at
+        datetime updated_at
+    }
+
+    PROJECT_PHASES {
+        uuid id PK
+        string name
+        text description
+        int default_order
+        json default_tasks
+        string color_hex
+        string icon
+        boolean requires_approval
+        int estimated_days
+        json email_templates
+        datetime created_at
+        datetime updated_at
+    }
+
+    %% WORKFLOW & AUTOMATION
+    PROJECT_PHASE_TRACKING {
+        uuid id PK
+        uuid project_id FK
+        int phase_number
+        string phase_name
+        string status
+        datetime started_at
+        datetime completed_at
+        uuid approved_by FK
+        datetime approved_at
+        text notes
+        json metadata
+        datetime created_at
+        datetime updated_at
+    }
+    
+    PHASE_AUTOMATION_RULES {
+        uuid id PK
+        string rule_name
+        json trigger_condition
+        string action_type
+        json action_config
+        boolean is_active
+        datetime created_at
+        datetime updated_at
+    }
+    
+    CLIENT_ACTIONS {
+        uuid id PK
+        uuid project_id FK
+        uuid phase_id FK
+        string action_type
+        string title
+        text description
+        text instructions
+        boolean is_required
+        date due_date
+        uuid completed_by FK
+        datetime completed_at
+        string status
+        json metadata
+        datetime created_at
+        datetime updated_at
+    }
+
+    CLIENT_CONTACTS {
+        uuid id PK
+        uuid client_id FK
+        string name
+        string title
+        string email
+        string phone
+        string mobile
+        boolean is_primary
+        string preferred_contact_method
+        text notes
+        datetime created_at
+        datetime updated_at
+    }
+
+    CLIENT_FEEDBACK {
+        uuid id PK
+        uuid client_id FK
+        uuid project_id FK
+        uuid phase_id FK
+        int rating
+        text feedback
+        string feedback_type
+        json improvements
+        uuid submitted_by FK
+        datetime created_at
+    }
+    
+    PROJECT_MILESTONES {
+        uuid id PK
+        uuid project_id FK
+        string name
+        text description
+        date due_date
+        boolean is_completed
+        datetime completed_at
+        int order_index
+        datetime created_at
+        datetime updated_at
+    }
+
+    PROJECT_APPROVALS {
+        uuid id PK
+        uuid project_id FK
+        uuid phase_id FK
+        string approval_type
+        uuid requested_by FK
+        datetime requested_at
+        uuid approved_by FK
+        datetime approved_at
+        string status
+        text comments
+        json attachments
+        datetime created_at
+    }
+
+    PROJECT_NOTES {
+        uuid id PK
+        uuid project_id FK
+        uuid author_id FK
+        string note_type
+        text content
+        json attachments
+        boolean is_internal
+        datetime created_at
+        datetime updated_at
+    }
+
+    PROJECT_RESOURCES {
+        uuid id PK
+        uuid project_id FK
+        string resource_type
+        string name
+        text description
+        string url
+        json metadata
+        uuid added_by FK
+        datetime created_at
+    }
+
+    PROJECT_TEAM {
+        uuid id PK
+        uuid project_id FK
+        uuid team_member_id FK
+        string role
+        json responsibilities
+        decimal hourly_rate
+        decimal allocated_hours
+        datetime assigned_at
+        datetime removed_at
+        uuid assigned_by FK
+    }
+
+    TEAM_TASKS {
+        uuid id PK
+        uuid project_id FK
+        uuid assigned_to FK
+        uuid assigned_by FK
+        string title
+        text description
+        string priority
+        string status
+        date due_date
+        datetime completed_at
+        int estimated_hours
+        int actual_hours
+        json attachments
+        datetime created_at
+        datetime updated_at
+    }
+
+    TEAM_MEMBER_SKILLS {
+        uuid id PK
+        uuid team_member_id FK
+        string skill_name
+        string skill_level
+        int years_experience
+        boolean is_certified
+        datetime created_at
+    }
+
+    %% FILE MANAGEMENT SYSTEM
+    FILE_CATEGORIES {
+        uuid id PK
+        string name UK
+        text description
+        string allowed_extensions
+        bigint max_file_size
+        string color_hex
+        string icon
+        boolean is_active
+        datetime created_at
+    }
+    
+    FILE_TAGS {
+        uuid id PK
+        string name UK
+        string color_hex
+        datetime created_at
+    }
+    
+    FILES {
+        uuid id PK
+        uuid project_id FK
+        uuid uploader_id FK
+        uuid category_id FK
+        string original_name
+        string stored_name
+        string file_path
+        bigint file_size
+        string mime_type
+        string file_type
+        text description
+        boolean is_public
+        int download_count
+        int version_number
+        uuid parent_file_id FK
+        boolean is_active
+        datetime created_at
+        datetime updated_at
+    }
+    
+    FILE_TAG_ASSIGNMENTS {
+        uuid id PK
+        uuid file_id FK
+        uuid tag_id FK
+        datetime created_at
+    }
+
+    FILE_VERSIONS {
+        uuid id PK
+        uuid file_id FK
+        int version_number
+        string stored_name
+        string file_path
+        bigint file_size
+        string change_description
+        uuid uploaded_by FK
+        datetime created_at
+    }
+
+    %% COMMUNICATION SYSTEM
+    MESSAGE_THREADS {
+        uuid id PK
+        uuid project_id FK
+        string title
+        string type
+        string status
+        uuid created_by FK
+        datetime last_message_at
+        int participant_count
+        int message_count
+        datetime created_at
+        datetime updated_at
+    }
+    
+    MESSAGES {
+        uuid id PK
+        uuid project_id FK
+        uuid thread_id FK
+        uuid sender_id FK
+        uuid parent_message_id FK
+        text content
+        string message_type
+        json attachments
+        boolean is_edited
+        datetime edited_at
+        json reactions
+        datetime created_at
+    }
+    
+    MESSAGE_PARTICIPANTS {
+        uuid id PK
+        uuid thread_id FK
+        uuid user_id FK
+        uuid last_read_message_id FK
+        datetime last_read_at
+        string notification_preference
+        datetime joined_at
+    }
+
+    %% NOTIFICATION & EMAIL SYSTEM
+    NOTIFICATIONS {
+        uuid id PK
+        uuid recipient_id FK
+        uuid sender_id FK
+        string type
+        string title
+        text message
+        string action_url
+        string action_text
+        uuid project_id FK
+        string entity_type
+        uuid entity_id
+        string priority
+        boolean is_read
+        datetime read_at
+        boolean is_email_sent
+        boolean is_push_sent
+        json metadata
+        datetime created_at
+    }
+    
+    EMAIL_TEMPLATES {
+        uuid id PK
+        string name UK
+        string subject
+        text html_content
+        text text_content
+        json variables
+        string category
+        boolean is_active
+        boolean is_system
+        uuid created_by FK
+        datetime created_at
+        datetime updated_at
+    }
+    
+    EMAIL_QUEUE {
+        uuid id PK
+        string to_email
+        string to_name
+        string from_email
+        string from_name
+        string subject
+        text html_content
+        text text_content
+        uuid template_id FK
+        uuid user_id FK
+        uuid project_id FK
+        int priority
+        string status
+        int attempts
+        int max_attempts
+        datetime scheduled_for
+        datetime sent_at
+        text error_message
+        json metadata
+        datetime created_at
+    }
+
+    EMAIL_LOGS {
+        uuid id PK
+        uuid queue_id FK
+        string recipient_email
+        string subject
+        string status
+        string provider_response
+        json tracking_data
+        datetime opened_at
+        datetime clicked_at
+        datetime bounced_at
+        datetime created_at
+    }
+
+    %% FINANCIAL MANAGEMENT
+    INVOICES {
+        uuid id PK
+        string invoice_number UK
+        uuid project_id FK
+        uuid client_id FK
+        decimal amount
+        decimal tax_amount
+        decimal total_amount
+        string currency
+        string status
+        date due_date
+        date issued_date
+        date paid_date
+        string payment_method
+        string stripe_payment_intent_id
+        text description
+        text terms
+        text notes
+        datetime created_at
+        datetime updated_at
+    }
+    
+    INVOICE_ITEMS {
+        uuid id PK
+        uuid invoice_id FK
+        text description
+        decimal quantity
+        decimal unit_price
+        decimal discount_percentage
+        decimal tax_percentage
+        decimal line_total
+        uuid project_id FK
+        uuid time_entry_id FK
+        datetime created_at
+    }
+    
+    PAYMENTS {
+        uuid id PK
+        uuid invoice_id FK
+        decimal amount
+        date payment_date
+        string payment_method
+        string transaction_id
+        string stripe_payment_intent_id
+        text notes
+        string status
+        uuid created_by FK
+        datetime created_at
+    }
+
+    %% TIME TRACKING & COLLABORATION
+    TIME_ENTRIES {
+        uuid id PK
+        uuid project_id FK
+        uuid user_id FK
+        uuid task_id FK
+        text task_description
+        decimal hours
+        decimal hourly_rate
+        date date
+        time start_time
+        time end_time
+        boolean is_billable
+        boolean is_invoiced
+        uuid invoice_id FK
+        text notes
+        datetime created_at
+        datetime updated_at
+    }
+    
+    PROJECT_TEAM_MEMBERS {
+        uuid id PK
+        uuid project_id FK
+        uuid user_id FK
+        string role
+        json permissions
+        decimal hourly_rate
+        uuid added_by FK
+        datetime added_at
+        datetime removed_at
+    }
+
+    TEAM_MEMBER_ASSIGNMENTS {
+        uuid id PK
+        uuid team_member_id FK
+        uuid project_id FK
+        uuid task_id FK
+        string assignment_type
+        decimal allocated_hours
+        date start_date
+        date end_date
+        string status
+        uuid assigned_by FK
+        datetime created_at
+        datetime updated_at
+    }
+
+    %% AUDIT & SECURITY
+    USER_SESSIONS {
+        uuid id PK
+        uuid user_id FK
+        string session_token
+        string refresh_token
+        datetime expires_at
+        string ip_address
+        text user_agent
+        boolean is_active
+        datetime created_at
+    }
+    
+    ACTIVITY_LOG {
+        uuid id PK
+        uuid user_id FK
+        uuid project_id FK
+        string action
+        string entity_type
+        uuid entity_id
+        text description
+        json metadata
+        string ip_address
+        text user_agent
+        datetime created_at
+    }
+
+    %% AUTOMATION & SYSTEM
+    AUTOMATION_RULES {
+        uuid id PK
+        string name
+        text description
+        string trigger_event
+        json trigger_conditions
+        json actions
+        boolean is_active
+        int priority
+        uuid created_by FK
+        datetime last_triggered_at
+        int trigger_count
+        datetime created_at
+        datetime updated_at
+    }
+
+    AUTOMATION_EXECUTIONS {
+        uuid id PK
+        uuid rule_id FK
+        uuid project_id FK
+        json trigger_data
+        json execution_result
+        string status
+        datetime started_at
+        datetime completed_at
+        text error_message
+        datetime created_at
+    }
+    
+    AUTOMATION_NOTIFICATIONS {
+        uuid id PK
+        string notification_key UK
+        string notification_type
+        uuid recipient_id FK
+        uuid project_id FK
+        json data
+        boolean is_processed
+        datetime processed_at
+        datetime created_at
+    }
+    
+    SYSTEM_SETTINGS {
+        uuid id PK
+        string key UK
+        text value
+        string value_type
+        text description
+        boolean is_public
+        string category
+        uuid updated_by FK
+        datetime created_at
+        datetime updated_at
+    }
+
+    %% =============================================================================
+    %% COMPREHENSIVE RELATIONSHIPS - 42 TABLES
+    %% =============================================================================
+    
+    %% Client & User Management
+    CLIENTS ||--o{ USERS : "employs"
+    CLIENTS ||--o{ PROJECTS : "commissions"
+    CLIENTS ||--o{ INVOICES : "receives"
+    CLIENTS ||--o{ CLIENT_CONTACTS : "has_contacts"
+    CLIENTS ||--o{ CLIENT_FEEDBACK : "provides_feedback"
+    
+    %% User & Team Relationships
+    USERS ||--o{ TEAM_MEMBERS : "is_team_member"
+    USERS ||--o{ USER_SESSIONS : "authenticates"
+    USERS ||--o{ ACTIVITY_LOG : "performs_actions"
+    USERS ||--o{ FILES : "uploads"
+    USERS ||--o{ MESSAGES : "sends"
+    USERS ||--o{ NOTIFICATIONS : "receives"
+    USERS ||--o{ TIME_ENTRIES : "logs_time"
+    USERS ||--o{ PROJECT_TEAM_MEMBERS : "joins_projects"
+    USERS ||--o{ TEAM_TASKS : "assigned_tasks"
+    
+    %% Team Member Management
+    TEAM_MEMBERS ||--o{ TEAM_MEMBER_SKILLS : "has_skills"
+    TEAM_MEMBERS ||--o{ PROJECT_TEAM : "assigned_to_projects"
+    TEAM_MEMBERS ||--o{ TEAM_MEMBER_ASSIGNMENTS : "receives_assignments"
+    
+    %% Project Management
+    PROJECT_CATEGORIES ||--o{ PROJECT_TYPES : "contains"
+    PROJECT_CATEGORIES ||--o{ PROJECTS : "categorizes"
+    PROJECT_TYPES ||--o{ PROJECTS : "templates"
+    PROJECT_TYPES ||--o{ PROJECT_TEMPLATES : "has_templates"
+    PROJECT_TEMPLATES ||--o{ PROJECTS : "instantiates"
+    
+    PROJECTS ||--o{ PROJECT_PHASE_TRACKING : "tracks_phases"
+    PROJECTS ||--o{ CLIENT_ACTIONS : "requires_actions"
+    PROJECTS ||--o{ PROJECT_MILESTONES : "has_milestones"
+    PROJECTS ||--o{ PROJECT_APPROVALS : "needs_approvals"
+    PROJECTS ||--o{ PROJECT_NOTES : "contains_notes"
+    PROJECTS ||--o{ PROJECT_RESOURCES : "uses_resources"
+    PROJECTS ||--o{ PROJECT_TEAM : "has_team"
+    PROJECTS ||--o{ TEAM_TASKS : "contains_tasks"
+    PROJECTS ||--o{ FILES : "stores_files"
+    PROJECTS ||--o{ MESSAGE_THREADS : "enables_communication"
+    PROJECTS ||--o{ TIME_ENTRIES : "tracks_time"
+    PROJECTS ||--o{ PROJECT_TEAM_MEMBERS : "assigns_team"
+    PROJECTS ||--o{ INVOICES : "generates_invoices"
+    PROJECTS ||--o{ CLIENT_FEEDBACK : "receives_feedback"
+    
+    %% Phase Management
+    PROJECT_PHASES ||--o{ PROJECT_PHASE_TRACKING : "defines_phases"
+    PROJECT_PHASE_TRACKING ||--o{ CLIENT_ACTIONS : "defines_actions"
+    PROJECT_PHASE_TRACKING ||--o{ PROJECT_APPROVALS : "requires_approvals"
+    PROJECT_PHASE_TRACKING ||--o{ CLIENT_FEEDBACK : "collects_feedback"
+    USERS ||--o{ PROJECT_PHASE_TRACKING : "approves_phases"
+    
+    %% File Management
+    FILE_CATEGORIES ||--o{ FILES : "categorizes_files"
+    FILES ||--o{ FILE_TAG_ASSIGNMENTS : "tagged_with"
+    FILE_TAGS ||--o{ FILE_TAG_ASSIGNMENTS : "tags_files"
+    FILES ||--o{ FILES : "versions_of"
+    FILES ||--o{ FILE_VERSIONS : "has_versions"
+    
+    %% Communication System
+    MESSAGE_THREADS ||--o{ MESSAGES : "contains_messages"
+    MESSAGE_THREADS ||--o{ MESSAGE_PARTICIPANTS : "includes_participants"
+    MESSAGES ||--o{ MESSAGES : "replies_to"
+    USERS ||--o{ MESSAGE_PARTICIPANTS : "participates_in"
+    
+    %% Email & Notification System
+    EMAIL_TEMPLATES ||--o{ EMAIL_QUEUE : "generates_emails"
+    EMAIL_QUEUE ||--o{ EMAIL_LOGS : "logs_delivery"
+    USERS ||--o{ EMAIL_QUEUE : "receives_emails"
+    PROJECTS ||--o{ EMAIL_QUEUE : "triggers_emails"
+    
+    %% Financial System
+    INVOICES ||--o{ INVOICE_ITEMS : "itemizes"
+    INVOICES ||--o{ PAYMENTS : "receives_payments"
+    TIME_ENTRIES ||--o{ INVOICE_ITEMS : "billed_as"
+    TIME_ENTRIES ||--o{ INVOICES : "included_in"
+    
+    %% Task Management
+    TEAM_TASKS ||--o{ TIME_ENTRIES : "tracks_time"
+    TEAM_TASKS ||--o{ TEAM_MEMBER_ASSIGNMENTS : "assigns_to"
+    
+    %% Automation System
+    AUTOMATION_RULES ||--o{ AUTOMATION_EXECUTIONS : "executes"
+    PHASE_AUTOMATION_RULES ||--o{ AUTOMATION_EXECUTIONS : "triggers"
+    PROJECTS ||--o{ AUTOMATION_EXECUTIONS : "triggers_automation"
+    PROJECTS ||--o{ AUTOMATION_NOTIFICATIONS : "generates_notifications"
+    
+    %% System Configuration
+    USERS ||--o{ SYSTEM_SETTINGS : "configures"
+    USERS ||--o{ EMAIL_TEMPLATES : "creates"
+    USERS ||--o{ AUTOMATION_RULES : "defines"
+
+    %% =============================================================================
+    %% LEGEND
+    %% =============================================================================
+    %% PK = Primary Key
+    %% FK = Foreign Key
+    %% UK = Unique Key
+    %% All tables use UUID for primary keys
+    %% All tables include appropriate timestamps
+    %% Total: 42 Production Tables
+    %% =============================================================================

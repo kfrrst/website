@@ -1,0 +1,99 @@
+{
+  "id": "intake_website",
+  "version": "1.0.0",
+  "serviceFilter": [
+    "WEB"
+  ],
+  "schema": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Website Design Intake",
+    "type": "object",
+    "properties": {
+      "siteType": {
+        "type": "string",
+        "enum": [
+          "Marketing",
+          "E\u2011commerce",
+          "Portfolio",
+          "Web App"
+        ]
+      },
+      "pages": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "title": "Planned pages"
+      },
+      "cms": {
+        "type": "string",
+        "enum": [
+          "None/Static",
+          "Sanity",
+          "Contentful",
+          "WordPress",
+          "Other"
+        ]
+      },
+      "integrations": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "enum": [
+            "Stripe",
+            "Auth",
+            "Analytics",
+            "CRM",
+            "Email",
+            "Search",
+            "Maps",
+            "Other"
+          ]
+        }
+      },
+      "contentState": {
+        "type": "string",
+        "enum": [
+          "Ready",
+          "Needs Copy",
+          "Needs Assets"
+        ]
+      },
+      "seo": {
+        "type": "object",
+        "properties": {
+          "keywords": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "competitors": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "a11y": {
+        "type": "boolean",
+        "title": "WCAG AA minimum"
+      }
+    }
+  },
+  "uiSchema": {
+    "pages": {
+      "ui:options": {
+        "placeholder": "Home, About, Contact"
+      }
+    },
+    "seo": {
+      "keywords": {
+        "ui:options": {
+          "orderable": true
+        }
+      }
+    }
+  }
+}

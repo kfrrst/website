@@ -112,6 +112,13 @@ import formRoutes from './routes/forms.js';
 import documentRoutes from './routes/documents.js';
 import researchRoutes from './routes/research.js';
 import proofRoutes from './routes/proofs.js';
+// New routes from reprint-wiring-branch-plus
+import pdfRoutes from './server/routes/pdf.js';
+import formsGetRoutes from './server/routes/forms-get.js';
+import formsSubmitRoutes from './server/routes/forms-submit.js';
+import newPhaseRoutes from './server/routes/phases.js';
+import stripeRoutes from './server/routes/stripe.js';
+import signEventRoutes from './server/routes/sign-events.js';
 import settingsRoutes from './routes/settings.js';
 import fileCategoriesRoutes from './routes/file-categories.js';
 import fileTagsRoutes from './routes/file-tags.js';
@@ -159,6 +166,15 @@ app.use('/api/team-collaboration', auditLog('team-collaboration'), teamCollabora
 app.use('/api/system-settings', auditLog('system-settings'), systemSettingsRoutes);
 app.use('/api/automation-rules', auditLog('automation-rules'), automationRulesRoutes);
 app.use('/api', auditLog('proofs'), proofRoutes);
+
+// Mount new routes from reprint-wiring-branch-plus
+// Stripe webhook needs to be before body parsing middleware for signature verification
+app.use('/api/stripe', stripeRoutes);
+app.use('/api/pdf', pdfRoutes);
+app.use('/api/new-forms', formsGetRoutes);
+app.use('/api/new-forms', formsSubmitRoutes);
+app.use('/api/new-phases', newPhaseRoutes);
+app.use('/api/sign-events', signEventRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
