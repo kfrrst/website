@@ -70,11 +70,12 @@ async function globalSetup(config: FullConfig) {
         )
       `);
       await pool.query(`DELETE FROM messages WHERE project_id IN (SELECT id FROM projects WHERE name LIKE 'test_%')`);
-      await pool.query(`DELETE FROM project_phases WHERE project_id IN (SELECT id FROM projects WHERE name LIKE 'test_%')`);
-      await pool.query(`DELETE FROM client_actions WHERE project_id IN (SELECT id FROM projects WHERE name LIKE 'test_%')`);
+      await pool.query(`DELETE FROM project_phase_tracking WHERE project_id IN (SELECT id FROM projects WHERE name LIKE 'test_%')`);
+      await pool.query(`DELETE FROM project_phase_history WHERE project_id IN (SELECT id FROM projects WHERE name LIKE 'test_%')`);
+      await pool.query(`DELETE FROM project_phase_action_status WHERE project_id IN (SELECT id FROM projects WHERE name LIKE 'test_%')`);
+      await pool.query(`DELETE FROM phase_documents WHERE project_id IN (SELECT id FROM projects WHERE name LIKE 'test_%')`);
       await pool.query(`DELETE FROM projects WHERE name LIKE 'test_%'`);
-      await pool.query(`DELETE FROM clients WHERE company_name LIKE 'test_%'`);
-      await pool.query(`DELETE FROM users WHERE email LIKE 'test_%'`);
+      await pool.query(`DELETE FROM users WHERE email LIKE 'test_%' AND role = 'client'`);
     } catch (cleanupError) {
       console.log('⚠️  Some cleanup queries failed, continuing anyway:', cleanupError.message);
     }

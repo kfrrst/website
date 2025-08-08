@@ -54,8 +54,7 @@ export class AdminDashboardModule extends BaseAdminModule {
         <div class="overview-header">
           <h1>Admin Dashboard</h1>
           <div class="overview-actions">
-            <button class="refresh-btn" onclick="admin.modules.dashboard.refresh()">
-              <span class="icon">🔄</span>
+            <button class="refresh-btn" id="btn-refresh-dashboard">
               Refresh
             </button>
             <div class="last-updated">
@@ -108,52 +107,74 @@ export class AdminDashboardModule extends BaseAdminModule {
     `;
 
     this.initializeCharts();
+    this.setupEventHandlers();
+  }
+
+  /**
+   * Setup event handlers
+   */
+  setupEventHandlers() {
+    // Refresh button
+    const refreshBtn = document.getElementById('btn-refresh-dashboard');
+    if (refreshBtn) {
+      this.addEventListener(refreshBtn, 'click', () => this.refresh());
+    }
+
+    // Quick action buttons
+    const quickActionBtns = this.element.querySelectorAll('.quick-action-btn');
+    quickActionBtns.forEach(btn => {
+      this.addEventListener(btn, 'click', () => {
+        const action = btn.getAttribute('data-action');
+        this.handleQuickAction(action);
+      });
+    });
   }
 
   /**
    * Render statistics cards
    */
   renderStatsCards() {
+    const stats = this.stats?.stats || {};
     const cards = [
       {
         title: 'Total Clients',
-        value: this.stats.totalClients || 0,
-        icon: '👥',
-        trend: this.stats.clientsTrend || 0,
+        value: stats.total_clients || stats.total_users || 0,
+        icon: '',
+        trend: null,
         color: 'blue'
       },
       {
         title: 'Active Projects',
-        value: this.stats.activeProjects || 0,
-        icon: '📋',
-        trend: this.stats.projectsTrend || 0,
+        value: stats.active_projects || 0,
+        icon: '',
+        trend: null,
         color: 'green'
       },
       {
         title: 'Monthly Revenue',
-        value: this.formatCurrency(this.stats.monthlyRevenue || 0),
-        icon: '💰',
-        trend: this.stats.revenueTrend || 0,
+        value: this.formatCurrency(stats.revenue_month || 0),
+        icon: '',
+        trend: null,
         color: 'purple'
       },
       {
         title: 'Pending Invoices',
-        value: this.stats.pendingInvoices || 0,
-        icon: '💳',
-        trend: this.stats.invoicesTrend || 0,
+        value: stats.pending_invoices || 0,
+        icon: '',
+        trend: null,
         color: 'orange'
       },
       {
-        title: 'Open Inquiries',
-        value: this.stats.openInquiries || 0,
-        icon: '💬',
-        trend: this.stats.inquiriesTrend || 0,
+        title: 'Total Files',
+        value: stats.total_files || 0,
+        icon: '',
+        trend: null,
         color: 'red'
       },
       {
-        title: 'Server Uptime',
-        value: this.formatUptime(this.stats.serverUptime || 0),
-        icon: '⚡',
+        title: 'Recent Activities',
+        value: stats.recent_activities || 0,
+        icon: '',
         trend: null,
         color: 'cyan'
       }
@@ -162,13 +183,12 @@ export class AdminDashboardModule extends BaseAdminModule {
     return cards.map(card => `
       <div class="stat-card ${card.color}">
         <div class="stat-header">
-          <span class="stat-icon">${card.icon}</span>
           <span class="stat-title">${card.title}</span>
         </div>
         <div class="stat-value">${card.value}</div>
         ${card.trend !== null ? `
           <div class="stat-trend ${card.trend >= 0 ? 'positive' : 'negative'}">
-            <span class="trend-icon">${card.trend >= 0 ? '↗️' : '↘️'}</span>
+            <span class="trend-icon">${card.trend >= 0 ? '↑' : '↓'}</span>
             <span class="trend-value">${Math.abs(card.trend)}%</span>
             <span class="trend-period">vs last month</span>
           </div>
@@ -182,7 +202,8 @@ export class AdminDashboardModule extends BaseAdminModule {
    */
   renderRevenueChart() {
     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
-    const revenue = this.stats.monthlyRevenueData || [0, 0, 0, 0, 0, 0];
+    const stats = this.stats?.stats || {};
+    const revenue = [0, 0, 0, 0, 0, stats.revenue_month || 0]; // Only show current month revenue
     
     return `
       <div class="simple-chart">
@@ -205,9 +226,10 @@ export class AdminDashboardModule extends BaseAdminModule {
    * Render project status chart
    */
   renderProjectStatusChart() {
-    const statuses = this.stats.projectStatusData || {
-      active: 0,
-      completed: 0,
+    const stats = this.stats?.stats || {};
+    const statuses = {
+      active: stats.active_projects || 0,
+      completed: stats.total_projects - (stats.active_projects || 0) || 0,
       on_hold: 0,
       cancelled: 0
     };
@@ -239,7 +261,7 @@ export class AdminDashboardModule extends BaseAdminModule {
     if (!this.recentActivity.length) {
       return `
         <div class="empty-state">
-          <div class="empty-icon">📋</div>
+          <div class="empty-icon"></div>
           <p>No recent activity</p>
         </div>
       `;
@@ -263,25 +285,25 @@ export class AdminDashboardModule extends BaseAdminModule {
     const actions = [
       {
         label: 'New Client',
-        icon: '👤',
+        icon: '',
         action: 'createClient',
         color: 'blue'
       },
       {
         label: 'New Project',
-        icon: '📋',
+        icon: '',
         action: 'createProject',
         color: 'green'
       },
       {
         label: 'Send Invoice',
-        icon: '💳',
+        icon: '',
         action: 'createInvoice',
         color: 'purple'
       },
       {
         label: 'View Reports',
-        icon: '📊',
+        icon: '',
         action: 'viewReports',
         color: 'orange'
       }
@@ -289,8 +311,7 @@ export class AdminDashboardModule extends BaseAdminModule {
 
     return actions.map(action => `
       <button class="quick-action-btn ${action.color}" 
-              onclick="admin.modules.dashboard.handleQuickAction('${action.action}')">
-        <span class="action-icon">${action.icon}</span>
+              data-action="${action.action}">
         <span class="action-label">${action.label}</span>
       </button>
     `).join('');
@@ -301,7 +322,7 @@ export class AdminDashboardModule extends BaseAdminModule {
    */
   initializeCharts() {
     // This would integrate with Chart.js or similar library
-    console.log('📊 Charts initialized (using simplified version)');
+    console.log('Charts initialized (using simplified version)');
   }
 
   /**
@@ -311,15 +332,28 @@ export class AdminDashboardModule extends BaseAdminModule {
     switch (action) {
       case 'createClient':
         this.admin.showSection('clients');
-        // Trigger client creation modal
+        // Wait for section to be visible then trigger modal
+        setTimeout(() => {
+          if (this.admin.modules.clients && this.admin.modules.clients.showCreateModal) {
+            this.admin.modules.clients.showCreateModal();
+          }
+        }, 100);
         break;
       case 'createProject':
         this.admin.showSection('projects');
-        // Trigger project creation modal
+        setTimeout(() => {
+          if (this.admin.modules.projects && this.admin.modules.projects.showCreateModal) {
+            this.admin.modules.projects.showCreateModal();
+          }
+        }, 100);
         break;
       case 'createInvoice':
         this.admin.showSection('invoices');
-        // Trigger invoice creation modal
+        setTimeout(() => {
+          if (this.admin.modules.invoices && this.admin.modules.invoices.showCreateModal) {
+            this.admin.modules.invoices.showCreateModal();
+          }
+        }, 100);
         break;
       case 'viewReports':
         this.admin.showSection('reports');
@@ -347,16 +381,16 @@ export class AdminDashboardModule extends BaseAdminModule {
    */
   getActivityIcon(type) {
     const icons = {
-      client_created: '👤',
-      project_created: '📋',
-      project_updated: '✏️',
-      invoice_sent: '💳',
-      payment_received: '💰',
-      inquiry_received: '💬',
-      file_uploaded: '📁',
-      user_login: '🔐'
+      client_created: '',
+      project_created: '',
+      project_updated: '',
+      invoice_sent: '',
+      payment_received: '',
+      inquiry_received: '',
+      file_uploaded: '',
+      user_login: ''
     };
-    return icons[type] || '📋';
+    return icons[type] || '';
   }
 
   /**

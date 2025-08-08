@@ -57,12 +57,10 @@ export class AdminInvoicesModule extends BaseAdminModule {
         <div class="invoices-header">
           <h1>Invoice Management</h1>
           <div class="invoices-actions">
-            <button class="btn-primary" onclick="admin.modules.invoices.showCreateModal()">
-              <span class="icon">➕</span>
+            <button class="btn-primary" id="btn-create-invoice">
               Create Invoice
             </button>
-            <button class="btn-secondary" onclick="admin.modules.invoices.exportInvoices()">
-              <span class="icon">📊</span>
+            <button class="btn-secondary" id="btn-export-invoices">
               Export
             </button>
           </div>
@@ -70,7 +68,7 @@ export class AdminInvoicesModule extends BaseAdminModule {
 
         <div class="invoices-filters">
           <div class="filter-group">
-            <select class="status-filter" onchange="admin.modules.invoices.filterByStatus(this.value)">
+            <select class="status-filter" id="invoice-status-filter">
               <option value="all">All Invoices</option>
               <option value="draft">Draft</option>
               <option value="sent">Sent</option>
@@ -81,7 +79,7 @@ export class AdminInvoicesModule extends BaseAdminModule {
           </div>
           
           <div class="filter-group">
-            <select class="date-filter" onchange="admin.modules.invoices.filterByDate(this.value)">
+            <select class="date-filter" id="invoice-date-filter">
               <option value="all">All Time</option>
               <option value="today">Today</option>
               <option value="week">This Week</option>
@@ -93,9 +91,8 @@ export class AdminInvoicesModule extends BaseAdminModule {
           <div class="search-group">
             <input type="text" 
                    class="search-input" 
-                   placeholder="Search invoices..." 
-                   oninput="admin.modules.invoices.handleSearch(this.value)">
-            <span class="search-icon">🔍</span>
+                   id="invoice-search-input"
+                   placeholder="Search invoices...">
           </div>
         </div>
 
@@ -110,11 +107,11 @@ export class AdminInvoicesModule extends BaseAdminModule {
 
       <!-- Invoice Modal -->
       <div id="invoice-modal" class="modal">
-        <div class="modal-overlay" onclick="admin.modules.invoices.closeModal()"></div>
+        <div class="modal-overlay" id="invoice-modal-overlay"></div>
         <div class="modal-content large">
           <div class="modal-header">
             <h2 id="invoice-modal-title">Create Invoice</h2>
-            <button class="modal-close" onclick="admin.modules.invoices.closeModal()">×</button>
+            <button class="modal-close" id="invoice-modal-close">×</button>
           </div>
           <div class="modal-body">
             <form id="invoice-form">
@@ -126,17 +123,17 @@ export class AdminInvoicesModule extends BaseAdminModule {
 
       <!-- Invoice Preview Modal -->
       <div id="invoice-preview-modal" class="modal">
-        <div class="modal-overlay" onclick="admin.modules.invoices.closePreviewModal()"></div>
+        <div class="modal-overlay" id="invoice-preview-overlay"></div>
         <div class="modal-content large">
           <div class="modal-header">
             <h2>Invoice Preview</h2>
-            <button class="modal-close" onclick="admin.modules.invoices.closePreviewModal()">×</button>
+            <button class="modal-close" id="invoice-preview-close">×</button>
           </div>
           <div class="modal-body" id="invoice-preview-content">
             <!-- Invoice preview will be rendered here -->
           </div>
           <div class="modal-footer">
-            <button class="btn-secondary" onclick="admin.modules.invoices.closePreviewModal()">Close</button>
+            <button class="btn-secondary" id="invoice-preview-close-btn">Close</button>
             <button class="btn-primary" onclick="admin.modules.invoices.sendInvoice()">Send Invoice</button>
           </div>
         </div>
@@ -259,26 +256,26 @@ export class AdminInvoicesModule extends BaseAdminModule {
         <td class="invoice-actions">
           <div class="action-buttons">
             <button class="action-btn" onclick="admin.modules.invoices.viewInvoice('${invoice.id}')" title="View">
-              👁️
+              View
             </button>
             <button class="action-btn" onclick="admin.modules.invoices.editInvoice('${invoice.id}')" title="Edit">
-              ✏️
+              Edit
             </button>
             ${invoice.status === 'draft' ? `
               <button class="action-btn" onclick="admin.modules.invoices.sendInvoice('${invoice.id}')" title="Send">
-                📧
+                Send
               </button>
             ` : ''}
             ${invoice.status === 'sent' ? `
               <button class="action-btn" onclick="admin.modules.invoices.markPaid('${invoice.id}')" title="Mark Paid">
-                ✅
+                Paid
               </button>
             ` : ''}
             <button class="action-btn" onclick="admin.modules.invoices.downloadInvoice('${invoice.id}')" title="Download">
-              ⬇️
+              Download
             </button>
             <button class="action-btn danger" onclick="admin.modules.invoices.deleteInvoice('${invoice.id}')" title="Delete">
-              🗑️
+              Delete
             </button>
           </div>
         </td>
@@ -294,7 +291,7 @@ export class AdminInvoicesModule extends BaseAdminModule {
     
     return `
       <div class="empty-state">
-        <div class="empty-icon">💳</div>
+        <div class="empty-icon"></div>
         <h3>${isFiltered ? 'No invoices found' : 'No invoices yet'}</h3>
         <p>${isFiltered ? 'Try adjusting your filters or search term.' : 'Create your first invoice to get started.'}</p>
         ${!isFiltered ? `
@@ -445,6 +442,51 @@ export class AdminInvoicesModule extends BaseAdminModule {
     const form = document.getElementById('invoice-form');
     if (form) {
       this.addEventListener(form, 'submit', this.handleFormSubmit.bind(this));
+    }
+
+    // Setup create button handler
+    const createBtn = document.getElementById('btn-create-invoice');
+    if (createBtn) {
+      this.addEventListener(createBtn, 'click', () => this.showCreateModal());
+    }
+
+    // Setup export button handler
+    const exportBtn = document.getElementById('btn-export-invoices');
+    if (exportBtn) {
+      this.addEventListener(exportBtn, 'click', () => this.exportInvoices());
+    }
+
+    // Setup filter handlers
+    const statusFilter = document.getElementById('invoice-status-filter');
+    if (statusFilter) {
+      this.addEventListener(statusFilter, 'change', (e) => this.filterByStatus(e.target.value));
+    }
+
+    const dateFilter = document.getElementById('invoice-date-filter');
+    if (dateFilter) {
+      this.addEventListener(dateFilter, 'change', (e) => this.filterByDate(e.target.value));
+    }
+
+    const searchInput = document.getElementById('invoice-search-input');
+    if (searchInput) {
+      this.addEventListener(searchInput, 'input', (e) => this.handleSearch(e.target.value));
+    }
+
+    // Setup modal close handlers
+    const modalOverlay = document.getElementById('invoice-modal-overlay');
+    if (modalOverlay) {
+      this.addEventListener(modalOverlay, 'click', () => this.closeModal());
+    }
+    
+    const modalClose = document.getElementById('invoice-modal-close');
+    if (modalClose) {
+      this.addEventListener(modalClose, 'click', () => this.closeModal());
+    }
+
+    // Setup add item button
+    const addItemBtn = document.getElementById('btn-add-item');
+    if (addItemBtn) {
+      this.addEventListener(addItemBtn, 'click', () => this.addItem());
     }
   }
 

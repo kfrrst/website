@@ -58,12 +58,10 @@ export class AdminProjectsModule extends BaseAdminModule {
         <div class="projects-header">
           <h1>Project Management</h1>
           <div class="projects-actions">
-            <button class="btn-primary" onclick="admin.modules.projects.showCreateModal()">
-              <span class="icon">➕</span>
+            <button class="btn-primary" id="btn-create-project">
               New Project
             </button>
-            <button class="btn-secondary" onclick="admin.modules.projects.exportProjects()">
-              <span class="icon">📊</span>
+            <button class="btn-secondary" id="btn-export-projects">
               Export
             </button>
           </div>
@@ -71,7 +69,7 @@ export class AdminProjectsModule extends BaseAdminModule {
 
         <div class="projects-filters">
           <div class="filter-group">
-            <select class="status-filter" onchange="admin.modules.projects.filterByStatus(this.value)">
+            <select class="status-filter" id="project-status-filter">
               <option value="all">All Projects</option>
               <option value="planning">Planning</option>
               <option value="active">Active</option>
@@ -82,7 +80,7 @@ export class AdminProjectsModule extends BaseAdminModule {
           </div>
           
           <div class="filter-group">
-            <select class="phase-filter" onchange="admin.modules.projects.filterByPhase(this.value)">
+            <select class="phase-filter" id="project-phase-filter">
               <option value="all">All Phases</option>
               <option value="1">Phase 1: Onboarding</option>
               <option value="2">Phase 2: Ideation</option>
@@ -98,19 +96,18 @@ export class AdminProjectsModule extends BaseAdminModule {
           <div class="search-group">
             <input type="text" 
                    class="search-input" 
-                   placeholder="Search projects..." 
-                   oninput="admin.modules.projects.handleSearch(this.value)">
-            <span class="search-icon">🔍</span>
+                   id="project-search-input"
+                   placeholder="Search projects...">
           </div>
 
           <div class="view-toggle">
             <button class="${this.viewMode === 'grid' ? 'active' : ''}" 
-                    onclick="admin.modules.projects.setViewMode('grid')">
-              <span class="icon">⊞</span>
+                    id="btn-view-grid">
+              Grid
             </button>
             <button class="${this.viewMode === 'table' ? 'active' : ''}" 
-                    onclick="admin.modules.projects.setViewMode('table')">
-              <span class="icon">☰</span>
+                    id="btn-view-table">
+              Table
             </button>
           </div>
         </div>
@@ -126,11 +123,11 @@ export class AdminProjectsModule extends BaseAdminModule {
 
       <!-- Project Modal -->
       <div id="project-modal" class="modal">
-        <div class="modal-overlay" onclick="admin.modules.projects.closeModal()"></div>
+        <div class="modal-overlay" id="project-modal-overlay"></div>
         <div class="modal-content">
           <div class="modal-header">
             <h2 id="project-modal-title">Create Project</h2>
-            <button class="modal-close" onclick="admin.modules.projects.closeModal()">×</button>
+            <button class="modal-close" id="project-modal-close">×</button>
           </div>
           <div class="modal-body">
             <form id="project-form">
@@ -255,16 +252,16 @@ export class AdminProjectsModule extends BaseAdminModule {
         
         <div class="project-actions">
           <button class="action-btn" onclick="admin.modules.projects.viewProject('${project.id}')" title="View Details">
-            👁️
+            View
           </button>
           <button class="action-btn" onclick="admin.modules.projects.editProject('${project.id}')" title="Edit">
-            ✏️
+            Edit
           </button>
           <button class="action-btn" onclick="admin.modules.projects.updatePhase('${project.id}')" title="Update Phase">
-            📈
+            Phase
           </button>
           <button class="action-btn danger" onclick="admin.modules.projects.deleteProject('${project.id}')" title="Delete">
-            🗑️
+            Delete
           </button>
         </div>
       </div>
@@ -329,13 +326,13 @@ export class AdminProjectsModule extends BaseAdminModule {
         <td class="project-actions">
           <div class="action-buttons">
             <button class="action-btn" onclick="admin.modules.projects.viewProject('${project.id}')" title="View">
-              👁️
+              View
             </button>
             <button class="action-btn" onclick="admin.modules.projects.editProject('${project.id}')" title="Edit">
-              ✏️
+              Edit
             </button>
             <button class="action-btn" onclick="admin.modules.projects.updatePhase('${project.id}')" title="Phase">
-              📈
+              Phase
             </button>
           </div>
         </td>
@@ -351,7 +348,7 @@ export class AdminProjectsModule extends BaseAdminModule {
     
     return `
       <div class="empty-state">
-        <div class="empty-icon">📋</div>
+        <div class="empty-icon"></div>
         <h3>${isFiltered ? 'No projects found' : 'No projects yet'}</h3>
         <p>${isFiltered ? 'Try adjusting your filters or search term.' : 'Create your first project to get started.'}</p>
         ${!isFiltered ? `
@@ -451,9 +448,59 @@ export class AdminProjectsModule extends BaseAdminModule {
    * Setup event handlers
    */
   setupEventHandlers() {
+    // Form handler
     const form = document.getElementById('project-form');
     if (form) {
       this.addEventListener(form, 'submit', this.handleFormSubmit.bind(this));
+    }
+    
+    // Button handlers
+    const createBtn = document.getElementById('btn-create-project');
+    if (createBtn) {
+      this.addEventListener(createBtn, 'click', () => this.showCreateModal());
+    }
+    
+    const exportBtn = document.getElementById('btn-export-projects');
+    if (exportBtn) {
+      this.addEventListener(exportBtn, 'click', () => this.exportProjects());
+    }
+    
+    // Filter handlers
+    const statusFilter = document.getElementById('project-status-filter');
+    if (statusFilter) {
+      this.addEventListener(statusFilter, 'change', (e) => this.filterByStatus(e.target.value));
+    }
+    
+    const phaseFilter = document.getElementById('project-phase-filter');
+    if (phaseFilter) {
+      this.addEventListener(phaseFilter, 'change', (e) => this.filterByPhase(e.target.value));
+    }
+    
+    const searchInput = document.getElementById('project-search-input');
+    if (searchInput) {
+      this.addEventListener(searchInput, 'input', (e) => this.handleSearch(e.target.value));
+    }
+    
+    // Modal handlers
+    const modalOverlay = document.getElementById('project-modal-overlay');
+    if (modalOverlay) {
+      this.addEventListener(modalOverlay, 'click', () => this.closeModal());
+    }
+    
+    const modalClose = document.getElementById('project-modal-close');
+    if (modalClose) {
+      this.addEventListener(modalClose, 'click', () => this.closeModal());
+    }
+    
+    // View mode handlers
+    const gridBtn = document.getElementById('btn-view-grid');
+    if (gridBtn) {
+      this.addEventListener(gridBtn, 'click', () => this.setViewMode('grid'));
+    }
+    
+    const tableBtn = document.getElementById('btn-view-table');
+    if (tableBtn) {
+      this.addEventListener(tableBtn, 'click', () => this.setViewMode('table'));
     }
   }
 

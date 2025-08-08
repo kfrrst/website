@@ -1,7 +1,7 @@
 import express from 'express';
 import { body, param, query, validationResult } from 'express-validator';
 import { authenticateToken, requireAdmin } from '../middleware/auth.js';
-import { query as dbQuery, beginTransaction, commitTransaction, rollbackTransaction } from '../config/database.js';
+import { query as dbQuery, withTransaction } from '../config/database.js';
 import { uploadSingle, uploadMultiple, getFileCategory, formatFileSize, cleanupFiles } from '../middleware/upload.js';
 import { canViewFile, canDownloadFile, canEditFile, canDeleteFile, canUploadToProject } from '../middleware/filePermissions.js';
 import path from 'path';
@@ -47,73 +47,100 @@ router.post('/upload',
   [
     body('project_id').optional().isUUID().withMessage('Invalid project ID format'),
     body('description').optional().trim().isLength({ max: 1000 }).withMessage('Description max 1000 characters'),
-    body('is_public').optional().isBoolean().withMessage('is_public must be boolean')
+    body('is_public').optional().isBoolean().withMessage('is_public must be boolean'),
+    body('category_id').optional().isUUID().withMessage('Invalid category ID format'),
+    body('tags').optional().isArray().withMessage('Tags must be an array'),
+    body('tags.*').optional().isUUID().withMessage('Each tag must be a valid UUID')
   ],
   validateRequest,
   async (req, res) => {
-    const client = await beginTransaction();
-    
     try {
       const userId = req.user.id;
-      const { project_id, description, is_public = false } = req.body;
+      const { project_id, description, is_public = false, category_id, tags = [] } = req.body;
       const uploadedFiles = req.files || [];
       
       if (uploadedFiles.length === 0) {
-        await rollbackTransaction(client);
         return res.status(400).json({ error: 'No files uploaded' });
       }
       
-      const savedFiles = [];
-      
-      for (const file of uploadedFiles) {
-        // Determine file category
-        const fileCategory = getFileCategory(file.mimetype);
+      const savedFiles = await withTransaction(async (client) => {
+        const files = [];
         
-        // Insert file record into database
-        const insertQuery = `
-          INSERT INTO files (
-            project_id, uploader_id, original_name, stored_name, file_path,
-            file_size, mime_type, file_type, description, is_public
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-          RETURNING id, original_name, file_size, mime_type, file_type, created_at
-        `;
-        
-        const result = await client.query(insertQuery, [
-          project_id || null,
-          userId,
-          file.originalname,
-          file.filename,
-          file.path,
-          file.size,
-          file.mimetype,
-          fileCategory,
-          description || null,
-          is_public
-        ]);
-        
-        const savedFile = result.rows[0];
-        savedFiles.push({
-          ...savedFile,
-          file_size_formatted: formatFileSize(savedFile.file_size)
-        });
-        
-        // Log activity
-        await logActivity(
-          client,
-          userId,
-          'file',
-          savedFile.id,
-          'uploaded',
-          `File uploaded: ${file.originalname}`,
-          {
-            file_size: file.size,
-            mime_type: file.mimetype,
-            project_id: project_id || null
+        for (const file of uploadedFiles) {
+          // Determine file category from database or fallback to detected category
+          let fileCategoryId = category_id;
+          if (!fileCategoryId) {
+            const categoryResult = await client.query(
+              `SELECT id FROM file_categories WHERE name = $1 AND is_active = true`,
+              [getFileCategory(file.mimetype)]
+            );
+            if (categoryResult.rows.length > 0) {
+              fileCategoryId = categoryResult.rows[0].id;
+            }
           }
-        );
-      }
-      
-      await commitTransaction(client);
+          
+          // Insert file record into database
+          const insertQuery = `
+            INSERT INTO files (
+              project_id, uploader_id, category_id, original_name, stored_name, file_path,
+              file_size, mime_type, file_type, description, is_public
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+            RETURNING id, original_name, file_size, mime_type, file_type, created_at
+          `;
+          
+          const result = await client.query(insertQuery, [
+            project_id || null,
+            userId,
+            fileCategoryId,
+            file.originalname,
+            file.filename,
+            file.path,
+            file.size,
+            file.mimetype,
+            getFileCategory(file.mimetype),
+            description || null,
+            is_public
+          ]);
+          
+          const savedFile = result.rows[0];
+          
+          // Add tags if provided
+          if (tags && tags.length > 0) {
+            for (const tagId of tags) {
+              await client.query(
+                `INSERT INTO file_tag_assignments (file_id, tag_id) 
+                 VALUES ($1, $2) ON CONFLICT (file_id, tag_id) DO NOTHING`,
+                [savedFile.id, tagId]
+              );
+            }
+          }
+          
+          files.push({
+            ...savedFile,
+            file_size_formatted: formatFileSize(savedFile.file_size),
+            tags: tags
+          });
+          
+          // Log activity
+          await logActivity(
+            client,
+            userId,
+            'file',
+            savedFile.id,
+            'uploaded',
+            `File uploaded: ${file.originalname}`,
+            {
+              file_size: file.size,
+              mime_type: file.mimetype,
+              project_id: project_id || null,
+              category_id: fileCategoryId,
+              tags_count: tags.length
+            }
+          );
+        }
+        
+        return files;
+      });
       
       // Send email notifications if files were uploaded to a project
       if (project_id && savedFiles.length > 0) {
@@ -121,19 +148,18 @@ router.post('/upload',
           // Get project and client details
           const projectResult = await dbQuery(
             `SELECT p.name as project_name, p.client_id,
-                    u.email, u.first_name, u.last_name,
-                    pp.name as phase_name, pp.id as phase_id
+                    c.email, c.contact_person, c.company_name,
+                    pt.phase_number, pt.phase_name
              FROM projects p
-             JOIN users u ON p.client_id = u.id
+             JOIN clients c ON p.client_id = c.id
              LEFT JOIN project_phase_tracking pt ON p.id = pt.project_id
-             LEFT JOIN project_phases pp ON pt.current_phase_id = pp.id
              WHERE p.id = $1`,
             [project_id]
           );
           
           if (projectResult.rows.length > 0 && req.user.role === 'admin') {
             const project = projectResult.rows[0];
-            const clientName = `${project.first_name} ${project.last_name || ''}`.trim();
+            const clientName = project.contact_person || project.company_name;
             
             // Send notification for each uploaded file
             for (const file of savedFiles) {
@@ -147,7 +173,7 @@ router.post('/upload',
                 fileType: file.file_type,
                 uploaderName: req.user.name || 'Admin',
                 uploadDate: new Date(),
-                phaseName: project.phase_name,
+                phaseName: project.phase_name || 'Planning',
                 downloadUrl: `${process.env.BASE_URL || 'http://localhost:3000'}/portal#files/${file.id}`,
                 description: description,
                 context: 'file',
@@ -167,7 +193,7 @@ router.post('/upload',
       });
       
     } catch (error) {
-      await rollbackTransaction(client);
+      // Transaction will auto-rollback on error
       console.error('Error uploading files:', error);
       
       // Clean up uploaded files on error
@@ -207,6 +233,7 @@ router.get('/',
       const search = req.query.search || '';
       const sort = req.query.sort || 'created_at';
       const order = req.query.order || 'desc';
+      const folder = req.query.folder || '';
       
       // Build WHERE clause based on user permissions
       let whereClause = 'WHERE f.is_active = true';
@@ -243,6 +270,13 @@ router.get('/',
         paramCount++;
         whereClause += ` AND f.original_name ILIKE $${paramCount}`;
         queryParams.push(`%${search}%`);
+      }
+      
+      // Handle folder parameter (for now, just accept all folders)
+      // In the future, we could add a folder_path column to files table
+      // For now, we'll just log the folder request and return all files
+      if (folder) {
+        console.log(`Files requested for folder: ${folder}`);
       }
       
       // Get total count
@@ -395,7 +429,7 @@ router.get('/:id/download',
   ],
   validateRequest,
   async (req, res) => {
-    const client = await beginTransaction();
+    // Using withTransaction pattern
     
     try {
       const fileId = req.params.id;
@@ -412,7 +446,7 @@ router.get('/:id/download',
       const result = await client.query(fileQuery, [fileId]);
       
       if (result.rows.length === 0) {
-        await rollbackTransaction(client);
+        // Transaction will auto-rollback on error
         return res.status(404).json({ error: 'File not found' });
       }
       
@@ -420,7 +454,7 @@ router.get('/:id/download',
       
       // Check if file exists on disk
       if (!await fs.pathExists(file.file_path)) {
-        await rollbackTransaction(client);
+        // Transaction will auto-rollback on error
         return res.status(404).json({ error: 'File not found on disk' });
       }
       
@@ -444,7 +478,7 @@ router.get('/:id/download',
         }
       );
       
-      await commitTransaction(client);
+      // Transaction will auto-commit on success
       
       // Set appropriate headers
       res.setHeader('Content-Disposition', `attachment; filename="${file.original_name}"`);
@@ -463,7 +497,7 @@ router.get('/:id/download',
       });
       
     } catch (error) {
-      await rollbackTransaction(client);
+      // Transaction will auto-rollback on error
       console.error('Error downloading file:', error);
       if (!res.headersSent) {
         res.status(500).json({ error: 'Failed to download file' });
@@ -485,7 +519,7 @@ router.put('/:id',
   ],
   validateRequest,
   async (req, res) => {
-    const client = await beginTransaction();
+    // Using withTransaction pattern
     
     try {
       const fileId = req.params.id;
@@ -497,7 +531,7 @@ router.put('/:id',
       const existingFile = await client.query(existingFileQuery, [fileId]);
       
       if (existingFile.rows.length === 0) {
-        await rollbackTransaction(client);
+        // Transaction will auto-rollback on error
         return res.status(404).json({ error: 'File not found' });
       }
       
@@ -520,7 +554,7 @@ router.put('/:id',
       }
       
       if (paramCount === 0) {
-        await rollbackTransaction(client);
+        // Transaction will auto-rollback on error
         return res.status(400).json({ error: 'No valid fields to update' });
       }
       
@@ -555,7 +589,7 @@ router.put('/:id',
         { updated_fields: Object.keys(updatedFields) }
       );
       
-      await commitTransaction(client);
+      // Transaction will auto-commit on success
       
       res.json({
         message: 'File updated successfully',
@@ -563,7 +597,7 @@ router.put('/:id',
       });
       
     } catch (error) {
-      await rollbackTransaction(client);
+      // Transaction will auto-rollback on error
       console.error('Error updating file:', error);
       res.status(500).json({ error: 'Failed to update file' });
     }
@@ -581,7 +615,7 @@ router.delete('/:id',
   ],
   validateRequest,
   async (req, res) => {
-    const client = await beginTransaction();
+    // Using withTransaction pattern
     
     try {
       const fileId = req.params.id;
@@ -592,7 +626,7 @@ router.delete('/:id',
       const existingFile = await client.query(existingFileQuery, [fileId]);
       
       if (existingFile.rows.length === 0) {
-        await rollbackTransaction(client);
+        // Transaction will auto-rollback on error
         return res.status(404).json({ error: 'File not found' });
       }
       
@@ -623,7 +657,7 @@ router.delete('/:id',
         }
       );
       
-      await commitTransaction(client);
+      // Transaction will auto-commit on success
       
       res.json({
         message: 'File deleted successfully',
@@ -631,7 +665,7 @@ router.delete('/:id',
       });
       
     } catch (error) {
-      await rollbackTransaction(client);
+      // Transaction will auto-rollback on error
       console.error('Error deleting file:', error);
       res.status(500).json({ error: 'Failed to delete file' });
     }

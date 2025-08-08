@@ -19,30 +19,102 @@ export class ProjectsModule extends BaseModule {
   }
 
   async doInit() {
-    this.element = document.getElementById('projects');
+    console.log('ProjectsModule.doInit called');
+    // Find the projects list container within the projects section
+    const projectsSection = document.getElementById('projects');
+    console.log('Projects section found:', !!projectsSection);
+    
+    if (projectsSection) {
+      // Log what's inside the projects section
+      console.log('Projects section innerHTML:', projectsSection.innerHTML.substring(0, 200));
+      
+      this.element = projectsSection.querySelector('.projects-list');
+      console.log('Projects list element found:', !!this.element);
+      console.log('Projects list element:', this.element);
+      
+      if (this.element) {
+        console.log('Loading projects data...');
+        await this.loadProjects();
+        console.log('Projects loaded:', this.projects.length);
+        console.log('Projects data:', this.projects);
+        this.setupProjectsInterface();
+        console.log('Projects interface setup complete');
+      } else {
+        console.error('Could not find .projects-list element');
+        console.error('Available elements in projects section:', projectsSection.querySelectorAll('*'));
+      }
+    } else {
+      console.error('Could not find #projects section');
+      console.error('Available sections:', document.querySelectorAll('section'));
+    }
+  }
+
+  async activate() {
+    console.log('ProjectsModule.activate called');
+    
+    // If element doesn't exist, try to find it again
+    if (!this.element) {
+      const projectsSection = document.getElementById('projects');
+      if (projectsSection) {
+        this.element = projectsSection.querySelector('.projects-list');
+        console.log('ProjectsModule.activate: Found element on retry:', !!this.element);
+      }
+    }
+    
+    // Refresh projects when section becomes active
     if (this.element) {
-      await this.loadProjects();
-      this.setupProjectsInterface();
+      console.log('ProjectsModule.activate: Refreshing projects...');
+      await this.refreshProjects();
+    } else {
+      console.error('ProjectsModule.activate: No element found, cannot refresh');
+      // Try to initialize if not already done
+      await this.doInit();
     }
   }
 
   async loadProjects() {
     try {
-      const data = await this.getCachedData('projects', async () => {
-        const response = await this.apiRequest('/api/projects');
-        const result = await response.json();
-        return result.projects || [];
-      }, 120000); // 2 minutes cache
+      console.log('ProjectsModule.loadProjects: starting');
+      const response = await this.apiRequest('/api/projects');
+      console.log('ProjectsModule.loadProjects: got response', response.status);
+      
+      if (!response.ok) {
+        const error = await response.text();
+        console.error('ProjectsModule.loadProjects: API error', error);
+        throw new Error(`API returned ${response.status}: ${error}`);
+      }
+      
+      const result = await response.json();
+      console.log('ProjectsModule.loadProjects: parsed JSON', result);
+      const data = result.projects || [];
+      console.log('ProjectsModule.loadProjects: got', data.length, 'projects');
+      console.log('ProjectsModule.loadProjects: first project:', data[0]);
 
       this.projects = data;
     } catch (error) {
-      console.error('Failed to load projects:', error);
+      console.error('Failed to load projects - Full error:', error);
+      console.error('Error stack:', error.stack);
       this.projects = [];
+      // Show error in UI
+      if (this.element) {
+        this.element.innerHTML = `
+          <div class="error-message">
+            <p>Failed to load projects. Please refresh the page or contact support.</p>
+            <small>Error: ${error.message}</small>
+          </div>
+        `;
+      }
     }
   }
 
   setupProjectsInterface() {
-    if (!this.element) return;
+    console.log('ProjectsModule.setupProjectsInterface called, element:', this.element);
+    console.log('ProjectsModule.setupProjectsInterface projects count:', this.projects.length);
+    
+    if (!this.element) {
+      console.error('ProjectsModule.setupProjectsInterface: No element found!');
+      return;
+    }
 
     this.element.innerHTML = `
       <div class="projects-container">
@@ -74,51 +146,56 @@ export class ProjectsModule extends BaseModule {
   }
 
   renderProjectCard(project) {
-    const phaseIndex = project.current_phase_index || 0;
+    // Use current_phase_index from database, fallback to calculated_phase_index, then calculate from progress
+    const phaseIndex = project.current_phase_index !== undefined ? 
+      project.current_phase_index : 
+      (project.calculated_phase_index !== undefined ? 
+        project.calculated_phase_index : 
+        this.calculatePhaseFromProgress(project.progress_percentage || 0));
+    
     const currentPhase = this.phaseNames[phaseIndex] || 'Unknown';
-    const progress = Math.round((phaseIndex / (this.phaseNames.length - 1)) * 100);
+    const progress = project.progress_percentage !== undefined ? 
+      project.progress_percentage : 
+      Math.round((phaseIndex / (this.phaseNames.length - 1)) * 100);
     const statusClass = this.getStatusClass(project.status);
 
     return `
-      <div class="project-card" onclick="portal.modules.projects.selectProject('${project.id}')">
+      <div class="project-card" onclick="portal.modules.projects.selectProject('${project.id}')" style="background: #ffffff; border: 1px solid #e9ecef; padding: 1.5rem; border-radius: 8px; cursor: pointer; transition: all 0.3s;">
         <div class="project-header">
-          <h3 class="project-title">${project.name}</h3>
+          <h3 class="project-title" style="color: #333333;">${project.name}</h3>
           <span class="project-status ${statusClass}">${project.status}</span>
         </div>
         
-        <div class="project-description">
-          <p>${project.description || 'No description available'}</p>
+        <div class="project-description" style="background: #f8f9fa; padding: 1rem; border-radius: 6px; margin: 1rem 0;">
+          <p style="color: #666666; margin: 0;">${project.description || 'No description available'}</p>
         </div>
 
         <div class="project-progress">
           <div class="progress-header">
-            <span class="current-phase">Current: ${currentPhase}</span>
-            <span class="progress-percentage">${progress}%</span>
+            <span class="current-phase" style="color: #333333;">Current: ${currentPhase}</span>
+            <span class="progress-percentage" style="color: #0057FF; font-weight: 600;">${progress}%</span>
           </div>
-          <div class="progress-bar">
-            <div class="progress-fill" style="width: ${progress}%"></div>
+          <div class="progress-bar" style="background: #e9ecef; height: 8px; border-radius: 4px; margin: 0.5rem 0; overflow: hidden;">
+            <div class="progress-fill" style="width: ${progress}%; background: #0057FF; height: 8px; border-radius: 4px; transition: width 0.3s;"></div>
           </div>
-          <div class="phase-tracker">
+          <div class="phase-tracker" style="margin-top: 1rem; text-align: left;">
             ${this.renderMiniPhaseTracker(phaseIndex)}
           </div>
         </div>
 
-        <div class="project-meta">
+        <div class="project-meta" style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #e9ecef;">
           <div class="project-dates">
-            <span class="created-date">Created: ${this.formatDate(project.created_at, { month: 'short', day: 'numeric' })}</span>
-            ${project.due_date ? `<span class="due-date">Due: ${this.formatDate(project.due_date, { month: 'short', day: 'numeric' })}</span>` : ''}
-          </div>
-          <div class="project-priority">
-            <span class="priority priority-${project.priority}">${project.priority || 'normal'}</span>
+            <span class="created-date" style="color: #666666; font-size: 0.875rem;">Created: ${this.formatDate(project.created_at, { month: 'short', day: 'numeric' })}</span>
+            ${project.due_date ? `<span class="due-date" style="color: #666666; font-size: 0.875rem; margin-left: 1rem;">Due: ${this.formatDate(project.due_date, { month: 'short', day: 'numeric' })}</span>` : ''}
           </div>
         </div>
 
-        <div class="project-actions">
-          <button class="btn-secondary btn-sm" onclick="event.stopPropagation(); portal.modules.projects.viewProjectFiles('${project.id}')">
-            📁 Files
+        <div class="project-actions" style="margin-top: 1rem; display: flex; gap: 0.5rem;">
+          <button class="btn-secondary btn-sm" onclick="event.stopPropagation(); portal.modules.projects.viewProjectFiles('${project.id}')" style="background: #ffffff; border: 1px solid #e9ecef; color: #333333; padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer;">
+            Files
           </button>
-          <button class="btn-secondary btn-sm" onclick="event.stopPropagation(); portal.modules.projects.openProjectChat('${project.id}')">
-            💬 Chat
+          <button class="btn-secondary btn-sm" onclick="event.stopPropagation(); portal.modules.projects.openProjectChat('${project.id}')" style="background: #ffffff; border: 1px solid #e9ecef; color: #333333; padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer;">
+            Chat
           </button>
         </div>
       </div>
@@ -126,23 +203,45 @@ export class ProjectsModule extends BaseModule {
   }
 
   renderMiniPhaseTracker(currentPhaseIndex) {
-    return this.phaseNames.map((phase, index) => {
-      let statusClass = 'upcoming';
-      if (index < currentPhaseIndex) statusClass = 'completed';
-      else if (index === currentPhaseIndex) statusClass = 'current';
+    return `
+      <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
+        ${this.phaseNames.map((phase, index) => {
+          let statusClass = 'upcoming';
+          let dotColor = '#e9ecef';
+          let textColor = '#999999';
+          let icon = '○';
+          
+          if (index < currentPhaseIndex) {
+            statusClass = 'completed';
+            dotColor = '#27AE60';
+            textColor = '#27AE60';
+            icon = '✓';
+          } else if (index === currentPhaseIndex) {
+            statusClass = 'current';
+            dotColor = '#0057FF';
+            textColor = '#0057FF';
+            icon = '●';
+          }
 
-      return `
-        <div class="mini-phase ${statusClass}" title="${phase}">
-          ${index < currentPhaseIndex ? '✓' : index === currentPhaseIndex ? '●' : '○'}
-        </div>
-      `;
-    }).join('');
+          return `
+            <div class="mini-phase-item" style="display: flex; align-items: center; gap: 0.25rem;">
+              <span class="mini-phase-dot ${statusClass}" style="color: ${dotColor}; font-size: 1.25rem; line-height: 1;">
+                ${icon}
+              </span>
+              <span class="mini-phase-label" style="color: ${textColor}; font-size: 0.75rem; white-space: nowrap;">
+                ${phase}
+              </span>
+            </div>
+          `;
+        }).join('')}
+      </div>
+    `;
   }
 
   renderEmptyState() {
     return `
       <div class="empty-state">
-        <div class="empty-icon">📋</div>
+        <div class="empty-icon">[PROJECTS]</div>
         <h3>No Projects Yet</h3>
         <p>Your projects will appear here once they're created by the [RE]Print Studios team.</p>
         <button class="btn-primary" onclick="portal.modules.messaging.openComposer()">
@@ -161,6 +260,20 @@ export class ProjectsModule extends BaseModule {
       'planning': 'status-planning'
     };
     return statusMap[status] || 'status-default';
+  }
+
+  calculatePhaseFromProgress(progressPercentage) {
+    // Calculate phase index based on progress percentage
+    // 8 phases, so each phase is roughly 12.5% of progress
+    if (progressPercentage >= 100) return 7;  // Delivery (Phase 8)
+    if (progressPercentage >= 88) return 6;   // Sign-off (Phase 7)
+    if (progressPercentage >= 75) return 5;   // Payment (Phase 6)
+    if (progressPercentage >= 63) return 4;   // Production (Phase 5)
+    if (progressPercentage >= 50) return 3;   // Review (Phase 4)
+    if (progressPercentage >= 38) return 2;   // Design (Phase 3)
+    if (progressPercentage >= 25) return 1;   // Ideation (Phase 2)
+    if (progressPercentage >= 13) return 1;   // Still Ideation
+    return 0;  // Onboarding (Phase 1)
   }
 
   selectProject(projectId) {
@@ -184,8 +297,13 @@ export class ProjectsModule extends BaseModule {
       if (!response.ok) throw new Error('Failed to fetch project details');
       const data = await response.json();
       
-      // Merge detailed data
-      this.selectedProject = { ...project, ...data };
+      // The API returns { project: { ... } }, so extract the project data
+      const detailedProject = data.project || data;
+      
+      // Merge detailed data with existing project
+      this.selectedProject = { ...project, ...detailedProject };
+      
+      console.log('Project details loaded:', this.selectedProject);
       
       // Navigate to detailed project view
       this.renderDetailedProjectView();
@@ -199,7 +317,8 @@ export class ProjectsModule extends BaseModule {
     const project = this.selectedProject;
     if (!project) return;
     
-    const currentPhaseIndex = project.current_phase_index || 0;
+    // Get the current phase from project data
+    const currentPhaseIndex = project.current_phase || project.current_phase_index || 0;
     
     // Clear current content and show detailed view
     this.element.innerHTML = `
@@ -247,10 +366,7 @@ export class ProjectsModule extends BaseModule {
           ` : ''}
         </div>
         
-        <!-- Progress Tracker -->
-        <div id="project-progress-tracker" class="progress-tracker-container"></div>
-        
-        <!-- Phase Content with Tabs -->
+        <!-- Phase Content with Tabs (single progress indicator) -->
         <div class="phase-tabs-container">
           <div class="phase-tabs" id="phase-tabs">
             ${this.renderPhaseTabs(currentPhaseIndex)}
@@ -290,19 +406,6 @@ export class ProjectsModule extends BaseModule {
   }
 
   async initializeDetailedView(project, currentPhaseIndex) {
-    // Initialize progress tracker
-    const trackerContainer = document.getElementById('project-progress-tracker');
-    if (trackerContainer) {
-      const progressTracker = new ProgressTracker({
-        container: trackerContainer,
-        phases: this.phaseNames,
-        currentPhase: currentPhaseIndex,
-        viewMode: 'horizontal',
-        onPhaseClick: (index) => this.handlePhaseTabClick(index)
-      });
-      progressTracker.render();
-    }
-    
     // Add event listeners
     const backBtn = document.getElementById('back-to-projects');
     if (backBtn) {
@@ -350,7 +453,10 @@ export class ProjectsModule extends BaseModule {
       });
       
       if (!response.ok) throw new Error('Failed to fetch phase details');
-      const phaseData = await response.json();
+      const responseData = await response.json();
+      
+      // Extract phase data from response (API returns { phase: {...}, deliverables: [...], ... })
+      const phaseData = responseData.phase || responseData;
       
       // Clear loading state
       contentContainer.innerHTML = '';
@@ -373,17 +479,17 @@ export class ProjectsModule extends BaseModule {
           approved_at: phaseData.approved_at,
           expected_completion: phaseData.expected_completion
         },
-        deliverables: phaseData.deliverables || [],
-        clientActions: phaseData.client_actions || [],
+        deliverables: responseData.deliverables || [],
+        clientActions: responseData.client_actions || responseData.actions || [],
         isActive: phaseIndex === project.current_phase_index,
         commentCount: phaseData.comment_count || 0,
         isAdmin: false,
         authToken: this.portal.authToken,
         progressPercentage: phaseData.progress_percentage || 0,
-        completedActions: phaseData.completed_actions || 0,
-        totalActions: phaseData.total_actions || 0,
+        completedActions: responseData.statistics?.completed_actions || 0,
+        totalActions: responseData.statistics?.total_actions || 0,
         deadline: phaseData.deadline,
-        activityCount: phaseData.activity_count || 0,
+        activityCount: responseData.activity?.length || 0,
         isLocked: phaseIndex > project.current_phase_index,
         previousPhaseComplete: phaseIndex === 0 || project.current_phase_index >= phaseIndex,
         onApprove: async (phaseId) => this.handlePhaseApproval(phaseId),
@@ -394,14 +500,14 @@ export class ProjectsModule extends BaseModule {
       phaseCard.render();
       
       // Render deliverables section if there are files
-      if (phaseData.deliverables && phaseData.deliverables.length > 0) {
+      if (responseData.deliverables && responseData.deliverables.length > 0) {
         const deliverablesContainer = document.createElement('div');
         deliverablesContainer.className = 'phase-deliverables-wrapper';
         contentContainer.appendChild(deliverablesContainer);
         
         const phaseDeliverables = new PhaseDeliverables({
           container: deliverablesContainer,
-          deliverables: phaseData.deliverables,
+          deliverables: responseData.deliverables,
           phaseId: phaseData.id,
           phaseName: this.phaseNames[phaseIndex],
           authToken: this.portal.authToken,
@@ -417,10 +523,45 @@ export class ProjectsModule extends BaseModule {
       
     } catch (error) {
       console.error('Error loading phase content:', error);
+      console.error('Error details:', {
+        projectId: project?.id,
+        phaseIndex,
+        phaseNumber: phaseIndex + 1,
+        errorMessage: error.message,
+        stack: error.stack
+      });
+      
+      // Show a simple phase view as fallback
+      const phaseName = this.phaseNames[phaseIndex];
+      const phaseStatus = this.getPhaseStatus(phaseIndex, project.current_phase_index);
+      const statusIcon = phaseStatus === 'completed' ? '✓' : phaseStatus === 'in_progress' ? '🔄' : '⏳';
+      
       contentContainer.innerHTML = `
-        <div class="error-state">
-          <span class="error-icon">⚠</span>
-          <p>Unable to load phase details. Please try again.</p>
+        <div class="phase-content-fallback" style="background: #ffffff; padding: 2rem; border-radius: 8px; border: 1px solid #e9ecef;">
+          <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;">
+            <span style="font-size: 1.5rem;">${phaseIndex + 1}</span>
+            <h3 style="color: #333; margin: 0;">${phaseName}</h3>
+            <span style="font-size: 1.25rem;">${statusIcon}</span>
+            <span style="color: ${phaseStatus === 'completed' ? '#27AE60' : phaseStatus === 'in_progress' ? '#0057FF' : '#999'}; 
+                   background: ${phaseStatus === 'completed' ? '#27AE6020' : phaseStatus === 'in_progress' ? '#0057FF20' : '#f8f9fa'};
+                   padding: 0.25rem 0.75rem; border-radius: 12px; font-size: 0.875rem;">
+              ${phaseStatus === 'completed' ? 'Completed' : phaseStatus === 'in_progress' ? 'In Progress' : 'Not Started'}
+            </span>
+          </div>
+          
+          <p style="color: #666; margin-bottom: 1.5rem;">${this.getPhaseDescription(phaseName)}</p>
+          
+          <div class="phase-info" style="display: grid; gap: 1rem;">
+            ${this.getPhaseActions(phaseIndex, phaseStatus)}
+          </div>
+          
+          ${phaseStatus === 'in_progress' ? `
+            <div style="margin-top: 1.5rem; padding: 1rem; background: #FFF3CD; border: 1px solid #FFC107; border-radius: 6px;">
+              <strong style="color: #856404;">Action Required:</strong>
+              <p style="color: #856404; margin: 0.5rem 0 0 0;">${this.getClientActionText(phaseIndex)}</p>
+              ${this.getPhaseActionButtons(phaseIndex)}
+            </div>
+          ` : ''}
         </div>
       `;
     }
@@ -543,7 +684,52 @@ export class ProjectsModule extends BaseModule {
       'Delivery': 'Project completion and handover'
     };
     
-    return `<p class="phase-description">${descriptions[phaseName] || ''}</p>`;
+    return descriptions[phaseName] || '';
+  }
+  
+  getClientActionText(phaseIndex) {
+    const actions = [
+      'Please complete the intake form and provide project requirements',  // Onboarding
+      'Review mood boards and provide feedback on creative direction',      // Ideation
+      'Review initial designs and concepts',                              // Design
+      'Provide feedback on designs and request any changes',              // Review
+      'Monitor production progress',                                      // Production
+      'Review and pay outstanding invoices',                             // Payment
+      'Provide final approval and sign-off on deliverables',            // Sign-off
+      'Download final deliverables and assets'                          // Delivery
+    ];
+    return actions[phaseIndex] || 'No action required at this time';
+  }
+  
+  getPhaseActionButtons(phaseIndex) {
+    const buttons = [
+      '<button class="btn btn-primary" style="margin-top: 1rem; background: #0057FF; color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 6px; cursor: pointer;">Complete Intake Form</button>',
+      '<button class="btn btn-primary" style="margin-top: 1rem; background: #0057FF; color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 6px; cursor: pointer;">Review Concepts</button>',
+      '<button class="btn btn-primary" style="margin-top: 1rem; background: #0057FF; color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 6px; cursor: pointer;">Review Designs</button>',
+      '<button class="btn btn-primary" style="margin-top: 1rem; background: #0057FF; color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 6px; cursor: pointer;">Submit Feedback</button>',
+      '',  // No button for production
+      '<button class="btn btn-primary" style="margin-top: 1rem; background: #0057FF; color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 6px; cursor: pointer;">Make Payment</button>',
+      '<button class="btn btn-primary" style="margin-top: 1rem; background: #0057FF; color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 6px; cursor: pointer;">Approve & Sign Off</button>',
+      '<button class="btn btn-primary" style="margin-top: 1rem; background: #0057FF; color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 6px; cursor: pointer;">Download Assets</button>'
+    ];
+    return buttons[phaseIndex] || '';
+  }
+  
+  getPhaseActions(phaseIndex, status) {
+    const requiresAction = [true, true, false, true, false, true, true, true];
+    const isActionRequired = requiresAction[phaseIndex];
+    
+    return `
+      <div style="padding: 1rem; background: #f8f9fa; border-radius: 6px;">
+        <strong style="color: #333;">Phase ${phaseIndex + 1} of ${this.phaseNames.length}</strong>
+        <p style="color: #666; margin: 0.5rem 0 0 0;">Status: ${status === 'completed' ? 'Completed' : status === 'in_progress' ? 'In Progress' : 'Not Started'}</p>
+      </div>
+      
+      <div style="padding: 1rem; background: #f8f9fa; border-radius: 6px;">
+        <strong style="color: #333;">Client Action Required</strong>
+        <p style="color: #666; margin: 0.5rem 0 0 0;">${isActionRequired && status === 'in_progress' ? 'Yes - Action needed' : 'No action required'}</p>
+      </div>
+    `;
   }
 
   filterByStatus(status) {

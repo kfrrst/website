@@ -14,10 +14,14 @@ export class MessagingModule extends BaseModule {
   }
 
   async doInit() {
-    this.element = document.getElementById('messages');
-    if (this.element) {
-      await this.loadConversations();
-      this.setupMessagingInterface();
+    // Find the messaging interface container within the messages section
+    const messagesSection = document.getElementById('messages');
+    if (messagesSection) {
+      this.element = messagesSection.querySelector('.messaging-interface');
+      if (this.element) {
+        await this.loadConversations();
+        this.setupMessagingInterface();
+      }
     }
   }
 
@@ -44,7 +48,6 @@ export class MessagingModule extends BaseModule {
           <div class="conversations-header">
             <h2>Messages</h2>
             <button class="new-message-btn" onclick="portal.modules.messaging.openComposer()">
-              <span class="icon">✏️</span>
               New Message
             </button>
           </div>
@@ -63,7 +66,7 @@ export class MessagingModule extends BaseModule {
     if (this.conversations.length === 0) {
       return `
         <div class="empty-state">
-          <div class="empty-icon">💬</div>
+          <div class="empty-icon">[MESSAGES]</div>
           <h3>No conversations yet</h3>
           <p>Start a conversation to see it here</p>
         </div>
@@ -74,7 +77,7 @@ export class MessagingModule extends BaseModule {
       <div class="conversation-item ${conv.unread ? 'unread' : ''}" 
            onclick="portal.modules.messaging.selectConversation('${conv.id}')">
         <div class="conversation-avatar">
-          <img src="${conn.participant?.avatar || '/assets/default-avatar.png'}" 
+          <img src="${conv.participant?.avatar || '/assets/default-avatar.png'}" 
                alt="${conv.participant?.name}">
         </div>
         <div class="conversation-content">
@@ -96,7 +99,7 @@ export class MessagingModule extends BaseModule {
       return `
         <div class="no-conversation">
           <div class="no-conversation-content">
-            <div class="no-conversation-icon">💬</div>
+            <div class="no-conversation-icon">[MESSAGES]</div>
             <h3>Select a conversation</h3>
             <p>Choose a conversation from the sidebar to start messaging</p>
           </div>

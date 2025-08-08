@@ -57,12 +57,10 @@ export class AdminClientsModule extends BaseAdminModule {
         <div class="clients-header">
           <h1>Client Management</h1>
           <div class="clients-actions">
-            <button class="btn-primary" onclick="admin.modules.clients.showCreateModal()">
-              <span class="icon">➕</span>
+            <button class="btn-primary" id="btn-create-client">
               Add Client
             </button>
-            <button class="btn-secondary" onclick="admin.modules.clients.exportClients()">
-              <span class="icon">📊</span>
+            <button class="btn-secondary" id="btn-export-clients">
               Export
             </button>
           </div>
@@ -70,7 +68,7 @@ export class AdminClientsModule extends BaseAdminModule {
 
         <div class="clients-filters">
           <div class="filter-group">
-            <select class="status-filter" onchange="admin.modules.clients.filterByStatus(this.value)">
+            <select class="status-filter" id="client-status-filter">
               <option value="all">All Clients</option>
               <option value="active">Active</option>
               <option value="inactive">Inactive</option>
@@ -81,13 +79,12 @@ export class AdminClientsModule extends BaseAdminModule {
           <div class="search-group">
             <input type="text" 
                    class="search-input" 
-                   placeholder="Search clients..." 
-                   oninput="admin.modules.clients.handleSearch(this.value)">
-            <span class="search-icon">🔍</span>
+                   id="client-search-input"
+                   placeholder="Search clients...">
           </div>
 
           <div class="sort-group">
-            <select class="sort-select" onchange="admin.modules.clients.handleSort(this.value)">
+            <select class="sort-select" id="client-sort-select">
               <option value="name_asc">Name A-Z</option>
               <option value="name_desc">Name Z-A</option>
               <option value="created_desc">Newest First</option>
@@ -108,11 +105,11 @@ export class AdminClientsModule extends BaseAdminModule {
 
       <!-- Client Modal -->
       <div id="client-modal" class="modal">
-        <div class="modal-overlay" onclick="admin.modules.clients.closeModal()"></div>
+        <div class="modal-overlay" id="client-modal-overlay"></div>
         <div class="modal-content">
           <div class="modal-header">
             <h2 id="client-modal-title">Add Client</h2>
-            <button class="modal-close" onclick="admin.modules.clients.closeModal()">×</button>
+            <button class="modal-close" id="client-modal-close">×</button>
           </div>
           <div class="modal-body">
             <form id="client-form">
@@ -219,16 +216,16 @@ export class AdminClientsModule extends BaseAdminModule {
         <td class="client-actions">
           <div class="action-buttons">
             <button class="action-btn" onclick="admin.modules.clients.viewClient('${client.id}')" title="View Details">
-              👁️
+              View
             </button>
             <button class="action-btn" onclick="admin.modules.clients.editClient('${client.id}')" title="Edit">
-              ✏️
+              Edit
             </button>
             <button class="action-btn" onclick="admin.modules.clients.createProject('${client.id}')" title="New Project">
-              📋
+              Project
             </button>
             <button class="action-btn danger" onclick="admin.modules.clients.deleteClient('${client.id}')" title="Delete">
-              🗑️
+              Delete
             </button>
           </div>
         </td>
@@ -244,7 +241,7 @@ export class AdminClientsModule extends BaseAdminModule {
     
     return `
       <div class="empty-state">
-        <div class="empty-icon">👥</div>
+        <div class="empty-icon"></div>
         <h3>${isFiltered ? 'No clients found' : 'No clients yet'}</h3>
         <p>${isFiltered ? 'Try adjusting your filters or search term.' : 'Add your first client to get started.'}</p>
         ${!isFiltered ? `
@@ -339,6 +336,45 @@ export class AdminClientsModule extends BaseAdminModule {
     if (form) {
       this.addEventListener(form, 'submit', this.handleFormSubmit.bind(this));
     }
+    
+    // Setup modal close handlers
+    const modalOverlay = document.getElementById('client-modal-overlay');
+    if (modalOverlay) {
+      this.addEventListener(modalOverlay, 'click', () => this.closeModal());
+    }
+    
+    const modalClose = document.getElementById('client-modal-close');
+    if (modalClose) {
+      this.addEventListener(modalClose, 'click', () => this.closeModal());
+    }
+
+    // Setup create button handler
+    const createBtn = document.getElementById('btn-create-client');
+    if (createBtn) {
+      this.addEventListener(createBtn, 'click', () => this.showCreateModal());
+    }
+
+    // Setup export button handler
+    const exportBtn = document.getElementById('btn-export-clients');
+    if (exportBtn) {
+      this.addEventListener(exportBtn, 'click', () => this.exportClients());
+    }
+
+    // Setup filter handlers
+    const statusFilter = document.getElementById('client-status-filter');
+    if (statusFilter) {
+      this.addEventListener(statusFilter, 'change', (e) => this.filterByStatus(e.target.value));
+    }
+
+    const searchInput = document.getElementById('client-search-input');
+    if (searchInput) {
+      this.addEventListener(searchInput, 'input', (e) => this.handleSearch(e.target.value));
+    }
+
+    const sortSelect = document.getElementById('client-sort-select');
+    if (sortSelect) {
+      this.addEventListener(sortSelect, 'change', (e) => this.handleSort(e.target.value));
+    }
   }
 
   /**
@@ -403,9 +439,26 @@ export class AdminClientsModule extends BaseAdminModule {
       const url = isEdit ? `/clients/${this.currentClientId}` : '/clients';
       const method = isEdit ? 'PUT' : 'POST';
 
+      // Transform field names from camelCase to snake_case
+      const transformedData = {
+        first_name: clientData.firstName,
+        last_name: clientData.lastName,
+        email: clientData.email,
+        phone: clientData.phone || '',
+        company_name: clientData.company || '',
+        address: clientData.address || '',
+        status: clientData.status || 'prospect',
+        source: clientData.source || ''
+      };
+
+      // Add password for new clients (generate a temporary password)
+      if (!isEdit) {
+        transformedData.password = `TempPass${Date.now()}!`;
+      }
+
       const response = await this.apiRequest(url, {
         method,
-        body: JSON.stringify(clientData)
+        body: JSON.stringify(transformedData)
       });
 
       if (response.ok) {

@@ -58,11 +58,11 @@ export class AdminFilesModule extends BaseAdminModule {
         <div class="files-header">
           <h1>File Management</h1>
           <div class="files-actions">
-            <button class="btn-primary" onclick="admin.modules.files.showUploadModal()">
+            <button class="btn-primary" id="btn-upload-files">
               <span class="icon">⬆️</span>
               Upload Files
             </button>
-            <button class="btn-secondary" onclick="admin.modules.files.createFolder()">
+            <button class="btn-secondary" id="btn-create-folder">
               <span class="icon">📁</span>
               New Folder
             </button>
@@ -71,7 +71,7 @@ export class AdminFilesModule extends BaseAdminModule {
 
         <div class="files-filters">
           <div class="filter-group">
-            <select class="type-filter" onchange="admin.modules.files.filterByType(this.value)">
+            <select class="type-filter" id="type-filter">
               <option value="all">All Files</option>
               <option value="image">Images</option>
               <option value="document">Documents</option>
@@ -82,7 +82,7 @@ export class AdminFilesModule extends BaseAdminModule {
           </div>
           
           <div class="filter-group">
-            <select class="project-filter" onchange="admin.modules.files.filterByProject(this.value)">
+            <select class="project-filter" id="project-filter">
               <option value="all">All Projects</option>
               ${this.renderProjectFilterOptions()}
             </select>
@@ -91,18 +91,18 @@ export class AdminFilesModule extends BaseAdminModule {
           <div class="search-group">
             <input type="text" 
                    class="search-input" 
-                   placeholder="Search files..." 
-                   oninput="admin.modules.files.handleSearch(this.value)">
+                   id="search-input"
+                   placeholder="Search files...">
             <span class="search-icon">🔍</span>
           </div>
 
           <div class="view-toggle">
             <button class="${this.viewMode === 'grid' ? 'active' : ''}" 
-                    onclick="admin.modules.files.setViewMode('grid')">
+                    id="btn-view-grid">
               <span class="icon">⊞</span>
             </button>
             <button class="${this.viewMode === 'list' ? 'active' : ''}" 
-                    onclick="admin.modules.files.setViewMode('list')">
+                    id="btn-view-list">
               <span class="icon">☰</span>
             </button>
           </div>
@@ -119,11 +119,11 @@ export class AdminFilesModule extends BaseAdminModule {
 
       <!-- Upload Modal -->
       <div id="upload-modal" class="modal">
-        <div class="modal-overlay" onclick="admin.modules.files.closeUploadModal()"></div>
+        <div class="modal-overlay" id="upload-modal-overlay"></div>
         <div class="modal-content">
           <div class="modal-header">
             <h2>Upload Files</h2>
-            <button class="modal-close" onclick="admin.modules.files.closeUploadModal()">×</button>
+            <button class="modal-close" id="upload-modal-close">×</button>
           </div>
           <div class="modal-body">
             ${this.renderUploadForm()}
@@ -133,11 +133,11 @@ export class AdminFilesModule extends BaseAdminModule {
 
       <!-- File Preview Modal -->
       <div id="file-preview-modal" class="modal">
-        <div class="modal-overlay" onclick="admin.modules.files.closePreviewModal()"></div>
+        <div class="modal-overlay" id="preview-modal-overlay"></div>
         <div class="modal-content large">
           <div class="modal-header">
             <h2 id="preview-file-name">File Preview</h2>
-            <button class="modal-close" onclick="admin.modules.files.closePreviewModal()">×</button>
+            <button class="modal-close" id="preview-modal-close">×</button>
           </div>
           <div class="modal-body" id="file-preview-content">
             <!-- Preview content will be rendered here -->
@@ -217,7 +217,7 @@ export class AdminFilesModule extends BaseAdminModule {
     
     return `
       <div class="file-card" data-file-id="${file.id}">
-        <div class="file-preview" onclick="admin.modules.files.previewFile('${file.id}')">
+        <div class="file-preview" data-action="preview" data-file-id="${file.id}">
           ${thumbnail}
         </div>
         
@@ -231,16 +231,16 @@ export class AdminFilesModule extends BaseAdminModule {
         </div>
         
         <div class="file-actions">
-          <button class="action-btn" onclick="admin.modules.files.downloadFile('${file.id}')" title="Download">
+          <button class="action-btn" data-action="download" data-file-id="${file.id}" title="Download">
             ⬇️
           </button>
-          <button class="action-btn" onclick="admin.modules.files.shareFile('${file.id}')" title="Share">
+          <button class="action-btn" data-action="share" data-file-id="${file.id}" title="Share">
             🔗
           </button>
-          <button class="action-btn" onclick="admin.modules.files.editFile('${file.id}')" title="Edit">
+          <button class="action-btn" data-action="edit" data-file-id="${file.id}" title="Edit">
             ✏️
           </button>
-          <button class="action-btn danger" onclick="admin.modules.files.deleteFile('${file.id}')" title="Delete">
+          <button class="action-btn danger" data-action="delete" data-file-id="${file.id}" title="Delete">
             🗑️
           </button>
         </div>
@@ -296,16 +296,16 @@ export class AdminFilesModule extends BaseAdminModule {
         <td class="file-date">${this.formatDate(file.created_at, { month: 'short', day: 'numeric', year: 'numeric' })}</td>
         <td class="file-actions">
           <div class="action-buttons">
-            <button class="action-btn" onclick="admin.modules.files.previewFile('${file.id}')" title="Preview">
+            <button class="action-btn" data-action="preview" data-file-id="${file.id}" title="Preview">
               👁️
             </button>
-            <button class="action-btn" onclick="admin.modules.files.downloadFile('${file.id}')" title="Download">
+            <button class="action-btn" data-action="download" data-file-id="${file.id}" title="Download">
               ⬇️
             </button>
-            <button class="action-btn" onclick="admin.modules.files.shareFile('${file.id}')" title="Share">
+            <button class="action-btn" data-action="share" data-file-id="${file.id}" title="Share">
               🔗
             </button>
-            <button class="action-btn danger" onclick="admin.modules.files.deleteFile('${file.id}')" title="Delete">
+            <button class="action-btn danger" data-action="delete" data-file-id="${file.id}" title="Delete">
               🗑️
             </button>
           </div>
@@ -326,7 +326,7 @@ export class AdminFilesModule extends BaseAdminModule {
         <h3>${isFiltered ? 'No files found' : 'No files yet'}</h3>
         <p>${isFiltered ? 'Try adjusting your filters or search term.' : 'Upload your first file to get started.'}</p>
         ${!isFiltered ? `
-          <button class="btn-primary" onclick="admin.modules.files.showUploadModal()">
+          <button class="btn-primary" id="btn-upload-first">
             Upload First File
           </button>
         ` : ''}
@@ -353,7 +353,7 @@ export class AdminFilesModule extends BaseAdminModule {
           <h3>Drag & Drop Files Here</h3>
           <p>or click to browse</p>
           <input type="file" id="file-input" multiple hidden>
-          <button class="btn-secondary" onclick="document.getElementById('file-input').click()">
+          <button class="btn-secondary" id="btn-browse-files">
             Browse Files
           </button>
         </div>
@@ -364,10 +364,10 @@ export class AdminFilesModule extends BaseAdminModule {
         </div>
         
         <div class="form-actions">
-          <button type="button" class="btn-secondary" onclick="admin.modules.files.closeUploadModal()">
+          <button type="button" class="btn-secondary" id="btn-upload-cancel">
             Cancel
           </button>
-          <button type="button" class="btn-primary" onclick="admin.modules.files.uploadFiles()" id="upload-btn" disabled>
+          <button type="button" class="btn-primary" id="upload-btn" disabled>
             Upload Files
           </button>
         </div>
@@ -390,6 +390,65 @@ export class AdminFilesModule extends BaseAdminModule {
    * Setup event handlers
    */
   setupEventHandlers() {
+    // Setup buttons
+    const uploadBtn = document.getElementById('btn-upload-files');
+    if (uploadBtn) {
+      this.addEventListener(uploadBtn, 'click', () => this.showUploadModal());
+    }
+    
+    const createFolderBtn = document.getElementById('btn-create-folder');
+    if (createFolderBtn) {
+      this.addEventListener(createFolderBtn, 'click', () => this.createFolder());
+    }
+    
+    // Setup filters
+    const typeFilter = document.getElementById('type-filter');
+    if (typeFilter) {
+      this.addEventListener(typeFilter, 'change', (e) => this.filterByType(e.target.value));
+    }
+    
+    const projectFilter = document.getElementById('project-filter');
+    if (projectFilter) {
+      this.addEventListener(projectFilter, 'change', (e) => this.filterByProject(e.target.value));
+    }
+    
+    const searchInput = document.getElementById('search-input');
+    if (searchInput) {
+      this.addEventListener(searchInput, 'input', (e) => this.handleSearch(e.target.value));
+    }
+    
+    // Setup view toggle
+    const gridBtn = document.getElementById('btn-view-grid');
+    if (gridBtn) {
+      this.addEventListener(gridBtn, 'click', () => this.setViewMode('grid'));
+    }
+    
+    const listBtn = document.getElementById('btn-view-list');
+    if (listBtn) {
+      this.addEventListener(listBtn, 'click', () => this.setViewMode('list'));
+    }
+    
+    // Setup modal close buttons
+    const uploadModalOverlay = document.getElementById('upload-modal-overlay');
+    if (uploadModalOverlay) {
+      this.addEventListener(uploadModalOverlay, 'click', () => this.closeUploadModal());
+    }
+    
+    const uploadModalClose = document.getElementById('upload-modal-close');
+    if (uploadModalClose) {
+      this.addEventListener(uploadModalClose, 'click', () => this.closeUploadModal());
+    }
+    
+    const previewModalOverlay = document.getElementById('preview-modal-overlay');
+    if (previewModalOverlay) {
+      this.addEventListener(previewModalOverlay, 'click', () => this.closePreviewModal());
+    }
+    
+    const previewModalClose = document.getElementById('preview-modal-close');
+    if (previewModalClose) {
+      this.addEventListener(previewModalClose, 'click', () => this.closePreviewModal());
+    }
+    
     // Setup drag and drop
     const uploadArea = document.getElementById('upload-area');
     if (uploadArea) {
@@ -402,6 +461,60 @@ export class AdminFilesModule extends BaseAdminModule {
     const fileInput = document.getElementById('file-input');
     if (fileInput) {
       this.addEventListener(fileInput, 'change', this.handleFileSelect.bind(this));
+    }
+    
+    // Setup upload form buttons
+    const browseBtn = document.getElementById('btn-browse-files');
+    if (browseBtn) {
+      this.addEventListener(browseBtn, 'click', () => {
+        const input = document.getElementById('file-input');
+        if (input) input.click();
+      });
+    }
+    
+    const uploadFirstBtn = document.getElementById('btn-upload-first');
+    if (uploadFirstBtn) {
+      this.addEventListener(uploadFirstBtn, 'click', () => this.showUploadModal());
+    }
+    
+    const uploadCancelBtn = document.getElementById('btn-upload-cancel');
+    if (uploadCancelBtn) {
+      this.addEventListener(uploadCancelBtn, 'click', () => this.closeUploadModal());
+    }
+    
+    const uploadSubmitBtn = document.getElementById('upload-btn');
+    if (uploadSubmitBtn) {
+      this.addEventListener(uploadSubmitBtn, 'click', () => this.uploadFiles());
+    }
+    
+    // Setup file action delegated events
+    const filesContent = this.element.querySelector('.files-content');
+    if (filesContent) {
+      this.addEventListener(filesContent, 'click', (e) => {
+        const target = e.target.closest('[data-action]');
+        if (!target) return;
+        
+        const action = target.dataset.action;
+        const fileId = target.dataset.fileId;
+        
+        switch (action) {
+          case 'preview':
+            this.previewFile(fileId);
+            break;
+          case 'download':
+            this.downloadFile(fileId);
+            break;
+          case 'share':
+            this.shareFile(fileId);
+            break;
+          case 'edit':
+            this.editFile(fileId);
+            break;
+          case 'delete':
+            this.deleteFile(fileId);
+            break;
+        }
+      });
     }
   }
 

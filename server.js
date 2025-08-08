@@ -1,3 +1,7 @@
+import dotenv from 'dotenv';
+// Load environment variables FIRST before any other imports that might use them
+dotenv.config();
+
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -5,11 +9,10 @@ import morgan from 'morgan';
 import rateLimit from 'express-rate-limit';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import dotenv from 'dotenv';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
-import { testConnection } from './config/database.js';
-import PhaseAutomationService, { createAutomationTables } from './utils/phaseAutomation.js';
+import { testConnection, query } from './config/database.js';
+import phaseAutomationService from './utils/phaseAutomation.js';
 import { 
   rateLimiters, 
   preventSqlInjection, 
@@ -20,9 +23,6 @@ import {
   requestSizeLimits,
   auditLog 
 } from './middleware/security.js';
-
-// Load environment variables
-dotenv.config();
 
 // Get __dirname in ES modules
 const __filename = fileURLToPath(import.meta.url);
@@ -101,7 +101,7 @@ import fileRoutes from './routes/files.js';
 import messageRoutes from './routes/messages.js';
 import inquiryRoutes from './routes/inquiries.js';
 import phaseRoutes from './routes/phases.js';
-import activityRoutes from './routes/activity.js';
+import activityRoutes from './routes/activities.js';
 import userRoutes from './routes/users.js';
 import dashboardRoutes from './routes/dashboard.js';
 import emailRoutes from './routes/email.js';
@@ -112,6 +112,15 @@ import formRoutes from './routes/forms.js';
 import documentRoutes from './routes/documents.js';
 import researchRoutes from './routes/research.js';
 import proofRoutes from './routes/proofs.js';
+import settingsRoutes from './routes/settings.js';
+import fileCategoriesRoutes from './routes/file-categories.js';
+import fileTagsRoutes from './routes/file-tags.js';
+import notificationRoutes from './routes/notifications.js';
+import emailTemplatesRoutes from './routes/email-templates.js';
+import timeTrackingRoutes from './routes/time-tracking.js';
+import teamCollaborationRoutes from './routes/team-collaboration.js';
+import systemSettingsRoutes from './routes/system-settings.js';
+import automationRulesRoutes from './routes/automation-rules.js';
 import { initializeSocketHandlers } from './utils/socketHandlers.js';
 import { startCronJobs } from './utils/cronJobs.js';
 
@@ -140,6 +149,15 @@ app.use('/api/payments', auditLog('payments'), paymentRoutes);
 app.use('/api/forms', formRoutes);
 app.use('/api/documents', documentRoutes);
 app.use('/api/research', auditLog('research'), researchRoutes);
+app.use('/api/settings', settingsRoutes);
+app.use('/api/file-categories', auditLog('file-categories'), fileCategoriesRoutes);
+app.use('/api/file-tags', auditLog('file-tags'), fileTagsRoutes);
+app.use('/api/notifications', notificationRoutes);
+app.use('/api/email-templates', auditLog('email-templates'), emailTemplatesRoutes);
+app.use('/api/time-tracking', auditLog('time-tracking'), timeTrackingRoutes);
+app.use('/api/team-collaboration', auditLog('team-collaboration'), teamCollaborationRoutes);
+app.use('/api/system-settings', auditLog('system-settings'), systemSettingsRoutes);
+app.use('/api/automation-rules', auditLog('automation-rules'), automationRulesRoutes);
 app.use('/api', auditLog('proofs'), proofRoutes);
 
 // Health check endpoint
@@ -247,9 +265,16 @@ server.listen(PORT, async () => {
     await testConnection();
     
     // Initialize phase automation
-    await createAutomationTables();
-    const phaseAutomation = new PhaseAutomationService(io);
-    await phaseAutomation.start();
+    // Create automation tables if needed
+    await query(`
+      CREATE TABLE IF NOT EXISTS automation_notifications (
+        notification_key VARCHAR(255) PRIMARY KEY,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    console.log('Automation tables created successfully');
+    phaseAutomationService.io = io;
+    await phaseAutomationService.start();
     console.log('✅ Phase automation service started');
     
     // Start cron jobs

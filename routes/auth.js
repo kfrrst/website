@@ -3,7 +3,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { body, validationResult } from 'express-validator';
 import { authenticateToken } from '../middleware/auth.js';
-import { query, beginTransaction, commitTransaction, rollbackTransaction } from '../config/database.js';
+import { query, withTransaction } from '../config/database.js';
 import { v4 as uuidv4 } from 'uuid';
 import dotenv from 'dotenv';
 import { sendTemplateEmail } from '../utils/emailService.js';
@@ -23,13 +23,13 @@ const REFRESH_TOKEN_EXPIRES_IN = '7d';
 // Generate tokens
 const generateTokens = (userId, email, role) => {
   const accessToken = jwt.sign(
-    { userId, email, role },
+    { id: userId, userId, email, role },  // Include both id and userId for compatibility
     JWT_SECRET,
     { expiresIn: JWT_EXPIRES_IN }
   );
   
   const refreshToken = jwt.sign(
-    { userId, email, role, type: 'refresh' },
+    { id: userId, userId, email, role, type: 'refresh' },  // Include both id and userId for compatibility
     JWT_SECRET,
     { expiresIn: REFRESH_TOKEN_EXPIRES_IN }
   );
@@ -41,73 +41,75 @@ const generateTokens = (userId, email, role) => {
 
 // Register endpoint
 router.post('/register', userValidations.register, handleValidationErrors, async (req, res) => {
-  const client = await beginTransaction();
-  
   try {
+    const result = await withTransaction(async (client) => {
+      const { email, password, name, role = 'client' } = req.body;
+      
+      // Split name into first and last name for database storage
+      const nameParts = name ? name.trim().split(' ') : ['', ''];
+      const firstName = nameParts[0] || '';
+      const lastName = nameParts.slice(1).join(' ') || '';
 
-    const { email, password, name, role = 'client' } = req.body;
-    
-    // Split name into first and last name for database storage
-    const nameParts = name ? name.trim().split(' ') : ['', ''];
-    const firstName = nameParts[0] || '';
-    const lastName = nameParts.slice(1).join(' ') || '';
+      // Check if user already exists
+      const existingUser = await client.query(
+        'SELECT id FROM users WHERE email = $1',
+        [email]
+      );
+      
+      if (existingUser.rows.length > 0) {
+        throw new Error('User already exists with this email');
+      }
 
-    // Check if user already exists
-    const existingUser = await client.query(
-      'SELECT id FROM users WHERE email = $1',
-      [email]
-    );
-    
-    if (existingUser.rows.length > 0) {
-      await rollbackTransaction(client);
-      return res.status(409).json({ 
-        error: 'User already exists with this email' 
-      });
-    }
+      // Hash password
+      const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Hash password
-    const hashedPassword = await bcrypt.hash(password, 10);
+      // Create user
+      const userId = uuidv4();
+      const userResult = await client.query(
+        `INSERT INTO users (id, email, password_hash, first_name, last_name, role) 
+         VALUES ($1, $2, $3, $4, $5, $6) 
+         RETURNING id, email, first_name, last_name, role, created_at`,
+        [userId, email, hashedPassword, firstName, lastName, role]
+      );
+      
+      const user = userResult.rows[0];
 
-    // Create user
-    const userId = uuidv4();
-    const userResult = await client.query(
-      `INSERT INTO users (id, email, password_hash, first_name, last_name, role) 
-       VALUES ($1, $2, $3, $4, $5, $6) 
-       RETURNING id, email, first_name, last_name, role, created_at`,
-      [userId, email, hashedPassword, firstName, lastName, role]
-    );
-    
-    const user = userResult.rows[0];
+      // Create user session
+      const sessionId = uuidv4();
+      const sessionToken = uuidv4();
+      const { accessToken, refreshToken } = generateTokens(userId, email, role);
+      
+      await client.query(
+        `INSERT INTO user_sessions (id, user_id, session_token, refresh_token, expires_at)
+         VALUES ($1, $2, $3, $4, NOW() + INTERVAL '7 days')`,
+        [sessionId, userId, sessionToken, refreshToken]
+      );
 
-    // Create user session
-    const sessionId = uuidv4();
-    const sessionToken = uuidv4();
-    const { accessToken, refreshToken } = generateTokens(userId, email, role);
-    
-    await client.query(
-      `INSERT INTO user_sessions (id, user_id, session_token, refresh_token, expires_at)
-       VALUES ($1, $2, $3, $4, NOW() + INTERVAL '7 days')`,
-      [sessionId, userId, sessionToken, refreshToken]
-    );
-
-    await commitTransaction(client);
+      return {
+        user,
+        accessToken,
+        refreshToken
+      };
+    });
 
     res.status(201).json({
       message: 'User registered successfully',
       user: {
-        id: user.id,
-        email: user.email,
-        firstName: user.first_name,
-        lastName: user.last_name,
-        name: `${user.first_name} ${user.last_name}`,
-        role: user.role
+        id: result.user.id,
+        email: result.user.email,
+        firstName: result.user.first_name,
+        lastName: result.user.last_name,
+        name: `${result.user.first_name} ${result.user.last_name}`,
+        role: result.user.role
       },
-      accessToken,
-      refreshToken
+      accessToken: result.accessToken,
+      refreshToken: result.refreshToken
     });
   } catch (error) {
-    await rollbackTransaction(client);
     console.error('Registration error:', error);
+    if (error.message === 'User already exists with this email') {
+      return res.status(409).json({ error: error.message });
+    }
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -231,6 +233,7 @@ router.post('/login', userValidations.login, handleValidationErrors, async (req,
         name: `${user.first_name} ${user.last_name}`,
         role: user.role
       },
+      token: accessToken,  // For backward compatibility
       accessToken,
       refreshToken
     });
@@ -282,7 +285,7 @@ router.post('/refresh', async (req, res) => {
       // Update session with new refresh token
       await query(
         `UPDATE user_sessions 
-         SET refresh_token = $1, expires_at = NOW() + INTERVAL '7 days', updated_at = NOW() 
+         SET refresh_token = $1, expires_at = NOW() + INTERVAL '7 days'
          WHERE id = $2`,
         [newRefreshToken, session.id]
       );
@@ -328,10 +331,13 @@ router.post('/logout', authenticateToken, async (req, res) => {
 // Get current user endpoint
 router.get('/me', authenticateToken, async (req, res) => {
   try {
+    console.log('GET /me - req.user:', req.user);  // Debug log
+    const userId = req.user.userId || req.user.id;
+    
     const userResult = await query(
       `SELECT id, email, first_name, last_name, role, created_at, last_login_at, is_active 
        FROM users WHERE id = $1`,
-      [req.user.id]
+      [userId]
     );
     
     if (userResult.rows.length === 0) {

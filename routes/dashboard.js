@@ -30,7 +30,7 @@ router.get('/phase-summary', authenticateToken, async (req, res) => {
           p.due_date,
           u.first_name || ' ' || u.last_name as client_name
         FROM projects p
-        LEFT JOIN users u ON p.client_id = u.id
+        LEFT JOIN users u ON p.client_id = u.id AND u.role = 'client'
         LEFT JOIN project_phase_tracking pt ON p.id = pt.project_id
         LEFT JOIN project_phases ph ON pt.current_phase_id = ph.id
         WHERE p.is_active = true
@@ -125,7 +125,7 @@ router.get('/phase-summary', authenticateToken, async (req, res) => {
         u.first_name || ' ' || u.last_name as client_name
       FROM activity_log al
       JOIN projects p ON al.project_id = p.id
-      LEFT JOIN users u ON p.client_id = u.id
+      LEFT JOIN users u ON p.client_id = u.id AND u.role = 'client'
       WHERE 
         al.action = 'phase_change' 
         AND al.created_at >= CURRENT_TIMESTAMP - INTERVAL '7 days'
@@ -167,34 +167,82 @@ router.get('/stats', authenticateToken, async (req, res) => {
     let stats = {};
     
     if (userRole === 'admin') {
-      // Admin stats
+      // Admin stats - sees everything
       const statsQuery = `
         SELECT 
           (SELECT COUNT(*) FROM projects WHERE is_active = true) as total_projects,
           (SELECT COUNT(*) FROM projects WHERE status = 'in_progress' AND is_active = true) as active_projects,
           (SELECT COUNT(*) FROM users WHERE role = 'client' AND is_active = true) as total_clients,
+          (SELECT COUNT(*) FROM users WHERE role = 'client' AND is_active = true) as total_users,
           (SELECT COUNT(*) FROM invoices WHERE status = 'pending') as pending_invoices,
-          (SELECT SUM(total_amount) FROM invoices WHERE status = 'pending') as pending_revenue,
-          (SELECT COUNT(*) FROM messages WHERE is_read = false) as unread_messages
+          (SELECT COALESCE(SUM(total_amount), 0) FROM invoices WHERE status = 'pending') as pending_revenue,
+          (SELECT COUNT(*) FROM messages) as unread_messages,
+          (SELECT COUNT(*) FROM files WHERE is_active = true) as total_files,
+          (SELECT COUNT(DISTINCT pt.project_id) FROM project_phase_tracking pt WHERE pt.status = 'in_progress') as projects_in_progress,
+          (SELECT COUNT(*) FROM activity_log WHERE created_at > NOW() - INTERVAL '24 hours') as recent_activities
       `;
       
       const result = await dbQuery(statsQuery);
       stats = result.rows[0];
       
+      // Get additional admin-specific metrics
+      const metricsQuery = `
+        SELECT 
+          (SELECT COUNT(*) FROM projects WHERE created_at > NOW() - INTERVAL '30 days') as new_projects_month,
+          (SELECT COUNT(*) FROM invoices WHERE status = 'paid' AND paid_date > NOW() - INTERVAL '30 days') as paid_invoices_month,
+          (SELECT COALESCE(SUM(total_amount), 0) FROM invoices WHERE status = 'paid' AND paid_date > NOW() - INTERVAL '30 days') as revenue_month
+      `;
+      
+      const metricsResult = await dbQuery(metricsQuery);
+      stats = { ...stats, ...metricsResult.rows[0] };
+      
     } else {
-      // Client stats
+      // Client stats - specific to their account
+      // For clients, use their user ID as the client_id in projects
+      const clientId = userId;
+      
       const statsQuery = `
         SELECT 
           (SELECT COUNT(*) FROM projects WHERE client_id = $1 AND is_active = true) as total_projects,
           (SELECT COUNT(*) FROM projects WHERE client_id = $1 AND status = 'in_progress' AND is_active = true) as active_projects,
           (SELECT COUNT(*) FROM invoices WHERE client_id = $1 AND status = 'pending') as pending_invoices,
-          (SELECT SUM(total_amount) FROM invoices WHERE client_id = $1 AND status = 'pending') as total_due,
-          (SELECT COUNT(*) FROM messages WHERE recipient_id = $1 AND is_read = false) as unread_messages,
-          (SELECT COUNT(*) FROM files f JOIN projects p ON f.project_id = p.id WHERE p.client_id = $1 AND f.is_active = true) as total_files
+          (SELECT COALESCE(SUM(total_amount), 0) FROM invoices WHERE client_id = $1 AND status = 'pending') as total_due,
+          (SELECT COUNT(*) FROM messages m 
+           JOIN projects p ON m.project_id = p.id 
+           WHERE p.client_id = $1) as unread_messages,
+          (SELECT COUNT(*) FROM files f 
+           JOIN projects p ON f.project_id = p.id 
+           WHERE p.client_id = $1 AND f.is_active = true) as total_files,
+          (SELECT COUNT(DISTINCT pt.project_id) 
+           FROM project_phase_tracking pt 
+           JOIN projects p ON pt.project_id = p.id
+           WHERE p.client_id = $1 AND pt.status = 'in_progress') as projects_in_progress,
+          (SELECT COUNT(*) 
+           FROM activity_log al
+           JOIN projects p ON al.entity_id = p.id AND al.entity_type = 'project'
+           WHERE p.client_id = $1 AND al.created_at > NOW() - INTERVAL '7 days') as recent_activities
       `;
       
-      const result = await dbQuery(statsQuery, [userId]);
+      const result = await dbQuery(statsQuery, [clientId]);
       stats = result.rows[0];
+      
+      // Get current phase information for client projects
+      const phaseQuery = `
+        SELECT 
+          p.name as project_name,
+          pt.phase_number,
+          pt.phase_name,
+          p.status as phase_status
+        FROM projects p
+        LEFT JOIN project_phase_tracking pt ON p.id = pt.project_id
+        WHERE p.client_id = $1 
+          AND p.is_active = true 
+        ORDER BY p.created_at DESC
+        LIMIT 3
+      `;
+      
+      const phaseResult = await dbQuery(phaseQuery, [clientId]);
+      stats.current_phases = phaseResult.rows;
     }
     
     res.json({ stats });
@@ -247,7 +295,7 @@ router.get('/timeline', authenticateToken, async (req, res) => {
           al.entity_id,
           p.name as project_name
         FROM activity_log al
-        JOIN projects p ON al.project_id = p.id
+        LEFT JOIN projects p ON al.project_id = p.id
         WHERE p.client_id = $1 AND al.created_at >= CURRENT_TIMESTAMP - INTERVAL '${days} days'
         ORDER BY al.created_at DESC
         LIMIT 50

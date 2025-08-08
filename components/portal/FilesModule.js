@@ -20,18 +20,24 @@ export class FilesModule extends BaseModule {
   }
 
   async doInit() {
-    this.element = document.getElementById('files');
-    if (this.element) {
-      await this.loadFiles();
-      this.setupFilesInterface();
-      this.setupDragAndDrop();
+    // Find the file manager container within the files section
+    const filesSection = document.getElementById('files');
+    if (filesSection) {
+      this.element = filesSection.querySelector('.file-manager');
+      if (this.element) {
+        await this.loadFiles();
+        this.setupFilesInterface();
+        this.setupDragAndDrop();
+      }
     }
   }
 
   async loadFiles() {
     try {
       const data = await this.getCachedData(`files_${this.currentFolder}`, async () => {
-        const response = await this.apiRequest(`/api/files?folder=${encodeURIComponent(this.currentFolder)}`);
+        // Don't encode the folder parameter if it's just '/'
+        const folderParam = this.currentFolder === '/' ? '' : `?folder=${encodeURIComponent(this.currentFolder)}`;
+        const response = await this.apiRequest(`/api/files${folderParam}`);
         return await response.json();
       }, 60000); // 1 minute cache
 
@@ -53,11 +59,11 @@ export class FilesModule extends BaseModule {
           </div>
           <div class="files-actions">
             <button class="upload-btn" onclick="portal.modules.files.openUploader()">
-              <span class="icon">📁</span>
+              <span class="icon">[UPLOAD]</span>
               Upload Files
             </button>
             <button class="new-folder-btn" onclick="portal.modules.files.createFolder()">
-              <span class="icon">📂</span>
+              <span class="icon">[FOLDER]</span>
               New Folder
             </button>
           </div>
@@ -71,7 +77,7 @@ export class FilesModule extends BaseModule {
 
         <div class="upload-drop-zone" id="upload-drop-zone" style="display: none;">
           <div class="drop-zone-content">
-            <div class="drop-zone-icon">📁</div>
+            <div class="drop-zone-icon">[UPLOAD]</div>
             <h3>Drop files here to upload</h3>
             <p>Or click to select files</p>
           </div>
@@ -106,7 +112,7 @@ export class FilesModule extends BaseModule {
     if (this.files.length === 0) {
       return `
         <div class="empty-state">
-          <div class="empty-icon">📁</div>
+          <div class="empty-icon">[FILES]</div>
           <h3>No files in this folder</h3>
           <p>Upload files or create folders to get started</p>
         </div>
@@ -136,28 +142,28 @@ export class FilesModule extends BaseModule {
   }
 
   getFileIcon(file) {
-    if (file.type === 'folder') return '📂';
+    if (file.type === 'folder') return '[FOLDER]';
     
     const mimeType = file.mime_type || '';
     const extension = file.name.split('.').pop()?.toLowerCase();
     
     // Image files
-    if (mimeType.startsWith('image/')) return '🖼️';
+    if (mimeType.startsWith('image/')) return '[IMAGE]';
     
     // Documents
-    if (mimeType.includes('pdf')) return '📄';
-    if (mimeType.includes('word') || extension === 'doc' || extension === 'docx') return '📝';
-    if (mimeType.includes('spreadsheet') || extension === 'xls' || extension === 'xlsx') return '📊';
-    if (mimeType.includes('presentation') || extension === 'ppt' || extension === 'pptx') return '📽️';
+    if (mimeType.includes('pdf')) return '[PDF]';
+    if (mimeType.includes('word') || extension === 'doc' || extension === 'docx') return '[DOC]';
+    if (mimeType.includes('spreadsheet') || extension === 'xls' || extension === 'xlsx') return '[SHEET]';
+    if (mimeType.includes('presentation') || extension === 'ppt' || extension === 'pptx') return '[SLIDE]';
     
     // Archives
-    if (mimeType.includes('zip') || mimeType.includes('rar')) return '🗜️';
+    if (mimeType.includes('zip') || mimeType.includes('rar')) return '[ZIP]';
     
     // Text files
-    if (mimeType.startsWith('text/')) return '📄';
+    if (mimeType.startsWith('text/')) return '[TEXT]';
     
     // Default
-    return '📄';
+    return '[FILE]';
   }
 
   formatFileSize(bytes) {
@@ -287,7 +293,10 @@ export class FilesModule extends BaseModule {
   async uploadSingleFile(file, progressContainer) {
     const formData = new FormData();
     formData.append('file', file);
-    formData.append('folder', this.currentFolder);
+    // Only append folder if it's not the root
+    if (this.currentFolder && this.currentFolder !== '/') {
+      formData.append('folder', this.currentFolder);
+    }
 
     const progressItem = this.createProgressItem(file.name, progressContainer);
 

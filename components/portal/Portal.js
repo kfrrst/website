@@ -6,12 +6,13 @@ import { FilesModule } from './FilesModule.js';
 import { ProjectsModule } from './ProjectsModule.js';
 import { InvoicesModule } from './InvoicesModule.js';
 import { DocumentGenerationModule } from './DocumentGenerationModule.js';
+import { updateUserDisplay } from './updateUserDisplay.js';
 
 /**
  * Main Portal class that manages all modules
  * Provides a modular, maintainable architecture for the client portal
  */
-export class Portal {
+export class ClientPortal {
   constructor() {
     this.modules = {};
     this.currentSection = 'dashboard';
@@ -39,7 +40,7 @@ export class Portal {
     }
 
     try {
-      console.log('🚀 Portal initialization starting...');
+      console.log('Portal initialization starting...');
 
       // Initialize modules in dependency order
       await this.initializeModules();
@@ -53,10 +54,10 @@ export class Portal {
       this.initialized = true;
       
       const initTime = performance.now() - this.performanceMetrics.initStart;
-      console.log(`✅ Portal initialization completed in ${Math.round(initTime)}ms`);
+      console.log(`Portal initialization completed in ${Math.round(initTime)}ms`);
       
     } catch (error) {
-      console.error('❌ Portal initialization failed:', error);
+      console.error('Portal initialization failed:', error);
       this.handleInitializationError(error);
     }
   }
@@ -65,12 +66,14 @@ export class Portal {
    * Initialize all portal modules
    */
   async initializeModules() {
-    const moduleConfigs = [
-      // Core modules first
+    // Only initialize core modules initially
+    const coreModules = [
       { name: 'auth', module: AuthModule, critical: true },
-      { name: 'navigation', module: NavigationModule, critical: true },
-      
-      // Feature modules
+      { name: 'navigation', module: NavigationModule, critical: true }
+    ];
+    
+    // Dashboard modules to initialize after authentication
+    this.dashboardModules = [
       { name: 'dashboard', module: DashboardModule, critical: false },
       { name: 'messaging', module: MessagingModule, critical: false },
       { name: 'files', module: FilesModule, critical: false },
@@ -78,6 +81,9 @@ export class Portal {
       { name: 'invoices', module: InvoicesModule, critical: false },
       { name: 'documentModule', module: DocumentGenerationModule, critical: false }
     ];
+
+    // Initialize only core modules
+    const moduleConfigs = coreModules;
 
     for (const config of moduleConfigs) {
       try {
@@ -94,10 +100,10 @@ export class Portal {
         const initTime = performance.now() - startTime;
         this.performanceMetrics.moduleInitTimes[config.name] = initTime;
         
-        console.log(`✅ ${config.name} module initialized in ${Math.round(initTime)}ms`);
+        console.log(`${config.name} module initialized in ${Math.round(initTime)}ms`);
         
       } catch (error) {
-        console.error(`❌ ${config.name} module initialization failed:`, error);
+        console.error(`${config.name} module initialization failed:`, error);
         
         if (config.critical) {
           throw new Error(`Critical module ${config.name} failed to initialize: ${error.message}`);
@@ -115,23 +121,57 @@ export class Portal {
    */
   async initializeDashboard() {
     try {
+      console.log('Initializing dashboard modules...');
+      
+      // Update user display in header
+      updateUserDisplay(this.currentUser);
+      
+      // Initialize dashboard modules that require authentication
+      console.log('Dashboard modules to initialize:', this.dashboardModules.length);
+      for (const config of this.dashboardModules) {
+        try {
+          const startTime = performance.now();
+          
+          console.log(`Initializing ${config.name} module...`);
+          
+          // Create module instance if not already created
+          if (!this.modules[config.name]) {
+            console.log(`Creating instance of ${config.name}`);
+            this.modules[config.name] = new config.module(this);
+            
+            // Initialize module
+            console.log(`Calling init() for ${config.name}`);
+            await this.modules[config.name].init();
+            
+            const initTime = performance.now() - startTime;
+            this.performanceMetrics.moduleInitTimes[config.name] = initTime;
+            
+            console.log(`${config.name} module initialized in ${Math.round(initTime)}ms`);
+          } else {
+            console.log(`${config.name} module already exists`);
+          }
+        } catch (error) {
+          console.error(`${config.name} module initialization failed:`, error);
+          if (!config.critical) {
+            // Non-critical modules can fail without stopping the dashboard
+            console.warn(`Non-critical module ${config.name} will be unavailable`);
+            this.modules[config.name] = null;
+          }
+        }
+      }
+      
       // Initialize socket connection for real-time features
       await this.initializeSocket();
-      
-      // Load initial dashboard data
-      if (this.modules.dashboard) {
-        await this.modules.dashboard.setupDashboard();
-      }
       
       // Setup navigation
       if (this.modules.navigation) {
         this.modules.navigation.updateActiveSection('dashboard');
       }
       
-      console.log('✅ Dashboard initialized successfully');
+      console.log('Dashboard initialized successfully');
       
     } catch (error) {
-      console.error('❌ Dashboard initialization failed:', error);
+      console.error('Dashboard initialization failed:', error);
       // Dashboard failure shouldn't prevent login
     }
   }
@@ -155,11 +195,11 @@ export class Portal {
         });
 
         this.socket.on('connect', () => {
-          console.log('✅ Socket connected');
+          console.log('Socket connected');
         });
 
         this.socket.on('disconnect', () => {
-          console.log('🔌 Socket disconnected');
+          console.log('Socket disconnected');
         });
 
         this.socket.on('error', (error) => {
@@ -206,7 +246,7 @@ export class Portal {
 
     // Handle online/offline status
     window.addEventListener('online', () => {
-      console.log('🌐 Connection restored');
+      console.log('Connection restored');
       this.handleConnectionRestore();
     });
 
@@ -233,7 +273,7 @@ export class Portal {
     const observer = new PerformanceObserver((list) => {
       for (const entry of list.getEntries()) {
         if (entry.entryType === 'navigation') {
-          console.log(`📊 Page load time: ${Math.round(entry.loadEventEnd - entry.fetchStart)}ms`);
+          console.log(`Page load time: ${Math.round(entry.loadEventEnd - entry.fetchStart)}ms`);
         }
       }
     });
@@ -262,7 +302,7 @@ export class Portal {
         throw new Error(`Section ${sectionName} not found`);
       }
       
-      sectionElement.classList.remove('hidden');
+      sectionElement.classList.add('active');
       this.currentSection = sectionName;
       
       // Update navigation
@@ -276,7 +316,16 @@ export class Portal {
         'documents': 'documentModule'
       };
       const moduleName = moduleMapping[sectionName] || sectionName;
-      const module = this.modules[moduleName];
+      let module = this.modules[moduleName];
+      
+      // If module doesn't exist but we're authenticated, try to initialize it
+      if (!module && this.authToken && sectionName === 'projects') {
+        console.log(`Module ${moduleName} not initialized, initializing now...`);
+        const ProjectsModule = (await import('./ProjectsModule.js')).ProjectsModule;
+        this.modules.projects = new ProjectsModule(this);
+        await this.modules.projects.init();
+        module = this.modules.projects;
+      }
       
       if (module && typeof module.activate === 'function') {
         await module.activate();
@@ -303,7 +352,7 @@ export class Portal {
       const renderTime = performance.now() - startTime;
       this.performanceMetrics.lastRender = renderTime;
       
-      console.log(`📊 Section ${sectionName} rendered in ${Math.round(renderTime)}ms`);
+      console.log(`Section ${sectionName} rendered in ${Math.round(renderTime)}ms`);
       
     } catch (error) {
       console.error(`Failed to show section ${sectionName}:`, error);
@@ -320,8 +369,159 @@ export class Portal {
   hideAllSections() {
     const sections = document.querySelectorAll('.portal-section');
     sections.forEach(section => {
-      section.classList.add('hidden');
+      section.classList.remove('active');
     });
+  }
+
+  /**
+   * Show notification to the user
+   * @param {string} message - The message to display
+   * @param {string} type - The type of notification (success, error, warning, info)
+   * @param {number} duration - How long to show the notification in milliseconds
+   */
+  showNotification(message, type = 'info', duration = 5000) {
+    // Remove any existing notifications
+    const existingNotification = document.querySelector('.portal-notification');
+    if (existingNotification) {
+      existingNotification.remove();
+    }
+
+    // Create notification element
+    const notification = document.createElement('div');
+    notification.className = `portal-notification portal-notification-${type}`;
+    notification.innerHTML = `
+      <div class="notification-content">
+        <span class="notification-icon">${this.getNotificationIcon(type)}</span>
+        <span class="notification-message">${message}</span>
+        <button class="notification-close" onclick="this.parentElement.parentElement.remove()">×</button>
+      </div>
+    `;
+
+    // Add styles if not already present
+    if (!document.querySelector('#portal-notification-styles')) {
+      const styles = document.createElement('style');
+      styles.id = 'portal-notification-styles';
+      styles.textContent = `
+        .portal-notification {
+          position: fixed;
+          top: 20px;
+          right: 20px;
+          min-width: 300px;
+          max-width: 500px;
+          padding: 16px;
+          border-radius: 8px;
+          box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+          background: white;
+          border-left: 4px solid;
+          z-index: 10000;
+          animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn {
+          from {
+            transform: translateX(400px);
+            opacity: 0;
+          }
+          to {
+            transform: translateX(0);
+            opacity: 1;
+          }
+        }
+
+        @keyframes slideOut {
+          from {
+            transform: translateX(0);
+            opacity: 1;
+          }
+          to {
+            transform: translateX(400px);
+            opacity: 0;
+          }
+        }
+
+        .portal-notification-success {
+          border-left-color: #27AE60;
+          background: #f0f9ff;
+        }
+
+        .portal-notification-error {
+          border-left-color: #E63946;
+          background: #fef2f2;
+        }
+
+        .portal-notification-warning {
+          border-left-color: #F7C600;
+          background: #fffbeb;
+        }
+
+        .portal-notification-info {
+          border-left-color: #0057FF;
+          background: #f0f9ff;
+        }
+
+        .notification-content {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+        }
+
+        .notification-icon {
+          font-size: 20px;
+        }
+
+        .notification-message {
+          flex: 1;
+          color: #333;
+          font-size: 14px;
+        }
+
+        .notification-close {
+          background: none;
+          border: none;
+          font-size: 24px;
+          color: #666;
+          cursor: pointer;
+          padding: 0;
+          width: 24px;
+          height: 24px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .notification-close:hover {
+          color: #333;
+        }
+      `;
+      document.head.appendChild(styles);
+    }
+
+    // Add to document
+    document.body.appendChild(notification);
+
+    // Auto-remove after duration
+    if (duration > 0) {
+      setTimeout(() => {
+        if (notification.parentElement) {
+          notification.style.animation = 'slideOut 0.3s ease-out';
+          notification.style.animationFillMode = 'forwards';
+          setTimeout(() => notification.remove(), 300);
+        }
+      }, duration);
+    }
+  }
+
+  /**
+   * Get icon for notification type
+   */
+  getNotificationIcon(type) {
+    const icons = {
+      success: '✓',
+      error: '✕',
+      warning: '⚠',
+      info: 'ℹ'
+    };
+    return icons[type] || icons.info;
   }
 
   /**
@@ -453,15 +653,5 @@ export class Portal {
   }
 }
 
-// Global portal instance
-window.portal = new Portal();
-
-// Initialize when DOM is ready
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', () => {
-    window.portal.init();
-  });
-} else {
-  // DOM already loaded
-  window.portal.init();
-}
+// Export as Portal for backward compatibility
+export const Portal = ClientPortal;

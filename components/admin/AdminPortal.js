@@ -132,7 +132,7 @@ export class AdminPortal {
       this.setupPerformanceMonitoring();
       
       const initTime = performance.now() - startTime;
-      console.log(`✅ AdminPortal initialization completed in ${Math.round(initTime)}ms`);
+      console.log(`AdminPortal initialization completed in ${Math.round(initTime)}ms`);
       
     } catch (error) {
       console.error('❌ AdminPortal initialization failed:', error);
@@ -171,13 +171,18 @@ export class AdminPortal {
         // Create module instance
         this.modules[config.name] = new config.module(this);
         
-        // Initialize module
-        await this.modules[config.name].init();
+        // Initialize module with timeout
+        const initPromise = this.modules[config.name].init();
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error(`Module initialization timeout`)), 5000)
+        );
+        
+        await Promise.race([initPromise, timeoutPromise]);
         
         const initTime = performance.now() - startTime;
         this.performanceMetrics.set(`${config.name}_init`, initTime);
         
-        console.log(`✅ ${config.name} module initialized in ${Math.round(initTime)}ms`);
+        console.log(`${config.name} module initialized in ${Math.round(initTime)}ms`);
         
       } catch (error) {
         console.error(`❌ ${config.name} module initialization failed:`, error);
@@ -196,16 +201,22 @@ export class AdminPortal {
    * Initialize dashboard after authentication
    */
   async initializeDashboard() {
+    console.log('🎯 initializeDashboard called');
     try {
       // Hide login section and show dashboard
       const loginSection = document.getElementById('login-section');
       const adminDashboard = document.getElementById('admin-dashboard');
       
+      console.log('Login section found:', !!loginSection);
+      console.log('Admin dashboard found:', !!adminDashboard);
+      
       if (loginSection) {
+        console.log('Hiding login section');
         loginSection.style.display = 'none';
       }
       
       if (adminDashboard) {
+        console.log('Showing admin dashboard');
         adminDashboard.classList.remove('hidden');
         adminDashboard.style.display = 'block';
       }
@@ -221,7 +232,7 @@ export class AdminPortal {
       // Setup navigation - start with overview section
       await this.showSection('overview', false);
       
-      console.log('✅ Admin dashboard initialized successfully');
+      console.log('Admin dashboard initialized successfully');
       
     } catch (error) {
       console.error('❌ Admin dashboard initialization failed:', error);
@@ -232,7 +243,7 @@ export class AdminPortal {
    * Initialize modules that require authentication
    */
   async initializeAuthenticatedModules() {
-    console.log('🔐 Initializing authenticated modules...');
+    console.log('Initializing authenticated modules...');
     
     const authenticatedModules = [
       { name: 'dashboard', module: AdminDashboardModule, critical: false },
@@ -260,13 +271,18 @@ export class AdminPortal {
         // Create module instance
         this.modules[config.name] = new config.module(this);
         
-        // Initialize module
-        await this.modules[config.name].init();
+        // Initialize module with timeout
+        const initPromise = this.modules[config.name].init();
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error(`Module initialization timeout`)), 5000)
+        );
+        
+        await Promise.race([initPromise, timeoutPromise]);
         
         const initTime = performance.now() - startTime;
         this.performanceMetrics.set(`${config.name}_init`, initTime);
         
-        console.log(`✅ ${config.name} module initialized in ${Math.round(initTime)}ms`);
+        console.log(`${config.name} module initialized in ${Math.round(initTime)}ms`);
         
       } catch (error) {
         console.error(`❌ ${config.name} module initialization failed:`, error);
@@ -300,7 +316,7 @@ export class AdminPortal {
         });
 
         this.socket.on('connect', () => {
-          console.log('✅ Admin socket connected');
+          console.log('Admin socket connected');
         });
 
         this.socket.on('disconnect', () => {
@@ -407,7 +423,7 @@ export class AdminPortal {
       const observer = new PerformanceObserver((list) => {
         for (const entry of list.getEntries()) {
           if (entry.entryType === 'navigation') {
-            console.log(`📊 Admin page load time: ${Math.round(entry.loadEventEnd - entry.fetchStart)}ms`);
+            console.log(`Admin page load time: ${Math.round(entry.loadEventEnd - entry.fetchStart)}ms`);
           }
         }
       });
@@ -436,8 +452,8 @@ export class AdminPortal {
         throw new Error(`Section ${sectionName} not found`);
       }
       
+      sectionElement.classList.add('active');
       sectionElement.classList.remove('hidden');
-      sectionElement.style.display = 'block';
       this.currentSection = sectionName;
       
       // Update navigation
@@ -461,7 +477,7 @@ export class AdminPortal {
       const renderTime = performance.now() - startTime;
       this.performanceMetrics.set(`${sectionName}_switch`, renderTime);
       
-      console.log(`📊 Admin section ${sectionName} rendered in ${Math.round(renderTime)}ms`);
+      console.log(`Admin section ${sectionName} rendered in ${Math.round(renderTime)}ms`);
       
     } catch (error) {
       console.error(`Failed to show admin section ${sectionName}:`, error);
@@ -478,8 +494,8 @@ export class AdminPortal {
   hideAllSections() {
     const sections = document.querySelectorAll('.admin-section');
     sections.forEach(section => {
+      section.classList.remove('active');
       section.classList.add('hidden');
-      section.style.display = 'none';
     });
   }
 
@@ -607,9 +623,9 @@ export class AdminPortal {
    */
   getNotificationIcon(type) {
     const icons = {
-      'success': '✅',
-      'error': '❌',
-      'warning': '⚠️',
+      'success': '',
+      'error': '',
+      'warning': '',
       'info': 'ℹ️'
     };
     return icons[type] || icons.info;
@@ -739,24 +755,11 @@ export class AdminPortal {
     
     console.log('AdminPortal destroyed');
   }
+  
+  /**
+   * Alias for cleanup (for compatibility)
+   */
+  destroy() {
+    this.cleanup();
+  }
 }
-
-// Global admin instance
-window.admin = new AdminPortal();
-window.adminPortal = window.admin; // Backward compatibility
-
-// Initialize when DOM is ready
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', () => {
-    window.admin.init();
-  });
-} else {
-  // DOM already loaded
-  window.admin.init();
-}
-
-// Global function mappings for backward compatibility
-window.showNewClientForm = () => window.admin.modules.clients?.showClientModal();
-window.showNewProjectForm = () => window.admin.modules.clients?.showProjectModal();
-window.showNewInvoiceForm = () => window.admin.modules.clients?.showInvoiceModal();
-window.uploadFiles = () => window.admin.modules.clients?.showFileUploadModal();

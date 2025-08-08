@@ -1,7 +1,7 @@
 import express from 'express';
 import { body, validationResult } from 'express-validator';
 import { authenticateToken, requireAdmin } from '../middleware/auth.js';
-import { query as dbQuery, beginTransaction, commitTransaction, rollbackTransaction } from '../config/database.js';
+import { query as dbQuery, withTransaction } from '../config/database.js';
 import { v4 as uuidv4 } from 'uuid';
 
 const router = express.Router();

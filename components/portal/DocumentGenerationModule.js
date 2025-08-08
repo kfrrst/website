@@ -1,19 +1,30 @@
+import { BaseModule } from './BaseModule.js';
+
 /**
  * Document Generation Module for Client Portal
  * Allows clients to view and download project documents
  */
-
-export class DocumentGenerationModule {
+export class DocumentGenerationModule extends BaseModule {
   constructor(portal) {
-    this.portal = portal;
+    super(portal, 'DocumentGenerationModule');
     this.currentProject = null;
     this.availableTemplates = [];
     this.generatedDocuments = [];
-    this.token = portal.authToken || portal.token;
+  }
+
+  async doInit() {
+    // Find the documents section container
+    const documentsSection = document.getElementById('documents');
+    if (documentsSection) {
+      this.element = documentsSection.querySelector('#documents-section');
+      if (this.element) {
+        await this.setupDocumentsInterface();
+      }
+    }
   }
 
   /**
-   * Initialize the module
+   * Initialize the module for a specific project
    */
   async initialize(projectId) {
     this.currentProject = projectId;
@@ -22,15 +33,29 @@ export class DocumentGenerationModule {
   }
 
   /**
+   * Setup documents interface
+   */
+  async setupDocumentsInterface() {
+    if (!this.element) return;
+
+    this.element.innerHTML = `
+      <div class="documents-container">
+        <div class="documents-header">
+          <h2>Project Documents</h2>
+        </div>
+        <div class="documents-content">
+          <p>Select a project to view available documents.</p>
+        </div>
+      </div>
+    `;
+  }
+
+  /**
    * Load available templates for the current project
    */
   async loadAvailableTemplates() {
     try {
-      const response = await fetch('/api/documents/templates', {
-        headers: {
-          'Authorization': `Bearer ${this.token}`
-        }
-      });
+      const response = await this.apiRequest('/api/documents/templates');
 
       const data = await response.json();
       
@@ -187,12 +212,12 @@ export class DocumentGenerationModule {
    */
   getTemplateIcon(type) {
     const icons = {
-      'proposal': '📄',
-      'contract': '📋',
-      'invoice': '💰',
-      'brief': '📝',
-      'report': '📊',
-      'other': '📎'
+      'proposal': '[DOC]',
+      'contract': '[CONTRACT]',
+      'invoice': '[INVOICE]',
+      'brief': '[BRIEF]',
+      'report': '[REPORT]',
+      'other': '[FILE]'
     };
     return icons[type] || icons.other;
   }

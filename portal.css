@@ -263,8 +263,7 @@
   left: 0;
   right: 0;
   z-index: 1000;
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  /* Removed blur effect that was causing navigation issues */
 }
 
 .portal-nav {
@@ -521,9 +520,120 @@
 /* DASHBOARD GRID */
 .dashboard-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 2fr 1fr;
   gap: 2rem;
   background: var(--bone);
+}
+
+.dashboard-main {
+  min-width: 0;
+}
+
+.dashboard-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+/* Recent Activity in Sidebar */
+.dashboard-sidebar .recent-activity {
+  background: white;
+  border-radius: 8px;
+  padding: 1.5rem;
+  border: 1px solid #e9ecef;
+}
+
+.dashboard-sidebar .recent-activity .section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.dashboard-sidebar .recent-activity h3 {
+  font-size: 1.125rem;
+  margin: 0;
+  color: #333;
+}
+
+.dashboard-sidebar .recent-activity .btn-link-small {
+  font-size: 0.875rem;
+  color: #0057FF;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: none;
+}
+
+.dashboard-sidebar .recent-activity .btn-link-small:hover {
+  text-decoration: underline;
+}
+
+.dashboard-sidebar .activity-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.dashboard-sidebar .activity-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  background: #f8f9fa;
+  border-radius: 6px;
+  border: none;
+  transition: background 0.2s;
+}
+
+.dashboard-sidebar .activity-item:hover {
+  background: #e9ecef;
+}
+
+.dashboard-sidebar .activity-icon {
+  font-size: 1rem;
+  color: #666;
+  min-width: 60px;
+  font-weight: 600;
+}
+
+.dashboard-sidebar .activity-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.dashboard-sidebar .activity-description {
+  font-size: 0.875rem;
+  color: #333;
+  margin-bottom: 0.25rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dashboard-sidebar .activity-time {
+  font-size: 0.75rem;
+  color: #999;
+}
+
+.dashboard-sidebar .activity-show-more {
+  padding-top: 0.5rem;
+  text-align: center;
+}
+
+.dashboard-sidebar .activity-show-more .btn-link {
+  font-size: 0.875rem;
+  color: #0057FF;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.5rem;
+  text-decoration: none;
+}
+
+.dashboard-sidebar .activity-show-more .btn-link:hover {
+  text-decoration: underline;
 }
 
 .activity-panel,
@@ -2305,6 +2415,21 @@
   color: #333;
 }
 
+/* Modal System */
+.modal {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 9999;
+}
+
+.modal.active {
+  display: block;
+}
+
 /* Project Details Modal */
 .modal-overlay {
   position: fixed;
@@ -2325,6 +2450,193 @@
 .modal-overlay.show {
   opacity: 1;
   visibility: visible;
+}
+
+/* Project Details Page Styles */
+.project-detail-view {
+  padding: 2rem;
+}
+
+.project-detail-header {
+  margin-bottom: 2rem;
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+}
+
+.btn-back {
+  background: transparent;
+  border: 1px solid #e9ecef;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-back:hover {
+  background: #f8f9fa;
+  border-color: #dee2e6;
+}
+
+.project-detail-title {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex: 1;
+}
+
+.project-detail-title h1 {
+  margin: 0;
+  font-size: 1.75rem;
+  color: #2c2c2c;
+}
+
+.project-overview-section {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.project-info-card,
+.project-description-card {
+  background: #ffffff !important;
+  background-color: #ffffff !important;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
+  color: #333333 !important;
+}
+
+.project-info-card h3,
+.project-description-card h3 {
+  margin: 0 0 1rem 0;
+  font-size: 1.125rem;
+  color: #2c2c2c;
+  font-weight: 600;
+}
+
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.info-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.info-item label {
+  font-size: 0.875rem;
+  color: #6c757d;
+  font-weight: 500;
+}
+
+.info-item span {
+  font-size: 1rem;
+  color: #2c2c2c;
+}
+
+.project-description-card p {
+  margin: 0;
+  line-height: 1.6;
+  color: #4a4a4a;
+}
+
+/* Phase tabs container */
+.phase-tabs-container {
+  background: #ffffff;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  overflow: hidden;
+  margin-top: 2rem;
+}
+
+.phase-tabs {
+  display: flex;
+  background: #f8f9fa;
+  border-bottom: 1px solid #e9ecef;
+  overflow-x: auto;
+}
+
+.phase-tab {
+  flex: 1;
+  min-width: 120px;
+  padding: 1rem;
+  background: transparent;
+  border: none;
+  border-right: 1px solid #e9ecef;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  color: #6c757d;
+}
+
+.phase-tab:last-child {
+  border-right: none;
+}
+
+.phase-tab.active {
+  background: #ffffff;
+  color: #0057FF;
+  font-weight: 600;
+}
+
+.phase-tab.completed {
+  color: #27AE60;
+}
+
+.phase-tab.locked {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.phase-tab:hover:not(.locked) {
+  background: #ffffff;
+}
+
+.phase-tab-number {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #e9ecef;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.phase-tab.active .phase-tab-number {
+  background: #0057FF;
+  color: white;
+}
+
+.phase-tab.completed .phase-tab-number {
+  background: #27AE60;
+  color: white;
+}
+
+.phase-tab-content {
+  padding: 2rem;
+  min-height: 300px;
+}
+
+/* Progress tracker container */
+.progress-tracker-container {
+  background: #ffffff !important;
+  background-color: #ffffff !important;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  padding: 2rem;
+  margin-bottom: 2rem;
+  color: #333333 !important;
 }
 
 .project-details-content {

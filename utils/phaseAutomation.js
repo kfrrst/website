@@ -51,19 +51,19 @@ export class PhaseAutomationService {
     try {
       const result = await dbQuery(`
         SELECT 
-          ar.*,
-          fp.phase_key AS from_phase_key,
-          tp.phase_key AS to_phase_key
-        FROM phase_automation_rules ar
-        LEFT JOIN project_phases fp ON ar.from_phase_id = fp.id
-        JOIN project_phases tp ON ar.to_phase_id = tp.id
-        WHERE ar.is_active = true
+          id,
+          rule_name,
+          trigger_condition,
+          action_type,
+          action_config,
+          is_active
+        FROM phase_automation_rules
+        WHERE is_active = true
       `);
       
       this.automationRules.clear();
       result.rows.forEach(rule => {
-        const key = `${rule.from_phase_key || 'any'}->${rule.to_phase_key}`;
-        this.automationRules.set(key, rule);
+        this.automationRules.set(rule.id, rule);
       });
       
       console.log(`Loaded ${this.automationRules.size} automation rules`);
@@ -98,38 +98,50 @@ export class PhaseAutomationService {
    */
   async checkAutoAdvance() {
     try {
-      // Get projects with completed actions
+      // Get projects with their current phase tracking
       const result = await dbQuery(`
         SELECT DISTINCT
-          pt.project_id,
-          pt.current_phase_id,
-          pp.phase_key,
-          pp.name AS phase_name,
-          p.name AS project_name,
-          p.client_id
-        FROM project_phase_tracking pt
-        JOIN project_phases pp ON pt.current_phase_id = pp.id
-        JOIN projects p ON pt.project_id = p.id
-        WHERE pt.is_completed = false
-          AND pp.requires_client_action = true
-          AND NOT EXISTS (
-            SELECT 1 
-            FROM phase_client_actions pca
-            LEFT JOIN project_phase_action_status pas 
-              ON pca.id = pas.action_id 
-              AND pas.project_id = pt.project_id
-            WHERE pca.phase_id = pt.current_phase_id
-              AND pca.is_required = true
-              AND (pas.is_completed IS NULL OR pas.is_completed = false)
-          )
+          p.id as project_id,
+          p.name as project_name,
+          p.client_id,
+          pt.id as tracking_id,
+          pt.phase_number,
+          pt.phase_name,
+          pt.status,
+          pt.started_at,
+          COALESCE(
+            (SELECT COUNT(*) 
+             FROM client_actions ca 
+             WHERE ca.project_id = p.id 
+               AND ca.phase_id = pt.id
+               AND ca.status != 'completed'
+               AND ca.is_required = true), 
+            0
+          ) as pending_required_actions
+        FROM projects p
+        JOIN project_phase_tracking pt ON pt.project_id = p.id
+        WHERE pt.status IN ('in_progress', 'waiting_client')
+          AND pt.completed_at IS NULL
+        ORDER BY p.id, pt.phase_number DESC
       `);
       
-      for (const project of result.rows) {
-        const ruleKey = `${project.phase_key}->*`;
-        const rule = this.findMatchingRule(ruleKey);
-        
-        if (rule && rule.rule_config?.auto_advance) {
-          await this.advanceProjectPhase(project.project_id, 'Automated: All required actions completed');
+      // Group by project to get latest phase
+      const projectPhases = new Map();
+      for (const row of result.rows) {
+        if (!projectPhases.has(row.project_id) || 
+            projectPhases.get(row.project_id).phase_number < row.phase_number) {
+          projectPhases.set(row.project_id, row);
+        }
+      }
+      
+      // Check each project for auto-advance conditions
+      for (const project of projectPhases.values()) {
+        if (project.pending_required_actions === 0 && project.phase_number < 8) {
+          await this.advanceProjectPhase(
+            project.project_id, 
+            project.phase_number + 1,
+            'Automated: All required actions completed'
+          );
         }
       }
     } catch (error) {
@@ -145,28 +157,30 @@ export class PhaseAutomationService {
       const stuckThreshold = 7; // Days
       
       const result = await dbQuery(`
-        SELECT 
-          pt.project_id,
-          pt.phase_started_at,
-          pp.phase_key,
-          pp.name AS phase_name,
-          p.name AS project_name,
+        SELECT DISTINCT ON (p.id)
+          p.id as project_id,
+          p.name as project_name,
           p.client_id,
-          u.email AS client_email,
-          u.first_name AS client_name,
-          EXTRACT(DAY FROM NOW() - pt.phase_started_at) AS days_in_phase
-        FROM project_phase_tracking pt
-        JOIN project_phases pp ON pt.current_phase_id = pp.id
-        JOIN projects p ON pt.project_id = p.id
-        JOIN users u ON p.client_id = u.id
-        WHERE pt.is_completed = false
-          AND pt.phase_started_at < NOW() - INTERVAL '${stuckThreshold} days'
-          AND pp.phase_key NOT IN ('delivery') -- Don't notify for final phase
+          pt.phase_number,
+          pt.phase_name,
+          pt.started_at,
+          u.email as client_email,
+          u.first_name as client_name,
+          EXTRACT(DAY FROM NOW() - pt.started_at) as days_in_phase
+        FROM projects p
+        JOIN project_phase_tracking pt ON pt.project_id = p.id
+        JOIN clients c ON p.client_id = c.id
+        JOIN users u ON u.client_id = c.id AND u.role = 'client'
+        WHERE pt.status IN ('in_progress', 'waiting_client')
+          AND pt.completed_at IS NULL
+          AND pt.started_at < NOW() - INTERVAL '${stuckThreshold} days'
+          AND pt.phase_number < 8
+        ORDER BY p.id, pt.phase_number DESC
       `);
       
       for (const project of result.rows) {
         // Check if we've already notified recently
-        const notificationKey = `stuck-${project.project_id}-${project.phase_key}`;
+        const notificationKey = `stuck-${project.project_id}-${project.phase_number}`;
         const recentNotification = await this.hasRecentNotification(notificationKey, 3); // 3 days
         
         if (!recentNotification) {
@@ -185,26 +199,30 @@ export class PhaseAutomationService {
   async checkPaymentCompletions() {
     try {
       const result = await dbQuery(`
-        SELECT 
-          pt.project_id,
-          i.id AS invoice_id,
-          i.invoice_number,
-          p.name AS project_name,
-          p.client_id
-        FROM project_phase_tracking pt
-        JOIN project_phases pp ON pt.current_phase_id = pp.id
-        JOIN projects p ON pt.project_id = p.id
+        SELECT DISTINCT
+          p.id as project_id,
+          p.name as project_name,
+          p.client_id,
+          pt.phase_number,
+          i.id as invoice_id,
+          i.invoice_number
+        FROM projects p
+        JOIN project_phase_tracking pt ON pt.project_id = p.id
         JOIN invoices i ON i.project_id = p.id
-        WHERE pt.is_completed = false
-          AND pp.phase_key = 'payment'
+        WHERE pt.phase_number = 6  -- Payment phase
+          AND pt.status IN ('in_progress', 'waiting_client')
+          AND pt.completed_at IS NULL
           AND i.status = 'paid'
-          AND i.paid_date > pt.phase_started_at
+          AND i.paid_date > pt.started_at
       `);
       
       for (const project of result.rows) {
         // Auto-advance to sign-off phase
-        await this.advanceProjectPhase(project.project_id, 
-          `Automated: Payment received for invoice ${project.invoice_number}`);
+        await this.advanceProjectPhase(
+          project.project_id,
+          7, // Sign-off & Docs phase
+          `Automated: Payment received for invoice ${project.invoice_number}`
+        );
       }
     } catch (error) {
       console.error('Error checking payment completions:', error);
@@ -220,38 +238,37 @@ export class PhaseAutomationService {
       
       const result = await dbQuery(`
         SELECT 
-          pt.project_id,
-          pt.phase_started_at,
-          pp.phase_key,
-          pp.name AS phase_name,
-          p.name AS project_name,
+          p.id as project_id,
+          p.name as project_name,
           p.client_id,
-          u.email AS client_email,
-          u.first_name AS client_name,
-          COUNT(pca.id) AS pending_actions
-        FROM project_phase_tracking pt
-        JOIN project_phases pp ON pt.current_phase_id = pp.id
-        JOIN projects p ON pt.project_id = p.id
-        JOIN users u ON p.client_id = u.id
-        JOIN phase_client_actions pca ON pca.phase_id = pp.id
-        LEFT JOIN project_phase_action_status pas 
-          ON pca.id = pas.action_id 
-          AND pas.project_id = pt.project_id
-        WHERE pt.is_completed = false
-          AND pp.requires_client_action = true
-          AND pca.is_required = true
-          AND (pas.is_completed IS NULL OR pas.is_completed = false)
-          AND pt.phase_started_at < NOW() - INTERVAL '${reminderThreshold} days'
-        GROUP BY pt.project_id, pt.phase_started_at, pp.phase_key, pp.name, 
-                 p.name, p.client_id, u.email, u.first_name
+          pt.phase_number,
+          pt.phase_name,
+          pt.started_at,
+          u.email as client_email,
+          u.first_name as client_name,
+          COUNT(ca.id) as pending_actions
+        FROM projects p
+        JOIN project_phase_tracking pt ON pt.project_id = p.id
+        JOIN client_actions ca ON ca.project_id = p.id AND ca.phase_id = pt.id
+        JOIN clients c ON p.client_id = c.id
+        JOIN users u ON u.client_id = c.id AND u.role = 'client'
+        WHERE pt.status IN ('waiting_client', 'needs_approval')
+          AND pt.completed_at IS NULL
+          AND ca.status != 'completed'
+          AND ca.is_required = true
+          AND pt.started_at < NOW() - INTERVAL '${reminderThreshold} days'
+        GROUP BY p.id, p.name, p.client_id, pt.phase_number, 
+                 pt.phase_name, pt.started_at, u.email, u.first_name
+        HAVING COUNT(ca.id) > 0
       `);
       
       for (const project of result.rows) {
-        const notificationKey = `action-reminder-${project.project_id}-${project.phase_key}`;
+        // Check if we've already sent a reminder recently
+        const notificationKey = `overdue-${project.project_id}-${project.phase_number}`;
         const recentNotification = await this.hasRecentNotification(notificationKey, 2); // 2 days
         
         if (!recentNotification) {
-          await this.sendActionReminderNotification(project);
+          await this.sendOverdueActionReminder(project);
           await this.recordNotification(notificationKey);
         }
       }
@@ -263,65 +280,118 @@ export class PhaseAutomationService {
   /**
    * Advance project to next phase
    */
-  async advanceProjectPhase(projectId, reason) {
+  async advanceProjectPhase(projectId, nextPhaseNumber, reason) {
     try {
-      // Get system user ID for automation
-      const systemUserId = await this.getSystemUserId();
-      
-      // Call the database function to advance phase
-      const result = await dbQuery(
-        'SELECT advance_project_phase($1, $2, $3) AS success',
-        [projectId, systemUserId, reason]
+      // Check if next phase tracking already exists
+      const existing = await dbQuery(
+        `SELECT id FROM project_phase_tracking 
+         WHERE project_id = $1 AND phase_number = $2`,
+        [projectId, nextPhaseNumber]
       );
-      
-      if (result.rows[0].success) {
-        // Get updated phase info
-        const phaseResult = await dbQuery(`
-          SELECT 
-            pt.*,
-            pp.phase_key,
-            pp.name AS phase_name,
-            pp.icon AS phase_icon,
-            p.name AS project_name,
-            p.client_id
-          FROM project_phase_tracking pt
-          JOIN project_phases pp ON pt.current_phase_id = pp.id
-          JOIN projects p ON pt.project_id = p.id
-          WHERE pt.project_id = $1
-        `, [projectId]);
+
+      if (existing.rows.length > 0) {
+        // Update existing phase tracking
+        await dbQuery(
+          `UPDATE project_phase_tracking 
+           SET status = 'in_progress', 
+               started_at = NOW(),
+               notes = $3,
+               updated_at = NOW()
+           WHERE project_id = $1 AND phase_number = $2`,
+          [projectId, nextPhaseNumber, reason]
+        );
+      } else {
+        // Get phase name from our phase definitions
+        const phaseNames = [
+          'Onboarding',
+          'Ideation',
+          'Design',
+          'Review & Feedback',
+          'Production/Print',
+          'Payment',
+          'Sign-off & Docs',
+          'Delivery'
+        ];
         
-        if (phaseResult.rows.length > 0) {
-          const phaseData = phaseResult.rows[0];
-          
-          // Send real-time update
-          if (this.io) {
-            this.io.to(`user-${phaseData.client_id}`).emit('phase:updated', {
-              projectId,
-              newPhase: phaseData.phase_key,
-              phaseName: phaseData.phase_name,
-              phaseIcon: phaseData.phase_icon
-            });
-          }
-          
-          // Create notification
-          await createNotification({
-            user_id: phaseData.client_id,
-            type: 'phase_advanced',
-            title: 'Project Phase Updated',
-            message: `Your project "${phaseData.project_name}" has moved to the ${phaseData.phase_name} phase.`,
-            link: `/portal#projects`,
-            metadata: {
-              project_id: projectId,
-              phase_key: phaseData.phase_key
-            }
-          });
-          
-          // Send email notification
-          await this.sendPhaseAdvancedNotification(phaseData);
-        }
+        // Create new phase tracking
+        await dbQuery(
+          `INSERT INTO project_phase_tracking 
+           (project_id, phase_number, phase_name, status, started_at, notes)
+           VALUES ($1, $2, $3, 'in_progress', NOW(), $4)`,
+          [projectId, nextPhaseNumber, phaseNames[nextPhaseNumber - 1], reason]
+        );
       }
+
+      // Complete previous phase
+      await dbQuery(
+        `UPDATE project_phase_tracking 
+         SET status = 'completed', 
+             completed_at = NOW(),
+             updated_at = NOW()
+         WHERE project_id = $1 AND phase_number = $2`,
+        [projectId, nextPhaseNumber - 1]
+      );
+
+      // Update project progress
+      const progressPercentage = Math.round((nextPhaseNumber / 8) * 100);
+      await dbQuery(
+        `UPDATE projects 
+         SET progress_percentage = $2, updated_at = NOW()
+         WHERE id = $1`,
+        [projectId, progressPercentage]
+      );
+
+      // Send notification
+      await this.sendPhaseAdvancementNotification(projectId, nextPhaseNumber);
+      
+      // Emit socket event
+      if (this.io) {
+        this.io.to(`project-${projectId}`).emit('phase-advanced', {
+          projectId,
+          phaseNumber: nextPhaseNumber,
+          reason
+        });
+      }
+
+      console.log(`Advanced project ${projectId} to phase ${nextPhaseNumber}: ${reason}`);
     } catch (error) {
       console.error('Error advancing project phase:', error);
+    }
+  }
+
+  /**
+   * Check if notification was sent recently
+   */
+  async hasRecentNotification(notificationKey, daysThreshold) {
+    try {
+      const result = await dbQuery(
+        `SELECT created_at 
+         FROM automation_notifications 
+         WHERE notification_key = $1 
+           AND created_at > NOW() - INTERVAL '${daysThreshold} days'`,
+        [notificationKey]
+      );
+      return result.rows.length > 0;
+    } catch (error) {
+      console.error('Error checking recent notification:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Record that a notification was sent
+   */
+  async recordNotification(notificationKey) {
+    try {
+      await dbQuery(
+        `INSERT INTO automation_notifications (notification_key) 
+         VALUES ($1) 
+         ON CONFLICT (notification_key) 
+         DO UPDATE SET created_at = NOW()`,
+        [notificationKey]
+      );
+    } catch (error) {
+      console.error('Error recording notification:', error);
     }
   }
 
@@ -330,163 +400,145 @@ export class PhaseAutomationService {
    */
   async sendStuckProjectNotification(project) {
     try {
+      const message = `Project "${project.project_name}" has been in the ${project.phase_name} phase for ${project.days_in_phase} days.`;
+      
       // Create in-app notification
       await createNotification({
-        user_id: project.client_id,
-        type: 'project_stuck',
-        title: 'Action Required on Your Project',
-        message: `Your project "${project.project_name}" has been in the ${project.phase_name} phase for ${project.days_in_phase} days. Please check if any action is needed.`,
-        link: `/portal#projects`,
-        metadata: {
-          project_id: project.project_id,
-          phase_key: project.phase_key,
-          days_in_phase: project.days_in_phase
-        }
+        recipientId: project.client_id,
+        type: 'phase_stuck',
+        title: 'Project Update Needed',
+        message,
+        projectId: project.project_id,
+        priority: 'high'
       });
-      
+
       // Send email
-      await sendPhaseNotificationEmail('stuck_project', {
-        to: project.client_email,
-        clientName: project.client_name,
-        projectName: project.project_name,
-        phaseName: project.phase_name,
-        daysInPhase: project.days_in_phase,
-        portalLink: `${process.env.FRONTEND_URL}/portal#projects`
-      });
+      if (project.client_email) {
+        await sendPhaseNotificationEmail(
+          project.client_email,
+          project.client_name,
+          project.project_name,
+          'stuck',
+          { phaseName: project.phase_name, daysInPhase: project.days_in_phase }
+        );
+      }
+
+      console.log(`Sent stuck project notification for project ${project.project_id}`);
     } catch (error) {
       console.error('Error sending stuck project notification:', error);
     }
   }
 
   /**
-   * Send action reminder notification
+   * Send overdue action reminder
    */
-  async sendActionReminderNotification(project) {
+  async sendOverdueActionReminder(project) {
     try {
+      const message = `You have ${project.pending_actions} pending action(s) for project "${project.project_name}" in the ${project.phase_name} phase.`;
+      
       // Create in-app notification
       await createNotification({
-        user_id: project.client_id,
-        type: 'action_reminder',
-        title: 'Pending Actions on Your Project',
-        message: `You have ${project.pending_actions} pending action(s) for "${project.project_name}" in the ${project.phase_name} phase.`,
-        link: `/portal#projects`,
-        metadata: {
-          project_id: project.project_id,
-          phase_key: project.phase_key,
-          pending_actions: project.pending_actions
-        }
+        recipientId: project.client_id,
+        type: 'actions_overdue',
+        title: 'Action Required',
+        message,
+        projectId: project.project_id,
+        priority: 'high'
       });
-      
+
       // Send email
-      await sendPhaseNotificationEmail('action_reminder', {
-        to: project.client_email,
-        clientName: project.client_name,
-        projectName: project.project_name,
-        phaseName: project.phase_name,
-        pendingActions: project.pending_actions,
-        portalLink: `${process.env.FRONTEND_URL}/portal#projects`
-      });
-    } catch (error) {
-      console.error('Error sending action reminder notification:', error);
-    }
-  }
-
-  /**
-   * Send phase advanced notification
-   */
-  async sendPhaseAdvancedNotification(phaseData) {
-    try {
-      // Get client info
-      const clientResult = await dbQuery(
-        'SELECT email, first_name FROM users WHERE id = $1',
-        [phaseData.client_id]
-      );
-      
-      if (clientResult.rows.length > 0) {
-        const client = clientResult.rows[0];
-        
-        await sendPhaseNotificationEmail('phase_advanced', {
-          to: client.email,
-          clientName: client.first_name,
-          projectName: phaseData.project_name,
-          newPhaseName: phaseData.phase_name,
-          phaseIcon: phaseData.phase_icon,
-          portalLink: `${process.env.FRONTEND_URL}/portal#projects`
-        });
+      if (project.client_email) {
+        await sendPhaseNotificationEmail(
+          project.client_email,
+          project.client_name,
+          project.project_name,
+          'reminder',
+          { 
+            phaseName: project.phase_name, 
+            pendingActions: project.pending_actions 
+          }
+        );
       }
+
+      console.log(`Sent overdue action reminder for project ${project.project_id}`);
     } catch (error) {
-      console.error('Error sending phase advanced notification:', error);
+      console.error('Error sending overdue action reminder:', error);
     }
   }
 
   /**
-   * Helper functions
+   * Send phase advancement notification
    */
-  
-  findMatchingRule(key) {
-    // Direct match
-    if (this.automationRules.has(key)) {
-      return this.automationRules.get(key);
+  async sendPhaseAdvancementNotification(projectId, phaseNumber) {
+    try {
+      const phaseNames = [
+        'Onboarding',
+        'Ideation',
+        'Design',
+        'Review & Feedback',
+        'Production/Print',
+        'Payment',
+        'Sign-off & Docs',
+        'Delivery'
+      ];
+
+      const result = await dbQuery(
+        `SELECT p.name as project_name, p.client_id,
+                u.email as client_email, u.first_name as client_name
+         FROM projects p
+         JOIN clients c ON p.client_id = c.id
+         JOIN users u ON u.client_id = c.id AND u.role = 'client'
+         WHERE p.id = $1
+         LIMIT 1`,
+        [projectId]
+      );
+
+      if (result.rows.length === 0) return;
+
+      const project = result.rows[0];
+      const phaseName = phaseNames[phaseNumber - 1];
+      const message = `Project "${project.project_name}" has advanced to the ${phaseName} phase.`;
+
+      // Create in-app notification
+      await createNotification({
+        recipientId: project.client_id,
+        type: 'phase_advanced',
+        title: 'Project Phase Updated',
+        message,
+        projectId,
+        priority: 'medium'
+      });
+
+      // Send email
+      if (project.client_email) {
+        await sendPhaseNotificationEmail(
+          project.client_email,
+          project.client_name,
+          project.project_name,
+          'advancement',
+          { newPhase: phaseName }
+        );
+      }
+
+      console.log(`Sent phase advancement notification for project ${projectId}`);
+    } catch (error) {
+      console.error('Error sending phase advancement notification:', error);
     }
-    
-    // Wildcard match (any->phase)
-    const wildcardKey = key.replace(/^[^-]+/, 'any');
-    return this.automationRules.get(wildcardKey);
   }
 
-  async getSystemUserId() {
-    const result = await dbQuery(
-      "SELECT id FROM users WHERE email = 'system@reprintstudios.com' LIMIT 1"
-    );
-    
-    if (result.rows.length === 0) {
-      // Create system user if it doesn't exist
-      const createResult = await dbQuery(`
-        INSERT INTO users (email, password_hash, first_name, last_name, role, is_active)
-        VALUES ('system@reprintstudios.com', 'no-login', 'System', 'Automation', 'admin', false)
-        RETURNING id
-      `);
-      return createResult.rows[0].id;
+  /**
+   * Find matching automation rule
+   */
+  findMatchingRule(ruleKey) {
+    for (const rule of this.automationRules.values()) {
+      if (rule.trigger_condition?.ruleKey === ruleKey) {
+        return rule;
+      }
     }
-    
-    return result.rows[0].id;
-  }
-
-  async hasRecentNotification(key, dayThreshold) {
-    const result = await dbQuery(`
-      SELECT COUNT(*) AS count
-      FROM automation_notifications
-      WHERE notification_key = $1
-        AND created_at > NOW() - INTERVAL '${dayThreshold} days'
-    `, [key]);
-    
-    return result.rows[0].count > 0;
-  }
-
-  async recordNotification(key) {
-    await dbQuery(`
-      INSERT INTO automation_notifications (notification_key, created_at)
-      VALUES ($1, NOW())
-      ON CONFLICT (notification_key) 
-      DO UPDATE SET created_at = NOW()
-    `, [key]);
+    return null;
   }
 }
 
-// Create notification tracking table if it doesn't exist
-export async function createAutomationTables() {
-  try {
-    await dbQuery(`
-      CREATE TABLE IF NOT EXISTS automation_notifications (
-        notification_key VARCHAR(255) PRIMARY KEY,
-        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-      )
-    `);
-    
-    console.log('Automation tables created successfully');
-  } catch (error) {
-    console.error('Error creating automation tables:', error);
-  }
-}
-
-export default PhaseAutomationService;
+// Export singleton instance
+const phaseAutomationService = new PhaseAutomationService();
+export default phaseAutomationService;

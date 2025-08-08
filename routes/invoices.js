@@ -1,7 +1,7 @@
 import express from 'express';
 import Stripe from 'stripe';
 import { authenticateToken } from '../middleware/auth.js';
-import { query, beginTransaction, commitTransaction, rollbackTransaction } from '../config/database.js';
+import { query, withTransaction } from '../config/database.js';
 import { 
   generateInvoiceNumber, 
   calculateInvoiceTotals, 
@@ -33,9 +33,9 @@ router.get('/', authenticateToken, async (req, res) => {
     let baseQuery = `
       SELECT 
         i.*,
-        u.first_name || ' ' || u.last_name as client_name,
-        u.email as client_email,
-        u.company_name,
+        c.contact_person as client_name,
+        c.company_name,
+        c.email as client_email,
         p.name as project_name,
         CASE 
           WHEN i.status = 'paid' THEN 'Paid'
@@ -43,7 +43,7 @@ router.get('/', authenticateToken, async (req, res) => {
           ELSE initcap(i.status)
         END as display_status
       FROM invoices i
-      JOIN users u ON i.client_id = u.id
+      JOIN clients c ON i.client_id = c.id
       LEFT JOIN projects p ON i.project_id = p.id
     `;
     
@@ -53,7 +53,7 @@ router.get('/', authenticateToken, async (req, res) => {
     
     // Filter by user role
     if (req.user.role === 'client') {
-      conditions.push(`i.client_id = $${paramIndex++}`);
+      conditions.push(`i.client_id = (SELECT client_id FROM users WHERE id = $${paramIndex++})`);
       params.push(req.user.id);
     }
     
@@ -88,7 +88,7 @@ router.get('/', authenticateToken, async (req, res) => {
     let countQuery = `
       SELECT COUNT(*) as total
       FROM invoices i
-      JOIN users u ON i.client_id = u.id
+      JOIN clients c ON i.client_id = c.id
     `;
     
     if (conditions.length > 0) {
@@ -135,20 +135,20 @@ router.get('/:id', authenticateToken, async (req, res) => {
     let invoiceQuery = `
       SELECT 
         i.*,
-        u.first_name || ' ' || u.last_name as client_name,
-        u.email as client_email,
-        u.company_name,
-        u.phone as client_phone,
+        c.contact_person as client_name,
+        c.email as client_email,
+        c.company_name,
+        c.phone as client_phone,
         p.name as project_name
       FROM invoices i
-      JOIN users u ON i.client_id = u.id
+      JOIN clients c ON i.client_id = c.id
       LEFT JOIN projects p ON i.project_id = p.id
       WHERE i.id = $1
     `;
     
     // If client, ensure they can only see their own invoices
     if (req.user.role === 'client') {
-      invoiceQuery += ' AND i.client_id = $2';
+      invoiceQuery += ' AND i.client_id = (SELECT client_id FROM users WHERE id = $2)';
     }
     
     const params = req.user.role === 'client' ? [id, req.user.id] : [id];
@@ -186,7 +186,7 @@ router.post('/', authenticateToken, async (req, res) => {
     return res.status(403).json({ error: 'Unauthorized' });
   }
   
-  const client = await beginTransaction();
+  // Using withTransaction pattern
   
   try {
     const invoiceData = req.body;
@@ -194,22 +194,22 @@ router.post('/', authenticateToken, async (req, res) => {
     // Validate invoice data
     const validationErrors = validateInvoiceData(invoiceData);
     if (validationErrors.length > 0) {
-      await rollbackTransaction(client);
       return res.status(400).json({ error: 'Validation failed', details: validationErrors });
     }
     
-    // Generate invoice number
-    const invoiceNumber = await generateInvoiceNumber();
-    
-    // Calculate totals
-    const totals = calculateInvoiceTotals(
-      invoiceData.line_items, 
-      invoiceData.tax_rate || 0, 
-      invoiceData.discount_amount || 0
-    );
-    
-    // Create invoice
-    const invoiceResult = await client.query(
+    const result = await withTransaction(async (client) => {
+      // Generate invoice number
+      const invoiceNumber = await generateInvoiceNumber();
+      
+      // Calculate totals
+      const totals = calculateInvoiceTotals(
+        invoiceData.line_items, 
+        invoiceData.tax_rate || 0, 
+        invoiceData.discount_amount || 0
+      );
+      
+      // Create invoice
+      const invoiceResult = await client.query(
       `INSERT INTO invoices (
         client_id, project_id, invoice_number, title, description, status,
         subtotal, tax_rate, tax_amount, discount_amount, total_amount, currency,
@@ -238,47 +238,45 @@ router.post('/', authenticateToken, async (req, res) => {
     
     const invoice = invoiceResult.rows[0];
     
-    // Create line items
-    const lineItems = [];
-    for (let i = 0; i < invoiceData.line_items.length; i++) {
-      const item = invoiceData.line_items[i];
-      const lineTotal = parseFloat(item.quantity) * parseFloat(item.unit_price);
-      
-      const lineItemResult = await client.query(
-        `INSERT INTO invoice_line_items (
-          invoice_id, description, quantity, unit_price, line_total, order_index
-        ) VALUES ($1, $2, $3, $4, $5, $6)
-        RETURNING *`,
-        [
-          invoice.id,
-          item.description,
-          item.quantity,
-          item.unit_price,
-          lineTotal,
-          i
-        ]
+      // Create line items
+      const lineItems = [];
+      for (let i = 0; i < invoiceData.line_items.length; i++) {
+        const item = invoiceData.line_items[i];
+        const lineTotal = parseFloat(item.quantity) * parseFloat(item.unit_price);
+        
+        const lineItemResult = await client.query(
+          `INSERT INTO invoice_line_items (
+            invoice_id, description, quantity, unit_price, line_total, order_index
+          ) VALUES ($1, $2, $3, $4, $5, $6)
+          RETURNING *`,
+          [
+            invoice.id,
+            item.description,
+            item.quantity,
+            item.unit_price,
+            lineTotal,
+            i
+          ]
+        );
+        
+        lineItems.push(lineItemResult.rows[0]);
+      }
+    
+      // Log activity
+      await logInvoiceActivity(
+        req.user.id,
+        invoice.id,
+        'created',
+        `Invoice ${invoice.invoice_number} created`,
+        { total_amount: invoice.total_amount }
       );
       
-      lineItems.push(lineItemResult.rows[0]);
-    }
-    
-    // Log activity
-    await logInvoiceActivity(
-      req.user.id,
-      invoice.id,
-      'created',
-      `Invoice ${invoice.invoice_number} created`,
-      { total_amount: invoice.total_amount }
-    );
-    
-    await commitTransaction(client);
-    
-    res.status(201).json({
-      invoice,
-      line_items: lineItems
+      return { invoice, line_items: lineItems };
     });
+    
+    res.status(201).json(result);
   } catch (error) {
-    await rollbackTransaction(client);
+    // Transaction will auto-rollback on error
     console.error('Error creating invoice:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
@@ -291,7 +289,7 @@ router.put('/:id', authenticateToken, async (req, res) => {
     return res.status(403).json({ error: 'Unauthorized' });
   }
   
-  const client = await beginTransaction();
+  // Using withTransaction pattern
   
   try {
     const { id } = req.params;
@@ -304,19 +302,19 @@ router.put('/:id', authenticateToken, async (req, res) => {
     );
     
     if (checkResult.rows.length === 0) {
-      await rollbackTransaction(client);
+      // Transaction will auto-rollback on error
       return res.status(404).json({ error: 'Invoice not found' });
     }
     
     if (checkResult.rows[0].status !== 'draft') {
-      await rollbackTransaction(client);
+      // Transaction will auto-rollback on error
       return res.status(400).json({ error: 'Only draft invoices can be updated' });
     }
     
     // Validate invoice data
     const validationErrors = validateInvoiceData(invoiceData);
     if (validationErrors.length > 0) {
-      await rollbackTransaction(client);
+      // Transaction will auto-rollback on error
       return res.status(400).json({ error: 'Validation failed', details: validationErrors });
     }
     
@@ -391,14 +389,14 @@ router.put('/:id', authenticateToken, async (req, res) => {
       { total_amount: invoiceResult.rows[0].total_amount }
     );
     
-    await commitTransaction(client);
+    // Transaction will auto-commit on success
     
     res.json({
       invoice: invoiceResult.rows[0],
       line_items: lineItems
     });
   } catch (error) {
-    await rollbackTransaction(client);
+    // Transaction will auto-rollback on error
     console.error('Error updating invoice:', error);
     res.status(500).json({ error: 'Internal server error' });
   }

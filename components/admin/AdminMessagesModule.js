@@ -691,7 +691,9 @@ export class AdminMessagesModule extends BaseAdminModule {
    * Get avatar for conversation
    */
   getAvatar(conversation) {
-    const initials = conversation.participant_name
+    // Handle missing participant name
+    const name = conversation.participant_name || conversation.participant_email || 'Unknown';
+    const initials = name
       .split(' ')
       .map(n => n[0])
       .join('')
@@ -699,7 +701,7 @@ export class AdminMessagesModule extends BaseAdminModule {
       .slice(0, 2);
     
     const colors = ['#0057FF', '#27AE60', '#F7C600', '#E63946', '#8B00FF'];
-    const colorIndex = conversation.id.charCodeAt(0) % colors.length;
+    const colorIndex = (conversation.id || '0').charCodeAt(0) % colors.length;
     
     return `
       <div class="avatar-circle" style="background: ${colors[colorIndex]}">

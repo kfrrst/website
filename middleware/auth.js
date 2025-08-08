@@ -20,6 +20,7 @@ const authenticateToken = (req, res, next) => {
     // Handle both 'id' and 'userId' in the token payload
     req.user = {
       id: decoded.id || decoded.userId,
+      userId: decoded.id || decoded.userId,  // Maintain both for compatibility
       email: decoded.email,
       role: decoded.role
     };

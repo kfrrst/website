@@ -15,11 +15,15 @@ export class InvoicesModule extends BaseModule {
   }
 
   async doInit() {
-    this.element = document.getElementById('invoices');
-    if (this.element) {
-      await this.initializeStripe();
-      await this.loadInvoices();
-      this.setupInvoicesInterface();
+    // Find the invoices list container within the invoices section
+    const invoicesSection = document.getElementById('invoices');
+    if (invoicesSection) {
+      this.element = invoicesSection.querySelector('.invoices-list');
+      if (this.element) {
+        await this.initializeStripe();
+        await this.loadInvoices();
+        this.setupInvoicesInterface();
+      }
     }
   }
 
@@ -27,7 +31,7 @@ export class InvoicesModule extends BaseModule {
     try {
       if (typeof Stripe !== 'undefined') {
         this.stripe = Stripe(window.STRIPE_PUBLIC_KEY || 'pk_test_...');
-        console.log('✅ Stripe initialized');
+        console.log('Stripe initialized');
       } else {
         console.warn('Stripe not available');
       }
@@ -147,7 +151,7 @@ export class InvoicesModule extends BaseModule {
 
         <div class="invoice-details">
           <div class="invoice-project">
-            ${invoice.project_name ? `📋 ${invoice.project_name}` : 'General Invoice'}
+            ${invoice.project_name ? `[PROJECT] ${invoice.project_name}` : 'General Invoice'}
           </div>
           <div class="invoice-dates">
             <span class="invoice-date">Issued: ${this.formatDate(invoice.created_at, { month: 'short', day: 'numeric' })}</span>
@@ -157,11 +161,11 @@ export class InvoicesModule extends BaseModule {
 
         <div class="invoice-actions" onclick="event.stopPropagation()">
           <button class="btn-secondary btn-sm" onclick="portal.modules.invoices.downloadInvoice('${invoice.id}')">
-            📄 Download PDF
+            [PDF] Download PDF
           </button>
           ${isPayable ? `
             <button class="btn-primary btn-sm" onclick="portal.modules.invoices.payInvoice('${invoice.id}')">
-              💳 Pay Now
+              [PAY] Pay Now
             </button>
           ` : ''}
           ${invoice.status === 'paid' ? `
@@ -175,7 +179,7 @@ export class InvoicesModule extends BaseModule {
   renderEmptyState() {
     return `
       <div class="empty-state">
-        <div class="empty-icon">💳</div>
+        <div class="empty-icon">[INVOICES]</div>
         <h3>No Invoices Yet</h3>
         <p>Your invoices will appear here when projects begin billing.</p>
       </div>
@@ -319,11 +323,11 @@ export class InvoicesModule extends BaseModule {
 
         <div class="invoice-actions-full">
           <button class="btn-secondary" onclick="portal.modules.invoices.downloadInvoice('${invoice.id}')">
-            📄 Download PDF
+            [PDF] Download PDF
           </button>
           ${isPayable ? `
             <button class="btn-primary" onclick="portal.modules.invoices.payInvoice('${invoice.id}'); this.closest('.modal').remove();">
-              💳 Pay Invoice
+              [PAY] Pay Invoice
             </button>
           ` : ''}
         </div>

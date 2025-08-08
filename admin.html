@@ -10,6 +10,29 @@
   <link rel="stylesheet" href="admin.css">
   <link rel="stylesheet" href="components/admin/FormBuilder.css">
   <link rel="stylesheet" href="styles/admin-modules.css">
+  <script type="module">
+    import { AdminPortal } from './components/admin/AdminPortal.js';
+    
+    document.addEventListener('DOMContentLoaded', async () => {
+      console.log('🚀 Initializing Admin Portal...');
+      try {
+        window.adminDashboard = new AdminPortal();
+        window.admin = window.adminDashboard; // Backward compatibility
+        window.adminPortal = window.adminDashboard; // Backward compatibility
+        
+        await window.adminDashboard.init();
+        console.log('✅ Admin Portal initialized successfully');
+        
+        // Global function mappings for backward compatibility
+        window.showNewClientForm = () => window.admin.modules.clients?.showClientModal();
+        window.showNewProjectForm = () => window.admin.modules.clients?.showProjectModal();
+        window.showNewInvoiceForm = () => window.admin.modules.clients?.showInvoiceModal();
+        window.uploadFiles = () => window.admin.modules.clients?.showFileUploadModal();
+      } catch (error) {
+        console.error('❌ Failed to initialize Admin Portal:', error);
+      }
+    });
+  </script>
 </head>
 <body>
   <!-- Login Section (shown by default) -->

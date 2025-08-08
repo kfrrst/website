@@ -362,7 +362,7 @@ export class ProgressTracker {
       <div class="phase-advance">
         <button class="btn-primary advance-phase-btn" 
                 onclick="window.portalApp?.requestPhaseAdvance('${this.options.projectId}', ${currentIndex + 1})">
-          Advance to ${nextPhase.name} ${nextPhase.icon}
+          Advance to ${nextPhase.name || `Phase ${currentIndex + 2}`}
         </button>
       </div>
     `;

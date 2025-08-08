@@ -1,6 +1,6 @@
 import express from 'express';
 import { authenticateToken, requireAdmin } from '../middleware/auth.js';
-import { query, beginTransaction, commitTransaction, rollbackTransaction } from '../config/database.js';
+import { query, withTransaction } from '../config/database.js';
 import { getOnlineUsers, getUserPresence } from '../utils/socketHandlers.js';
 import multer from 'multer';
 import path from 'path';

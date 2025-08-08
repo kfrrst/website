@@ -24,10 +24,17 @@ export class BaseModule {
       return;
     }
 
+    console.log(`BaseModule.init called for ${this.name}`);
     try {
       await this.beforeInit();
+      console.log(`${this.name}: beforeInit complete`);
+      
       await this.doInit();
+      console.log(`${this.name}: doInit complete`);
+      
       await this.afterInit();
+      console.log(`${this.name}: afterInit complete`);
+      
       this.initialized = true;
       console.log(`Module ${this.name} initialized successfully`);
     } catch (error) {
@@ -61,6 +68,15 @@ export class BaseModule {
   }
 
   /**
+   * Called when the module's section becomes active
+   * Override to refresh data or update UI
+   */
+  async activate() {
+    // Override in subclasses to refresh content
+    console.log(`${this.name} activated`);
+  }
+
+  /**
    * Destroy the module and cleanup resources
    */
   destroy() {
@@ -71,7 +87,7 @@ export class BaseModule {
     this.eventListeners = [];
 
     // Clear cache
-    this.cache.clear();
+    this.clearCache();
 
     // Remove DOM references
     this.element = null;
@@ -154,7 +170,7 @@ export class BaseModule {
     errorElement.className = 'error-message';
     errorElement.innerHTML = `
       <div class="error-content">
-        <i class="error-icon">⚠️</i>
+        <i class="error-icon">[!]</i>
         <span class="error-text">${message}</span>
         <button class="error-close" onclick="this.parentElement.parentElement.remove()">×</button>
       </div>
@@ -183,7 +199,7 @@ export class BaseModule {
     successElement.className = 'success-message';
     successElement.innerHTML = `
       <div class="success-content">
-        <i class="success-icon">✅</i>
+        <i class="success-icon">[OK]</i>
         <span class="success-text">${message}</span>
         <button class="success-close" onclick="this.parentElement.parentElement.remove()">×</button>
       </div>
@@ -240,6 +256,7 @@ export class BaseModule {
    */
   async apiRequest(url, options = {}) {
     const token = this.portal.authToken;
+    console.log(`apiRequest to ${url}, token available:`, !!token);
     if (!token) {
       throw new Error('No authentication token available');
     }
@@ -247,20 +264,28 @@ export class BaseModule {
     const defaultOptions = {
       headers: {
         'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-        ...options.headers
+        'Content-Type': 'application/json'
       }
     };
 
-    const response = await fetch(url, { ...options, ...defaultOptions });
+    const finalOptions = {
+      ...defaultOptions,
+      ...options,
+      headers: {
+        ...defaultOptions.headers,
+        ...(options.headers || {})
+      }
+    };
+
+    const response = await fetch(url, finalOptions);
     
     if (response.status === 401) {
       // Token expired, try to refresh
       await this.portal.refreshAccessToken();
       // Retry with new token
       const newToken = this.portal.authToken;
-      defaultOptions.headers.Authorization = `Bearer ${newToken}`;
-      return fetch(url, { ...options, ...defaultOptions });
+      finalOptions.headers.Authorization = `Bearer ${newToken}`;
+      return fetch(url, finalOptions);
     }
 
     if (!response.ok) {

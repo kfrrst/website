@@ -69,10 +69,10 @@ export class AuthModule extends BaseModule {
         const input = e.target.closest('.form-group').querySelector('input[type="password"], input[type="text"]');
         if (input.type === 'password') {
           input.type = 'text';
-          e.target.textContent = '👁️';
+          e.target.textContent = 'Hide';
         } else {
           input.type = 'password';
-          e.target.textContent = '👁️‍🗨️';
+          e.target.textContent = 'Show';
         }
       });
     });
@@ -87,7 +87,7 @@ export class AuthModule extends BaseModule {
     const form = event.target;
     const formData = new FormData(form);
     const submitButton = form.querySelector('button[type="submit"]');
-    const buttonText = submitButton.querySelector('.button-text');
+    const buttonText = submitButton.querySelector('.btn-text');
     
     const credentials = {
       email: formData.get('email'),
@@ -300,11 +300,11 @@ export class AuthModule extends BaseModule {
    */
   async showDashboard() {
     const loginScreen = document.getElementById('login-screen');
-    const dashboard = document.getElementById('dashboard');
+    const portalContent = document.getElementById('portal-content');
     
-    if (loginScreen && dashboard) {
+    if (loginScreen && portalContent) {
       loginScreen.classList.add('hidden');
-      dashboard.classList.remove('hidden');
+      portalContent.classList.remove('hidden');
       
       // Initialize dashboard modules
       await this.portal.initializeDashboard();
@@ -316,11 +316,11 @@ export class AuthModule extends BaseModule {
    */
   showLoginScreen() {
     const loginScreen = document.getElementById('login-screen');
-    const dashboard = document.getElementById('dashboard');
+    const portalContent = document.getElementById('portal-content');
     
-    if (loginScreen && dashboard) {
+    if (loginScreen && portalContent) {
       loginScreen.classList.remove('hidden');
-      dashboard.classList.add('hidden');
+      portalContent.classList.add('hidden');
     }
 
     // Pre-fill remembered email

@@ -141,7 +141,7 @@ export class AdminAuthModule extends BaseAdminModule {
     try {
       console.log('🔐 Attempting admin login...');
       
-      const response = await fetch(`${this.admin.apiUrl}/auth/login`, {
+      const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -154,10 +154,10 @@ export class AdminAuthModule extends BaseAdminModule {
       if (response.ok) {
         console.log('✅ Admin login successful');
         console.log('👤 User data:', data.user);
-        console.log('🔑 Token:', data.token?.substring(0, 20) + '...');
+        console.log('🔑 Token:', data.accessToken?.substring(0, 20) + '...');
         
-        // Store tokens
-        this.admin.token = data.token;
+        // Store tokens (using accessToken as the main token)
+        this.admin.token = data.accessToken;
         this.admin.refreshToken = data.refreshToken;
         this.admin.currentUser = data.user;
         
@@ -171,11 +171,11 @@ export class AdminAuthModule extends BaseAdminModule {
         // Small delay to ensure token is properly set
         await new Promise(resolve => setTimeout(resolve, 100));
         
-        // Initialize other modules that require authentication
-        await this.admin.initializeAuthenticatedModules();
-        
-        // Initialize dashboard
+        // Show dashboard UI first (so elements exist for modules)
         await this.admin.initializeDashboard();
+        
+        // Then initialize other modules that require authentication
+        await this.admin.initializeAuthenticatedModules();
         
         // Clean up URL parameters if they exist
         if (window.location.search.includes('email=') || window.location.search.includes('password=')) {
@@ -206,7 +206,7 @@ export class AdminAuthModule extends BaseAdminModule {
   saveSession(data, rememberMe = false) {
     const expireDuration = rememberMe ? (30 * 24 * 60 * 60 * 1000) : (24 * 60 * 60 * 1000); // 30 days or 1 day
     const sessionData = {
-      token: data.token,
+      token: data.accessToken || data.token, // Support both accessToken and legacy token
       refreshToken: data.refreshToken,
       user: data.user,
       timestamp: Date.now(),
@@ -215,17 +215,17 @@ export class AdminAuthModule extends BaseAdminModule {
 
     try {
       // Primary storage - localStorage
-      localStorage.setItem('adminToken', data.token);
+      localStorage.setItem('adminToken', data.accessToken || data.token);
       localStorage.setItem('adminRefreshToken', data.refreshToken);
       localStorage.setItem('adminUser', JSON.stringify(data.user));
       
       // Backup storage - sessionStorage
-      sessionStorage.setItem('adminToken', data.token);
+      sessionStorage.setItem('adminToken', data.accessToken || data.token);
       sessionStorage.setItem('adminRefreshToken', data.refreshToken);
       
       // Encoded backup - base64 encoded JSON
       const encodedSession = btoa(JSON.stringify({
-        t: data.token,
+        t: data.accessToken || data.token,
         r: data.refreshToken,
         u: data.user,
         e: sessionData.expiresAt
@@ -234,7 +234,7 @@ export class AdminAuthModule extends BaseAdminModule {
       
       // Cookie fallback (httpOnly would be better but we need JS access)
       const maxAge = rememberMe ? (30*24*60*60) : (24*60*60); // 30 days or 1 day
-      document.cookie = `adminToken=${data.token}; path=/; max-age=${maxAge}; secure; samesite=strict`;
+      document.cookie = `adminToken=${data.accessToken || data.token}; path=/; max-age=${maxAge}; secure; samesite=strict`;
       
       console.log('💾 Admin session saved with multiple storage strategies');
       
@@ -357,14 +357,14 @@ export class AdminAuthModule extends BaseAdminModule {
         const data = await response.json();
         
         // Update tokens
-        this.admin.token = data.token;
+        this.admin.token = data.accessToken || data.token;
         if (data.refreshToken) {
           this.admin.refreshToken = data.refreshToken;
         }
         
         // Update storage
         this.saveSession({
-          token: data.token,
+          accessToken: data.accessToken || data.token,
           refreshToken: this.admin.refreshToken,
           user: this.admin.currentUser
         });

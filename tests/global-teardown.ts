@@ -21,8 +21,9 @@ async function globalTeardown(config: FullConfig) {
       `DELETE FROM project_phase_action_status WHERE project_id IN (SELECT id FROM projects WHERE name LIKE 'test_%')`,
       `DELETE FROM project_phase_history WHERE project_id IN (SELECT id FROM projects WHERE name LIKE 'test_%')`,
       `DELETE FROM project_phase_tracking WHERE project_id IN (SELECT id FROM projects WHERE name LIKE 'test_%')`,
+      `DELETE FROM phase_documents WHERE project_id IN (SELECT id FROM projects WHERE name LIKE 'test_%')`,
       `DELETE FROM projects WHERE name LIKE 'test_%'`,
-      `DELETE FROM users WHERE email LIKE 'test_%'`
+      `DELETE FROM users WHERE email LIKE 'test_%' AND role = 'client'`
     ];
     
     for (const query of cleanupQueries) {

@@ -1,10 +1,84 @@
 import express from 'express';
 import { body, param, query, validationResult } from 'express-validator';
 import { authenticateToken, requireAdmin } from '../middleware/auth.js';
-import { query as dbQuery, beginTransaction, commitTransaction, rollbackTransaction } from '../config/database.js';
+import { query as dbQuery, withTransaction } from '../config/database.js';
 import { v4 as uuidv4 } from 'uuid';
 
 const router = express.Router();
+
+// =============================================================================
+// GET /api/activity - Simple recent activity for dashboard
+// =============================================================================
+router.get('/', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const limit = parseInt(req.query.limit) || 10;
+
+    // Simple fallback query using only basic tables that should exist
+    const fallbackQuery = `
+      SELECT 
+        p.id::text as id,
+        'project' as activity_type,
+        'Project: ' || p.name as description,
+        p.created_at,
+        p.name as project_name,
+        'System' as user_name
+      FROM projects p
+      WHERE p.client_id = $1
+      AND p.created_at > NOW() - INTERVAL '30 days'
+      ORDER BY p.created_at DESC
+      LIMIT $2
+    `;
+    
+    const result = await dbQuery(fallbackQuery, [userId, limit]);
+
+    const activities = result.rows.map(activity => ({
+      id: activity.id,
+      type: activity.activity_type,
+      description: activity.description,
+      project_name: activity.project_name,
+      user_name: activity.user_name,
+      timestamp: activity.created_at,
+      timeAgo: formatTimeAgo(activity.created_at)
+    }));
+
+    res.json({
+      success: true,
+      activities,
+      total: activities.length
+    });
+
+  } catch (error) {
+    console.error('Error fetching dashboard activities:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch activities',
+      activities: []
+    });
+  }
+});
+
+// Helper function to format time ago
+function formatTimeAgo(timestamp) {
+  const now = new Date();
+  const time = new Date(timestamp);
+  const diffInSeconds = Math.floor((now - time) / 1000);
+
+  if (diffInSeconds < 60) {
+    return 'Just now';
+  } else if (diffInSeconds < 3600) {
+    const minutes = Math.floor(diffInSeconds / 60);
+    return `${minutes} minute${minutes > 1 ? 's' : ''} ago`;
+  } else if (diffInSeconds < 86400) {
+    const hours = Math.floor(diffInSeconds / 3600);
+    return `${hours} hour${hours > 1 ? 's' : ''} ago`;
+  } else if (diffInSeconds < 2592000) {
+    const days = Math.floor(diffInSeconds / 86400);
+    return `${days} day${days > 1 ? 's' : ''} ago`;
+  } else {
+    return time.toLocaleDateString();
+  }
+}
 
 // Validation middleware
 const validateRequest = (req, res, next) => {

@@ -7,6 +7,8 @@
   --bone-light: #FCFAF7;     /* Light bone white for elevated elements */
   --bone-dark: #F2EDE6;      /* Dark bone white for subtle borders */
   --bone-subtle: #EDE8E0;    /* Subtle contrast elements */
+  --bone-white: #F9F6F1;     /* Alias for bone white */
+  --white: #F9F6F1;          /* Override white to use bone white */
   
   /* === MONOCHROMATIC GRAYS === */
   --text: #2C2C2C;           /* Primary text - warm charcoal */
@@ -89,7 +91,7 @@ html, body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Remove white backgrounds throughout */
+/* Global white background overrides */
 .portal-body,
 .portal-content,
 .portal-main,
@@ -98,6 +100,26 @@ html, body {
 .modal-body,
 .project-card,
 .phase-card,
+.stat-card,
+.activity-panel,
+.projects-panel,
+.message-bubble,
+.file-item,
+.deliverable-card,
+.comment-thread,
+.annotation-sidebar,
+.gallery-item,
+.testimonial-section,
+.download-category,
+.success-card,
+.next-steps,
+.embed-container,
+.research-item,
+.deploy-info,
+.wrap-up-sections .section,
+.lightbox-info,
+.loader-content,
+.phase-content,
 .stat-card {
   background: var(--bone) !important;
 }

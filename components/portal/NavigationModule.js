@@ -8,13 +8,13 @@ export class NavigationModule extends BaseModule {
   constructor(portal) {
     super(portal, 'NavigationModule');
     this.navigationItems = [
-      { id: 'dashboard', label: 'Dashboard', icon: '🏠', href: '#dashboard' },
-      { id: 'projects', label: 'Projects', icon: '📋', href: '#projects' },
-      { id: 'files', label: 'Files', icon: '📁', href: '#files' },
-      { id: 'messages', label: 'Messages', icon: '💬', href: '#messages', badge: 'unreadCount' },
-      { id: 'documents', label: 'Documents', icon: '📄', href: '#documents' },
-      { id: 'invoices', label: 'Invoices', icon: '💳', href: '#invoices' },
-      { id: 'profile', label: 'Profile', icon: '👤', href: '#profile' }
+      { id: 'dashboard', label: 'Dashboard', icon: '', href: '#dashboard' },
+      { id: 'projects', label: 'Projects', icon: '', href: '#projects' },
+      { id: 'files', label: 'Files', icon: '', href: '#files' },
+      { id: 'messages', label: 'Messages', icon: '', href: '#messages', badge: 'unreadCount' },
+      { id: 'documents', label: 'Documents', icon: '', href: '#documents' },
+      { id: 'invoices', label: 'Invoices', icon: '', href: '#invoices' },
+      { id: 'profile', label: 'Profile', icon: '', href: '#profile' }
     ];
     this.unreadCount = 0;
   }
@@ -30,27 +30,26 @@ export class NavigationModule extends BaseModule {
    * Setup main navigation
    */
   setupNavigation() {
-    const nav = document.getElementById('main-navigation');
-    if (!nav) return;
+    // Find the existing navigation in the header
+    const nav = document.querySelector('.main-nav');
+    if (!nav) {
+      console.warn('Navigation element not found');
+      return;
+    }
 
-    // Render navigation items
-    nav.innerHTML = `
-      <div class="nav-header">
-        <div class="brand-logo">
-          <img src="/assets/logo.svg" alt="[RE]Print Studios" class="logo">
-          <span class="brand-name">[RE]Print Studios</span>
-        </div>
-      </div>
-      <nav class="nav-menu">
-        ${this.renderNavigationItems()}
-      </nav>
-      <div class="nav-footer">
-        ${this.renderUserInfo()}
-      </div>
-    `;
-
-    // Setup navigation event handlers
+    // Setup navigation event handlers for existing nav links
     this.setupNavigationEvents(nav);
+    
+    // Also setup logout button
+    const logoutBtn = document.querySelector('[data-action="logout"]');
+    if (logoutBtn) {
+      this.addEventListener(logoutBtn, 'click', (e) => {
+        e.preventDefault();
+        if (this.portal.modules.auth) {
+          this.portal.modules.auth.logout();
+        }
+      });
+    }
   }
 
   /**
@@ -110,23 +109,22 @@ export class NavigationModule extends BaseModule {
    * Setup navigation event handlers
    */
   setupNavigationEvents(nav) {
-    // Handle navigation clicks
-    const navItems = nav.querySelectorAll('.nav-item');
-    navItems.forEach(item => {
-      this.addEventListener(item, 'click', (e) => {
+    // Handle navigation clicks for existing nav links
+    const navLinks = nav.querySelectorAll('.nav-link');
+    navLinks.forEach(link => {
+      this.addEventListener(link, 'click', (e) => {
         e.preventDefault();
-        const section = item.dataset.section;
-        if (section) {
-          this.portal.showSection(section);
+        
+        // Extract section name from href
+        const href = link.getAttribute('href');
+        if (href && href.startsWith('#')) {
+          const section = href.substring(1);
+          if (section) {
+            this.portal.showSection(section);
+            this.updateActiveItem(link);
+          }
         }
       });
-    });
-
-    // Handle active state updates
-    this.addEventListener(nav, 'click', (e) => {
-      if (e.target.matches('.nav-item') || e.target.closest('.nav-item')) {
-        this.updateActiveItem(e.target.closest('.nav-item'));
-      }
     });
   }
 
@@ -134,9 +132,9 @@ export class NavigationModule extends BaseModule {
    * Update active navigation item
    */
   updateActiveItem(activeItem) {
-    // Remove active class from all items
-    const navItems = document.querySelectorAll('.nav-item');
-    navItems.forEach(item => item.classList.remove('active'));
+    // Remove active class from all nav links
+    const navLinks = document.querySelectorAll('.nav-link');
+    navLinks.forEach(link => link.classList.remove('active'));
     
     // Add active class to clicked item
     if (activeItem) {
@@ -148,9 +146,10 @@ export class NavigationModule extends BaseModule {
    * Update active section from external call
    */
   updateActiveSection(sectionName) {
-    const navItem = document.querySelector(`[data-section="${sectionName}"]`);
-    if (navItem) {
-      this.updateActiveItem(navItem);
+    // Find nav link by href
+    const navLink = document.querySelector(`.nav-link[href="#${sectionName}"]`);
+    if (navLink) {
+      this.updateActiveItem(navLink);
     }
     
     // Update breadcrumbs

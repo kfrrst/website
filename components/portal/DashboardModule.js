@@ -13,13 +13,20 @@ export class DashboardModule extends BaseModule {
   }
 
   async doInit() {
+    console.log('DashboardModule.doInit called');
     this.element = document.getElementById('dashboard');
+    console.log('Dashboard element found:', !!this.element);
+    
     if (!this.element) {
       throw new Error('Dashboard element not found');
     }
 
+    console.log('Setting up dashboard...');
     await this.setupDashboard();
+    console.log('Dashboard setup complete');
+    
     this.setupRefreshInterval();
+    console.log('Refresh interval setup');
   }
 
   /**
@@ -27,19 +34,23 @@ export class DashboardModule extends BaseModule {
    */
   async setupDashboard() {
     try {
+      console.log('setupDashboard: starting');
       this.showLoading();
       
+      console.log('Loading dashboard data...');
       // Load dashboard data
       await Promise.all([
-        this.loadProjects(),
-        this.loadStats(),
-        this.loadRecentActivity()
+        this.loadProjects().catch(err => { console.error('loadProjects failed:', err); return []; }),
+        this.loadStats().catch(err => { console.error('loadStats failed:', err); return {}; }),
+        this.loadRecentActivity().catch(err => { console.error('loadRecentActivity failed:', err); return []; })
       ]);
 
+      console.log('Dashboard data loaded, rendering...');
       this.renderDashboard();
       this.setupDashboardEvents();
       
       this.hideLoading();
+      console.log('setupDashboard: complete');
     } catch (error) {
       console.error('Dashboard setup error:', error);
       this.showError('Failed to load dashboard data');
@@ -51,11 +62,17 @@ export class DashboardModule extends BaseModule {
    */
   async loadProjects() {
     try {
-      const data = await this.getCachedData('projects', async () => {
-        const response = await this.apiRequest('/api/projects');
-        const result = await response.json();
-        return result.projects || [];
-      }, 120000); // 2 minutes cache
+      console.log('loadProjects: starting');
+      
+      // Bypass cache for debugging
+      console.log('loadProjects: making direct API request');
+      const response = await this.apiRequest('/api/projects');
+      console.log('loadProjects: got response', response.status);
+      const result = await response.json();
+      console.log('loadProjects: parsed JSON', result);
+      const data = result.projects || [];
+      
+      console.log('loadProjects: complete, got', data.length, 'projects');
 
       this.projects = data;
       return data;
@@ -71,12 +88,13 @@ export class DashboardModule extends BaseModule {
    */
   async loadStats() {
     try {
-      const data = await this.getCachedData('stats', async () => {
-        const response = await this.apiRequest('/api/dashboard/stats');
-        return await response.json();
-      }, 300000); // 5 minutes cache
-
+      console.log('loadStats: starting');
+      const response = await this.apiRequest('/api/dashboard/stats');
+      console.log('loadStats: got response', response.status);
+      const data = await response.json();
+      console.log('loadStats: parsed JSON', data);
       this.stats = data;
+      console.log('loadStats: complete');
       return data;
     } catch (error) {
       console.error('Failed to load stats:', error);
@@ -90,13 +108,14 @@ export class DashboardModule extends BaseModule {
    */
   async loadRecentActivity() {
     try {
-      const data = await this.getCachedData('activity', async () => {
-        const response = await this.apiRequest('/api/activity?limit=10');
-        const result = await response.json();
-        return result.activities || [];
-      }, 60000); // 1 minute cache
-
+      console.log('loadRecentActivity: starting');
+      const response = await this.apiRequest('/api/activity?limit=10');
+      console.log('loadRecentActivity: got response', response.status);
+      const result = await response.json();
+      console.log('loadRecentActivity: parsed JSON', result);
+      const data = result.activities || [];
       this.recentActivity = data;
+      console.log('loadRecentActivity: complete');
       return data;
     } catch (error) {
       console.error('Failed to load recent activity:', error);
@@ -136,15 +155,6 @@ export class DashboardModule extends BaseModule {
               ${this.renderProjectsList()}
             </div>
           </section>
-
-          <section class="recent-activity">
-            <div class="section-header">
-              <h2>Recent Activity</h2>
-            </div>
-            <div class="activity-list">
-              ${this.renderActivityList()}
-            </div>
-          </section>
         </div>
 
         <div class="dashboard-sidebar">
@@ -152,15 +162,15 @@ export class DashboardModule extends BaseModule {
             <h3>Quick Actions</h3>
             <div class="action-buttons">
               <button class="action-btn" onclick="portal.modules.messaging.openComposer()">
-                <i class="icon-message">💬</i>
+                <i class="icon-message">[MSG]</i>
                 <span>Send Message</span>
               </button>
               <button class="action-btn" onclick="portal.modules.files.openUploader()">
-                <i class="icon-upload">📁</i>
+                <i class="icon-upload">[FILE]</i>
                 <span>Upload Files</span>
               </button>
               <button class="action-btn" onclick="portal.showSection('invoices')">
-                <i class="icon-invoice">💳</i>
+                <i class="icon-invoice">[INV]</i>
                 <span>View Invoices</span>
               </button>
             </div>
@@ -172,6 +182,18 @@ export class DashboardModule extends BaseModule {
               ${this.renderNotifications()}
             </div>
           </div>
+
+          <section class="recent-activity">
+            <div class="section-header">
+              <h3>Recent Activity</h3>
+              <button class="btn-link-small" onclick="portal.modules.dashboard.loadMoreActivity()">
+                View All
+              </button>
+            </div>
+            <div class="activity-list">
+              ${this.renderActivityList()}
+            </div>
+          </section>
         </div>
       </div>
     `;
@@ -181,30 +203,30 @@ export class DashboardModule extends BaseModule {
    * Render statistics cards
    */
   renderStatsCards() {
-    const stats = this.stats;
+    const stats = this.stats?.stats || {};
     
     return `
       <div class="stats-grid">
         <div class="stat-card">
-          <div class="stat-value">${stats.activeProjects || 0}</div>
+          <div class="stat-value">${stats.active_projects || 0}</div>
           <div class="stat-label">Active Projects</div>
-          <div class="stat-change positive">+${stats.newProjects || 0} this month</div>
+          <div class="stat-change">${stats.total_projects || 0} total</div>
         </div>
         <div class="stat-card">
-          <div class="stat-value">${stats.completedProjects || 0}</div>
-          <div class="stat-label">Completed</div>
-          <div class="stat-change">${stats.completionRate || 0}% completion rate</div>
+          <div class="stat-value">${stats.projects_in_progress || 0}</div>
+          <div class="stat-label">In Progress</div>
+          <div class="stat-change">${stats.recent_activities || 0} activities this week</div>
         </div>
         <div class="stat-card">
-          <div class="stat-value">${this.formatCurrency(stats.totalInvoiced || 0)}</div>
-          <div class="stat-label">Total Invoiced</div>
-          <div class="stat-change">${this.formatCurrency(stats.pendingAmount || 0)} pending</div>
+          <div class="stat-value">${stats.pending_invoices || 0}</div>
+          <div class="stat-label">Pending Invoices</div>
+          <div class="stat-change">${this.formatCurrency(stats.total_due || 0)} due</div>
         </div>
         <div class="stat-card">
-          <div class="stat-value">${stats.unreadMessages || 0}</div>
+          <div class="stat-value">${stats.unread_messages || 0}</div>
           <div class="stat-label">Unread Messages</div>
-          <div class="stat-change ${stats.unreadMessages > 0 ? 'attention' : ''}">
-            ${stats.unreadMessages > 0 ? 'Needs attention' : 'All caught up'}
+          <div class="stat-change ${stats.unread_messages > 0 ? 'attention' : ''}">
+            ${stats.unread_messages > 0 ? 'Needs attention' : 'All caught up'}
           </div>
         </div>
       </div>
@@ -218,7 +240,7 @@ export class DashboardModule extends BaseModule {
     if (!this.projects || this.projects.length === 0) {
       return `
         <div class="empty-state">
-          <div class="empty-icon">📋</div>
+          <div class="empty-icon">[PROJECTS]</div>
           <h3>No Active Projects</h3>
           <p>Your projects will appear here once they're created.</p>
         </div>
@@ -270,22 +292,79 @@ export class DashboardModule extends BaseModule {
   renderActivityList() {
     if (!this.recentActivity || this.recentActivity.length === 0) {
       return `
-        <div class="empty-state">
-          <div class="empty-icon">📝</div>
-          <h3>No Recent Activity</h3>
-          <p>Your activity will appear here as you interact with projects.</p>
+        <div class="empty-state small">
+          <p>No recent activity</p>
         </div>
       `;
     }
 
-    return this.recentActivity.map(activity => `
+    // Show only first 5 activities initially
+    const visibleActivities = this.recentActivity.slice(0, 5);
+    const hasMore = this.recentActivity.length > 5;
+
+    return `
+      ${visibleActivities.map(activity => `
+        <div class="activity-item">
+          <div class="activity-icon">
+            ${this.getActivityIcon(activity.type || activity.action)}
+          </div>
+          <div class="activity-content">
+            <div class="activity-description">${activity.description}</div>
+            <div class="activity-time">${activity.timeAgo || this.formatRelativeTime(activity.timestamp || activity.created_at)}</div>
+          </div>
+        </div>
+      `).join('')}
+      ${hasMore ? `
+        <div class="activity-show-more">
+          <button class="btn-link" onclick="portal.modules.dashboard.expandActivity()">
+            Show ${this.recentActivity.length - 5} more activities
+          </button>
+        </div>
+      ` : ''}
+    `;
+  }
+
+  /**
+   * Format relative time
+   */
+  formatRelativeTime(timestamp) {
+    if (!timestamp) return '';
+    
+    const now = new Date();
+    const time = new Date(timestamp);
+    const diffInSeconds = Math.floor((now - time) / 1000);
+
+    if (diffInSeconds < 60) {
+      return 'Just now';
+    } else if (diffInSeconds < 3600) {
+      const minutes = Math.floor(diffInSeconds / 60);
+      return `${minutes} minute${minutes > 1 ? 's' : ''} ago`;
+    } else if (diffInSeconds < 86400) {
+      const hours = Math.floor(diffInSeconds / 3600);
+      return `${hours} hour${hours > 1 ? 's' : ''} ago`;
+    } else if (diffInSeconds < 604800) {
+      const days = Math.floor(diffInSeconds / 86400);
+      return `${days} day${days > 1 ? 's' : ''} ago`;
+    } else {
+      return this.formatDate(timestamp, { hour: undefined, minute: undefined });
+    }
+  }
+
+  /**
+   * Expand activity list to show all
+   */
+  expandActivity() {
+    const activityList = this.element.querySelector('.activity-list');
+    if (!activityList) return;
+
+    activityList.innerHTML = this.recentActivity.map(activity => `
       <div class="activity-item">
         <div class="activity-icon">
-          ${this.getActivityIcon(activity.action)}
+          ${this.getActivityIcon(activity.type || activity.action)}
         </div>
         <div class="activity-content">
           <div class="activity-description">${activity.description}</div>
-          <div class="activity-time">${this.formatDate(activity.created_at)}</div>
+          <div class="activity-time">${activity.timeAgo || this.formatRelativeTime(activity.timestamp || activity.created_at)}</div>
         </div>
       </div>
     `).join('');
@@ -296,39 +375,24 @@ export class DashboardModule extends BaseModule {
    */
   getActivityIcon(action) {
     const icons = {
-      'project_created': '🆕',
-      'phase_updated': '🔄',
-      'file_uploaded': '📁',
-      'message_sent': '💬',
-      'invoice_created': '💳',
-      'payment_received': '💰',
-      'project_completed': '✅'
+      'project_created': '[NEW]',
+      'phase_updated': '[UPDATE]',
+      'file_uploaded': '[FILE]',
+      'message_sent': '[MSG]',
+      'invoice_created': '[INV]',
+      'payment_received': '[PAY]',
+      'project_completed': '[DONE]'
     };
     
-    return icons[action] || '📋';
+    return icons[action] || '[ACTION]';
   }
 
   /**
    * Render notifications
    */
   renderNotifications() {
-    // This would typically come from a notifications API
-    const notifications = [
-      {
-        id: 1,
-        title: 'Project Update',
-        message: 'Your project "Brand Redesign" has moved to Review phase',
-        time: new Date(Date.now() - 2 * 60 * 60 * 1000), // 2 hours ago
-        type: 'info'
-      },
-      {
-        id: 2,
-        title: 'Payment Due',
-        message: 'Invoice #1001 is due in 3 days',
-        time: new Date(Date.now() - 24 * 60 * 60 * 1000), // 1 day ago
-        type: 'warning'
-      }
-    ];
+    // For now, show empty state - notifications will be loaded from API in future
+    const notifications = [];
 
     if (notifications.length === 0) {
       return `
