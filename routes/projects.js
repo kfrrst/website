@@ -41,9 +41,7 @@ const canAccessProject = async (projectId, userId, userRole) => {
   // Client users can only access projects for their client company
   const result = await dbQuery(
     `SELECT p.id FROM projects p 
-     JOIN clients c ON p.client_id = c.id
-     JOIN users u ON u.client_id = c.id 
-     WHERE p.id = $1 AND u.id = $2 AND p.is_active = true`,
+     WHERE p.id = $1 AND p.client_id = $2 AND p.is_active = true`,
     [projectId, userId]
   );
   return result.rows.length > 0;
@@ -86,7 +84,7 @@ router.get('/',
       // Non-admin users can only see projects for their client
       if (!isAdmin) {
         paramCount++;
-        whereClause += ` AND p.client_id = (SELECT client_id FROM users WHERE id = $${paramCount})`;
+        whereClause += ` AND p.client_id = $${paramCount}`;
         queryParams.push(userId);
       }
 
@@ -119,7 +117,7 @@ router.get('/',
       const countQuery = `
         SELECT COUNT(*) as total
         FROM projects p
-        LEFT JOIN clients c ON p.client_id = c.id
+        LEFT JOIN users c ON p.client_id = c.id
         ${whereClause}
       `;
       const countResult = await dbQuery(countQuery, queryParams);
@@ -148,7 +146,7 @@ router.get('/',
           p.project_type,
           p.created_at,
           p.updated_at,
-          c.contact_person as client_name,
+          CONCAT(c.first_name, ' ', c.last_name) as client_name,
           c.email as client_email,
           c.company_name,
           (SELECT COUNT(*) FROM project_milestones m WHERE m.project_id = p.id) as total_milestones,
@@ -160,7 +158,7 @@ router.get('/',
             ELSE false
           END as is_overdue
         FROM projects p
-        LEFT JOIN clients c ON p.client_id = c.id
+        LEFT JOIN users c ON p.client_id = c.id
         ${whereClause}
         ORDER BY ${sortField} ${order.toUpperCase()}
         LIMIT $${paramCount + 1} OFFSET $${paramCount + 2}
@@ -242,7 +240,7 @@ router.get('/:id',
           p.created_at,
           p.updated_at,
           c.company_name,
-          c.contact_person as client_name,
+          CONCAT(c.first_name, ' ', c.last_name) as client_name,
           c.email as client_email,
           c.phone as client_phone,
           CASE 
@@ -250,7 +248,7 @@ router.get('/:id',
             ELSE false
           END as is_overdue
         FROM projects p
-        LEFT JOIN clients c ON p.client_id = c.id
+        LEFT JOIN users c ON p.client_id = c.id
         WHERE p.id = $1 AND p.is_active = true
       `;
 
@@ -315,11 +313,10 @@ router.get('/:id/phases/:phaseNumber', authenticateToken, async (req, res) => {
     const accessQuery = `
       SELECT p.*, c.company_name, pt.* 
       FROM projects p
-      JOIN clients c ON p.client_id = c.id
-      JOIN users u ON u.client_id = c.id
+      JOIN users c ON p.client_id = c.id
       JOIN project_phase_tracking pt ON pt.project_id = p.id
       WHERE p.id = $1 
-        AND u.id = $2 
+        AND p.client_id = $2 
         AND pt.phase_number = $3
         AND p.is_active = true
     `;
@@ -447,7 +444,7 @@ router.get('/:id/details',
           p.created_at,
           p.updated_at,
           c.company_name,
-          c.contact_person as client_name,
+          CONCAT(c.first_name, ' ', c.last_name) as client_name,
           c.email as client_email,
           c.phone as client_phone,
           CASE 
@@ -455,7 +452,7 @@ router.get('/:id/details',
             ELSE false
           END as is_overdue
         FROM projects p
-        LEFT JOIN clients c ON p.client_id = c.id
+        LEFT JOIN users c ON p.client_id = c.id
         WHERE p.id = $1 AND p.is_active = true
       `;
 
@@ -707,8 +704,8 @@ router.post('/',
 
       // Verify client exists and is active
       const clientCheck = await dbQuery(
-        'SELECT id, company_name, contact_person FROM clients WHERE id = $1 AND status = $2',
-        [client_id, 'active']
+        'SELECT id, company_name, CONCAT(first_name, \' \', last_name) as contact_person FROM users WHERE id = $1 AND is_active = true AND role = \'client\'',
+        [client_id]
       );
 
       if (clientCheck.rows.length === 0) {
@@ -950,13 +947,13 @@ router.put('/:id',
           const projectResult = await dbQuery(
             `SELECT 
               p.*, 
-              c.email, c.contact_person, c.company_name,
+              c.email, CONCAT(c.first_name, ' ', c.last_name) as contact_person, c.company_name,
               COUNT(DISTINCT f.id) as total_deliverables
              FROM projects p
-             JOIN clients c ON p.client_id = c.id
+             JOIN users c ON p.client_id = c.id
              LEFT JOIN files f ON f.project_id = p.id AND f.is_active = true
              WHERE p.id = $1
-             GROUP BY p.id, c.email, c.contact_person, c.company_name`,
+             GROUP BY p.id, c.email, c.first_name, c.last_name, c.company_name`,
             [projectId]
           );
           
