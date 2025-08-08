@@ -1,0 +1,203 @@
+/* Fix for dark backgrounds in progress tracker and phase details */
+
+/* Remove all dark backgrounds and borders from progress tracker */
+.progress-tracker-container,
+.progress-tracker,
+.phase-timeline,
+.phase-details,
+.phase-tabs-container,
+.phase-tabs-content,
+.phase-tab-content {
+  background: transparent !important;
+  background-color: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  color: #333333 !important;
+}
+
+/* Ensure text is visible */
+.progress-tracker h3,
+.phase-details h3,
+.phase-tabs-content h3,
+.phase-name,
+.phase-status,
+.progress-percentage {
+  color: #333333 !important;
+}
+
+/* Progress header styling */
+.progress-header {
+  background: transparent !important;
+  color: #333333 !important;
+  padding: 1rem 0;
+  margin-bottom: 1rem;
+  border-bottom: 1px solid #e9ecef;
+}
+
+/* Phase nodes should have white background */
+.phase-node {
+  background: #ffffff !important;
+  border: 2px solid #e9ecef !important;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #666666 !important;
+}
+
+.phase-node.current {
+  background: #0057FF !important;
+  color: #ffffff !important;
+  border-color: #0057FF !important;
+}
+
+.phase-node.completed {
+  background: #27AE60 !important;
+  color: #ffffff !important;
+  border-color: #27AE60 !important;
+}
+
+/* Phase tabs styling */
+.phase-tab {
+  background: #ffffff !important;
+  border: 1px solid #e9ecef !important;
+  color: #333333 !important;
+  padding: 0.75rem 1rem;
+  margin: 0 0.25rem;
+  border-radius: 6px;
+  transition: all 0.3s ease;
+}
+
+.phase-tab.active {
+  background: #0057FF !important;
+  color: #ffffff !important;
+  border-color: #0057FF !important;
+}
+
+.phase-tab:hover:not(.active):not(.locked) {
+  background: #f8f9fa !important;
+  border-color: #0057FF !important;
+}
+
+.phase-tab.locked {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Phase tabs navigation */
+.phase-tabs-nav {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+  overflow-x: auto;
+  padding-bottom: 0.5rem;
+}
+
+/* Remove window-in-window appearance */
+.project-detail-view .progress-tracker-container {
+  margin: 2rem 0;
+  padding: 0;
+}
+
+/* Phase content area */
+.phase-tab-content,
+.phase-details {
+  background: #ffffff !important;
+  border: 1px solid #e9ecef !important;
+  border-radius: 8px;
+  padding: 1.5rem !important;
+  margin-top: 1rem;
+  color: #333333 !important;
+}
+
+/* Error messages */
+.phase-error-message,
+.error-message {
+  background: #FEE8E8 !important;
+  border: 1px solid #E63946 !important;
+  color: #E63946 !important;
+  padding: 1rem;
+  border-radius: 6px;
+  margin: 1rem 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Progress line */
+.progress-line {
+  position: absolute;
+  top: 50%;
+  left: 20px;
+  right: 20px;
+  height: 2px;
+  background: #e9ecef !important;
+  z-index: 1;
+}
+
+.progress-fill {
+  height: 100%;
+  background: #0057FF !important;
+  transition: width 0.3s ease;
+}
+
+/* Phase timeline */
+.phase-timeline {
+  position: relative;
+  padding: 2rem 0;
+}
+
+/* Phase nodes container */
+.phase-nodes {
+  display: flex;
+  justify-content: space-between;
+  position: relative;
+  z-index: 2;
+}
+
+/* Ensure labels are visible */
+.node-label,
+.tab-label,
+.phase-tab-name {
+  color: inherit !important;
+  font-size: 0.875rem;
+  margin-top: 0.5rem;
+}
+
+/* Remove any dark overlays */
+.modal-overlay,
+.project-details-overlay {
+  background: rgba(0, 0, 0, 0.5) !important;
+}
+
+/* Project details content should be white */
+.project-details-content,
+.project-detail-view {
+  background: #F9F6F1 !important;
+  color: #333333 !important;
+}
+
+/* Fix phase tabs container specifically */
+.phase-tabs-container {
+  background: transparent !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+/* Ensure all text elements are visible */
+.progress-tracker *,
+.phase-tabs-container *,
+.phase-details * {
+  color: inherit !important;
+}
+
+/* Override any inline styles */
+[style*="background: #333"],
+[style*="background-color: #333"],
+[style*="background: rgb(51"],
+[style*="background-color: rgb(51"] {
+  background: transparent !important;
+  background-color: transparent !important;
+}
