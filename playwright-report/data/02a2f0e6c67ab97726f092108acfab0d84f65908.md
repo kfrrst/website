@@ -1,0 +1,48 @@
+# Page snapshot
+
+```yaml
+- banner:
+  - heading "[Admin Dashboard]" [level=1]
+  - navigation:
+    - link "Overview":
+      - /url: "#overview"
+    - link "Clients":
+      - /url: "#clients"
+    - link "Projects":
+      - /url: "#projects"
+    - link "Invoices":
+      - /url: "#invoices"
+    - link "Files":
+      - /url: "#files"
+    - link "Messages":
+      - /url: "#messages"
+    - link "Inquiries":
+      - /url: "#inquiries"
+    - link "Phase Management":
+      - /url: "#phases"
+    - link "Requirements":
+      - /url: "#phase-requirements"
+    - link "Settings":
+      - /url: "#settings"
+  - button "Logout"
+- main:
+  - heading "[Invoice Management]" [level=2]
+  - combobox:
+    - option "All Status" [selected]
+    - option "Draft"
+    - option "Sent"
+    - option "Paid"
+    - option "Overdue"
+    - option "Cancelled"
+  - button "+ Create Invoice"
+  - table:
+    - rowgroup:
+      - 'row "Invoice # Client Amount Date Status Actions"':
+        - 'cell "Invoice #"'
+        - cell "Client"
+        - cell "Amount"
+        - cell "Date"
+        - cell "Status"
+        - cell "Actions"
+    - rowgroup
+```

@@ -128,8 +128,12 @@ import timeTrackingRoutes from './routes/time-tracking.js';
 import teamCollaborationRoutes from './routes/team-collaboration.js';
 import systemSettingsRoutes from './routes/system-settings.js';
 import automationRulesRoutes from './routes/automation-rules.js';
+import phaseRequirementsRoutes from './routes/phase-requirements.js';
+import agreementsRoutes from './routes/agreements.js';
+import paymentTrackingRoutes from './routes/payment-tracking.js';
 import { initializeSocketHandlers } from './utils/socketHandlers.js';
 import { startCronJobs } from './utils/cronJobs.js';
+import testAuthDebug from './test-auth-debug.js';
 
 // Make io instance available to routes
 app.set('io', io);
@@ -146,6 +150,9 @@ app.use('/api/files', auditLog('files'), fileRoutes);
 app.use('/api/messages', messageRoutes);
 app.use('/api/inquiries', inquiryRoutes);
 app.use('/api/phases', phaseRoutes);
+app.use('/api/phases', phaseRequirementsRoutes);
+app.use('/api/agreements', agreementsRoutes);
+app.use('/api/payment-tracking', paymentTrackingRoutes);
 app.use('/api/activity', activityRoutes);
 app.use('/api/users', auditLog('users'), userRoutes);
 app.use('/api/dashboard', dashboardRoutes);
@@ -166,6 +173,7 @@ app.use('/api/team-collaboration', auditLog('team-collaboration'), teamCollabora
 app.use('/api/system-settings', auditLog('system-settings'), systemSettingsRoutes);
 app.use('/api/automation-rules', auditLog('automation-rules'), automationRulesRoutes);
 app.use('/api', auditLog('proofs'), proofRoutes);
+app.use('/api/debug', testAuthDebug);
 
 // Mount new routes from reprint-wiring-branch-plus
 // Stripe webhook needs to be before body parsing middleware for signature verification

@@ -34,13 +34,10 @@ export class FilesModule extends BaseModule {
 
   async loadFiles() {
     try {
-      const data = await this.getCachedData(`files_${this.currentFolder}`, async () => {
-        // Don't encode the folder parameter if it's just '/'
-        const folderParam = this.currentFolder === '/' ? '' : `?folder=${encodeURIComponent(this.currentFolder)}`;
-        const response = await this.apiRequest(`/api/files${folderParam}`);
-        return await response.json();
-      }, 60000); // 1 minute cache
-
+      // Don't encode the folder parameter if it's just '/'
+      const folderParam = this.currentFolder === '/' ? '' : `?folder=${encodeURIComponent(this.currentFolder)}`;
+      const data = await this.apiRequest(`/api/files${folderParam}`);
+      
       this.files = data.files || [];
     } catch (error) {
       console.error('Failed to load files:', error);
@@ -59,11 +56,11 @@ export class FilesModule extends BaseModule {
           </div>
           <div class="files-actions">
             <button class="upload-btn" onclick="portal.modules.files.openUploader()">
-              <span class="icon">[UPLOAD]</span>
+              <span class="icon">📤</span>
               Upload Files
             </button>
             <button class="new-folder-btn" onclick="portal.modules.files.createFolder()">
-              <span class="icon">[FOLDER]</span>
+              <span class="icon">📁</span>
               New Folder
             </button>
           </div>
@@ -77,7 +74,7 @@ export class FilesModule extends BaseModule {
 
         <div class="upload-drop-zone" id="upload-drop-zone" style="display: none;">
           <div class="drop-zone-content">
-            <div class="drop-zone-icon">[UPLOAD]</div>
+            <div class="drop-zone-icon">📤</div>
             <h3>Drop files here to upload</h3>
             <p>Or click to select files</p>
           </div>
@@ -112,7 +109,7 @@ export class FilesModule extends BaseModule {
     if (this.files.length === 0) {
       return `
         <div class="empty-state">
-          <div class="empty-icon">[FILES]</div>
+          <div class="empty-icon">📂</div>
           <h3>No files in this folder</h3>
           <p>Upload files or create folders to get started</p>
         </div>
@@ -142,28 +139,28 @@ export class FilesModule extends BaseModule {
   }
 
   getFileIcon(file) {
-    if (file.type === 'folder') return '[FOLDER]';
+    if (file.type === 'folder') return '📁';
     
     const mimeType = file.mime_type || '';
     const extension = file.name.split('.').pop()?.toLowerCase();
     
     // Image files
-    if (mimeType.startsWith('image/')) return '[IMAGE]';
+    if (mimeType.startsWith('image/')) return '🇿️';
     
     // Documents
-    if (mimeType.includes('pdf')) return '[PDF]';
-    if (mimeType.includes('word') || extension === 'doc' || extension === 'docx') return '[DOC]';
-    if (mimeType.includes('spreadsheet') || extension === 'xls' || extension === 'xlsx') return '[SHEET]';
-    if (mimeType.includes('presentation') || extension === 'ppt' || extension === 'pptx') return '[SLIDE]';
+    if (mimeType.includes('pdf')) return '📝';
+    if (mimeType.includes('word') || extension === 'doc' || extension === 'docx') return '📄';
+    if (mimeType.includes('spreadsheet') || extension === 'xls' || extension === 'xlsx') return '📈';
+    if (mimeType.includes('presentation') || extension === 'ppt' || extension === 'pptx') return '📊';
     
     // Archives
-    if (mimeType.includes('zip') || mimeType.includes('rar')) return '[ZIP]';
+    if (mimeType.includes('zip') || mimeType.includes('rar')) return '🗜️';
     
     // Text files
-    if (mimeType.startsWith('text/')) return '[TEXT]';
+    if (mimeType.startsWith('text/')) return '📃';
     
     // Default
-    return '[FILE]';
+    return '📄';
   }
 
   formatFileSize(bytes) {

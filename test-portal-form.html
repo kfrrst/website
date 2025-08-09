@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test Portal Form Submission</title>
+</head>
+<body>
+  <h1>Test Portal Form Submission</h1>
+  <button id="testBtn">Test Form Submission</button>
+  <div id="result"></div>
+
+  <script>
+    document.getElementById('testBtn').addEventListener('click', async () => {
+      const resultDiv = document.getElementById('result');
+      
+      try {
+        // First login
+        const loginResponse = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: 'client@example.com',
+            password: 'client123'
+          })
+        });
+        
+        const loginData = await loginResponse.json();
+        const token = loginData.accessToken || loginData.token;
+        
+        if (!token) {
+          throw new Error('Login failed - no token received');
+        }
+        
+        resultDiv.innerHTML += '<p>✅ Login successful</p>';
+        
+        // Get projects
+        const projectsResponse = await fetch('/api/projects', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        const projectsData = await projectsResponse.json();
+        const testProject = projectsData.projects?.[0];
+        
+        if (!testProject) {
+          throw new Error('No projects found');
+        }
+        
+        resultDiv.innerHTML += `<p>✅ Found project: ${testProject.name}</p>`;
+        
+        // Submit intake form
+        const formResponse = await fetch('/api/forms/submit', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            projectId: testProject.id,
+            phaseKey: 'ONB',
+            moduleId: 'intake_base',
+            data: {
+              project_type: 'website',
+              project_goals: 'Test goals from HTML test page',
+              target_audience: 'Test audience',
+              timeline: '1-month',
+              budget_range: '2500-5000',
+              additional_details: 'Test from HTML page'
+            }
+          })
+        });
+        
+        const formData = await formResponse.json();
+        
+        if (formData.success) {
+          resultDiv.innerHTML += '<p>✅ Form submitted successfully!</p>';
+          resultDiv.innerHTML += '<pre>' + JSON.stringify(formData, null, 2) + '</pre>';
+        } else {
+          throw new Error(formData.error || 'Form submission failed');
+        }
+        
+      } catch (error) {
+        resultDiv.innerHTML += `<p>❌ Error: ${error.message}</p>`;
+        console.error('Test failed:', error);
+      }
+    });
+  </script>
+</body>
+</html>

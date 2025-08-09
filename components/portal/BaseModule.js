@@ -255,8 +255,8 @@ export class BaseModule {
    * Make authenticated API request
    */
   async apiRequest(url, options = {}) {
-    const token = this.portal.authToken;
-    console.log(`apiRequest to ${url}, token available:`, !!token);
+    const token = this.portal.authToken || localStorage.getItem('authToken');
+    console.log(`apiRequest to ${url}, token available:`, !!token, 'Token first 20 chars:', token ? token.substring(0, 20) + '...' : 'none');
     if (!token) {
       throw new Error('No authentication token available');
     }
@@ -276,20 +276,73 @@ export class BaseModule {
         ...(options.headers || {})
       }
     };
+    
+    console.log('Request options:', {
+      method: finalOptions.method || 'GET',
+      headers: {
+        ...finalOptions.headers,
+        Authorization: finalOptions.headers.Authorization ? 'Bearer [TOKEN]' : 'none'
+      },
+      bodyLength: finalOptions.body ? finalOptions.body.length : 0
+    });
 
     const response = await fetch(url, finalOptions);
     
     if (response.status === 401) {
       // Token expired, try to refresh
+      console.log('Token expired, attempting refresh...');
       await this.portal.refreshAccessToken();
       // Retry with new token
       const newToken = this.portal.authToken;
+      if (!newToken) {
+        throw new Error('Failed to refresh authentication token');
+      }
       finalOptions.headers.Authorization = `Bearer ${newToken}`;
-      return fetch(url, finalOptions);
+      const retryResponse = await fetch(url, finalOptions);
+      if (!retryResponse.ok) {
+        // For 500 errors, don't try to parse the body
+        if (retryResponse.status >= 500) {
+          console.error(`Server error on retry ${url}:`, retryResponse.status, retryResponse.statusText);
+          throw new Error(`Server error: ${retryResponse.status} ${retryResponse.statusText}`);
+        }
+        
+        // For client errors, try to get error details
+        let errorMessage = `API request failed: ${retryResponse.status} ${retryResponse.statusText}`;
+        try {
+          const errorData = await retryResponse.json();
+          if (errorData.error) {
+            errorMessage = errorData.error;
+          } else if (errorData.message) {
+            errorMessage = errorData.message;
+          }
+        } catch (e) {
+          // Couldn't parse error response
+        }
+        throw new Error(errorMessage);
+      }
+      return retryResponse;
     }
 
     if (!response.ok) {
-      throw new Error(`API request failed: ${response.status} ${response.statusText}`);
+      // For 500 errors, don't try to parse the body as it might not be JSON
+      if (response.status >= 500) {
+        console.error(`Server error on ${url}:`, response.status, response.statusText);
+        throw new Error(`Server error: ${response.status} ${response.statusText}`);
+      }
+      
+      // For client errors, try to get error details
+      let errorMessage = `API request failed: ${response.status} ${response.statusText}`;
+      try {
+        const errorData = await response.json();
+        if (errorData.error) {
+          errorMessage = errorData.error;
+        } else if (errorData.message) {
+          errorMessage = errorData.message;
+        }
+      } catch (e) {
+        // Couldn't parse error response, use default message
+      }
+      throw new Error(errorMessage);
     }
 
     return response;

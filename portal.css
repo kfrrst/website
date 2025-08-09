@@ -616,6 +616,16 @@
   border-color: #333;
 }
 
+/* Ensure inline-styled progress bars are also contained */
+.project-card [style*="overflow"],
+.project-card-detailed [style*="overflow"] {
+  overflow: hidden !important;
+}
+
+.project-progress > div[style*="overflow"] {
+  overflow: hidden !important;
+}
+
 .project-card:last-child {
   border-bottom: none;
   padding-bottom: 0;
@@ -671,6 +681,7 @@
   border-radius: 0;
   overflow: hidden;
   margin-bottom: 1rem;
+  position: relative;
 }
 
 .progress-fill {
@@ -678,6 +689,29 @@
   background-color: #333;
   border-radius: 0;
   transition: width 0.8s ease;
+  position: relative;
+  z-index: 1;
+}
+
+/* Fix for progress bar overflow on hover */
+.project-card .progress-bar,
+.project-card-detailed .progress-bar {
+  overflow: hidden !important;
+  position: relative;
+}
+
+.project-card:hover .progress-bar,
+.project-card-detailed:hover .progress-bar {
+  overflow: hidden !important;
+}
+
+.project-card .progress-fill,
+.project-card-detailed .progress-fill {
+  max-width: 100%;
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
 }
 
 .progress-text {

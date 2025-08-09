@@ -1,11 +1,11 @@
 # 🗄️ RE Print Studios - Complete Database Schema Documentation
 
 ## 📊 Database Overview
-**Database Name:** `reprint_studios`  
-**Total Tables:** 39 (Production-Ready)  
+**Database Name:** `kendrick_portal_dev`  
+**Total Tables:** 37 (Production-Ready)  
 **Database Type:** PostgreSQL with Extensions  
-**Schema Version:** 3.0 (Enhanced Complete)  
-**Last Updated:** 2025-08-07
+**Schema Version:** 4.0 (8-Step Flow Integration)  
+**Last Updated:** 2025-08-08
 
 ---
 
@@ -20,25 +20,29 @@
         │                              │                              │
         ▼                              ▼                              ▼
 ┌─────────────┐              ┌─────────────────┐              ┌─────────────┐
-│   CLIENTS   │◄─────────────┤     USERS       │──────────────┤  PROJECTS   │
-│(Companies)  │              │(Authentication) │              │(Main Work)  │
+│    USERS    │◄─────────────┤    PROJECTS     │──────────────┤    FILES    │
+│ (Auth/Client)│              │   (Main Work)   │              │  (Assets)   │
 └─────────────┘              └─────────────────┘              └─────────────┘
         │                              │                              │
         └─────────┐           ┌────────┴────────┐           ┌────────┴─────────┐
                   │           │                 │           │                  │
                   ▼           ▼                 ▼           ▼                  ▼
         ┌─────────────┐ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐
-        │  INVOICES   │ │USER_SESSIONS│ │ACTIVITY_LOG │ │    FILES    │ │  MESSAGES   │
-        │ (Billing)   │ │   (Auth)    │ │ (Audit)     │ │ (Assets)    │ │(Communication)│
+        │  INVOICES   │ │USER_SESSIONS│ │ACTIVITY_LOG │ │  DOCUMENTS  │ │  MESSAGES   │
+        │  (Billing)  │ │   (Auth)    │ │  (Audit)    │ │   (PDFs)    │ │(Communication)│
         └─────────────┘ └─────────────┘ └─────────────┘ └─────────────┘ └─────────────┘
-                                                               │                  │
-                        ┌──────────────────────────────────────┴─────────┐        │
-                        │                                                │        │
-                        ▼                                                ▼        ▼
-              ┌─────────────────┐                              ┌─────────────────┐ 
-              │ FILE_CATEGORIES │                              │MESSAGE_THREADS  │ 
-              │   FILE_TAGS     │                              │  PARTICIPANTS   │ 
-              └─────────────────┘                              └─────────────────┘ 
+
+                    ┌─────────────────────────────────────┐
+                    │     8-STEP PROJECT FLOW SYSTEM     │
+                    └─────────────────────────────────────┘
+                                       │
+        ┌──────────────────────────────┼──────────────────────────────┐
+        │                              │                              │
+        ▼                              ▼                              ▼
+┌─────────────────┐         ┌─────────────────┐         ┌─────────────────┐
+│FORMS_SUBMISSIONS│         │  SIGN_EVENTS    │         │PHASE_REQUIREMENTS│
+│ (Intake Forms)  │         │ (E-Signatures)  │         │(Client Actions) │
+└─────────────────┘         └─────────────────┘         └─────────────────┘
 
                     ┌─────────────────────────────────────┐
                     │        WORKFLOW & AUTOMATION        │
@@ -48,13 +52,13 @@
         │                              │                              │
         ▼                              ▼                              ▼
 ┌─────────────────┐         ┌─────────────────┐         ┌─────────────────┐
-│PROJECT_PHASE_   │         │PHASE_AUTOMATION_│         │CLIENT_ACTIONS   │
-│   TRACKING      │         │     RULES       │         │ (Requirements)  │
-│ (8 Phases)      │         │ (Auto Rules)    │         │                 │
+│PROJECT_PHASE_   │         │PHASE_AUTOMATION_│         │PHASE_CLIENT_    │
+│   TRACKING      │         │     RULES       │         │   ACTIONS       │
+│ (8 Phases)      │         │ (Auto Rules)    │         │ (Requirements)  │
 └─────────────────┘         └─────────────────┘         └─────────────────┘
 
                     ┌─────────────────────────────────────┐
-                    │     COMMUNICATION & NOTIFICATIONS  │
+                    │     COMMUNICATION & NOTIFICATIONS   │
                     └─────────────────────────────────────┘
                                        │
         ┌──────────────────────────────┼──────────────────────────────┐
@@ -64,511 +68,385 @@
 │EMAIL_TEMPLATES  │         │  EMAIL_QUEUE    │         │ NOTIFICATIONS   │
 │   (Templates)   │         │  (Sending)      │         │ (In-App)        │
 └─────────────────┘         └─────────────────┘         └─────────────────┘
-
-                    ┌─────────────────────────────────────┐
-                    │      TIME & COLLABORATION           │
-                    └─────────────────────────────────────┘
-                                       │
-        ┌──────────────────────────────┼──────────────────────────────┐
-        │                              │                              │
-        ▼                              ▼                              ▼
-┌─────────────────┐         ┌─────────────────┐         ┌─────────────────┐
-│ TIME_ENTRIES    │         │PROJECT_TEAM_    │         │SYSTEM_SETTINGS  │
-│ (Time Track)    │         │   MEMBERS       │         │ (Config)        │
-└─────────────────┘         └─────────────────┘         └─────────────────┘
 ```
 
 ---
 
 ## 📋 Complete Table Catalog
 
-### **CORE BUSINESS ENTITIES**
+### **CORE ENTITIES**
 
-#### 1. 🏢 **CLIENTS** (Company Management)
+#### 1. 👥 **USERS** (Authentication & Client Management) 
 ```sql
-PRIMARY: Company information and billing details
-COLUMNS: 24 fields including company_name, billing info, Stripe integration
-PURPOSE: Separate client companies from individual users
-RELATIONSHIPS: → users (1:many), → projects (1:many), → invoices (1:many)
+CREATE TABLE users (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    email VARCHAR(255) UNIQUE NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,
+    first_name VARCHAR(100) NOT NULL,
+    last_name VARCHAR(100) NOT NULL,
+    role VARCHAR(20) CHECK (role IN ('admin', 'client')) DEFAULT 'client',
+    company_name VARCHAR(200), -- For client users
+    phone VARCHAR(20),
+    avatar_url VARCHAR(500),
+    is_active BOOLEAN DEFAULT true,
+    email_verified BOOLEAN DEFAULT false,
+    last_login_at TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+PURPOSE: Combined authentication and client management
+NOTES: Users with role='client' represent client companies
+RELATIONSHIPS: → projects (1:many as client_id), → messages (1:many)
 ```
 
-#### 2. 👥 **USERS** (Authentication & Profiles) 
+#### 2. 📁 **PROJECTS** (Core Business Entity)
 ```sql
-PRIMARY: User accounts and authentication
-COLUMNS: 14 fields + client_id foreign key
-PURPOSE: Admin staff and client user accounts
-RELATIONSHIPS: → clients (many:1), → projects (1:many), → messages (1:many)
+CREATE TABLE projects (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    client_id UUID REFERENCES users(id) ON DELETE CASCADE, -- Points to user with role='client'
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    status VARCHAR(50) DEFAULT 'planning',
+    priority VARCHAR(20) DEFAULT 'medium',
+    progress_percentage INTEGER DEFAULT 0,
+    budget_amount NUMERIC(10,2),
+    budget_currency VARCHAR(3) DEFAULT 'USD',
+    start_date DATE,
+    due_date DATE,
+    completed_at TIMESTAMP WITH TIME ZONE,
+    project_type VARCHAR(100),
+    is_active BOOLEAN DEFAULT true,
+    current_phase_key VARCHAR(50) DEFAULT 'ONB', -- 8-step flow tracking
+    phase_metadata JSONB DEFAULT '{}',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+PURPOSE: Central project management with 8-step flow integration
+PHASES: ONB→IDEA→DSGN→REV→PROD→PAY→SIGN→LAUNCH
+RELATIONSHIPS: → users (many:1), → files (1:many), → invoices (1:many)
 ```
 
-#### 3. 🚀 **PROJECTS** (Core Business Entity)
+### **8-STEP FLOW TABLES**
+
+#### 3. 📝 **FORMS_SUBMISSIONS** (Dynamic Intake Forms)
 ```sql
-PRIMARY: Client projects through 8-phase workflow  
-COLUMNS: 19 fields including category, type, budget, timeline
-PURPOSE: Main project management and progress tracking
-RELATIONSHIPS: → clients (many:1), → files (1:many), → messages (1:many)
+CREATE TABLE forms_submissions (
+    id SERIAL PRIMARY KEY,
+    project_id UUID REFERENCES projects(id) ON DELETE CASCADE,
+    client_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    form_id VARCHAR(100) NOT NULL, -- intake_book_cover, intake_website, etc.
+    data JSONB NOT NULL, -- Form response data
+    status VARCHAR(50) DEFAULT 'submitted',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+PURPOSE: Store dynamic form submissions for project intake
+FORMS: intake_base, intake_book_cover, intake_website, intake_sp, intake_lfp, etc.
 ```
 
-### **PROJECT CATEGORIZATION**
-
-#### 4. 📂 **PROJECT_CATEGORIES** (Project Organization)
+#### 4. 📄 **DOCUMENTS** (Generated PDFs & Documents)
 ```sql
-PRIMARY: Project categories (Branding, Print, Digital, etc.)
-COLUMNS: 7 fields with visual styling (colors, icons)
-PURPOSE: Organize projects by type for better management
-DEFAULT_DATA: 8 categories (Branding, Print Design, Digital, etc.)
+CREATE TABLE documents (
+    id SERIAL PRIMARY KEY,
+    project_id UUID REFERENCES projects(id) ON DELETE CASCADE,
+    doc_type VARCHAR(100) NOT NULL, -- SOW, invoice, completion_agreement
+    title VARCHAR(255) NOT NULL,
+    storage_url TEXT,
+    file_path TEXT,
+    sha256 VARCHAR(64),
+    metadata JSONB,
+    generated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+PURPOSE: Track all generated documents (PDFs via Puppeteer)
+TYPES: service_agreement_sow, invoice, project_completion_agreement, etc.
 ```
 
-#### 5. 📋 **PROJECT_TYPES** (Specific Project Types)
+#### 5. ✍️ **SIGN_EVENTS** (Electronic Signatures)
 ```sql
-PRIMARY: Specific project types within categories
-COLUMNS: 8 fields with pricing and duration estimates
-PURPOSE: Template project configurations with default phases
-RELATIONSHIPS: → project_categories (many:1), → projects (1:many)
+CREATE TABLE sign_events (
+    id SERIAL PRIMARY KEY,
+    document_id INTEGER REFERENCES documents(id) ON DELETE CASCADE,
+    project_id UUID REFERENCES projects(id) ON DELETE CASCADE,
+    signer_role VARCHAR(50) NOT NULL,
+    signer_name VARCHAR(255),
+    signer_email VARCHAR(255),
+    method VARCHAR(50) NOT NULL, -- 'typed', 'drawn', 'external'
+    signature_data TEXT, -- Base64 encoded signature or typed name
+    ip_address INET,
+    user_agent TEXT,
+    signed_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+PURPOSE: Capture electronic signatures for agreements
+```
+
+#### 6. 📋 **PHASE_REQUIREMENTS** (Client Action Requirements)
+```sql
+CREATE TABLE phase_requirements (
+    id SERIAL PRIMARY KEY,
+    phase_key VARCHAR(50) NOT NULL, -- ONB, IDEA, DSGN, etc.
+    requirement_type VARCHAR(100) NOT NULL,
+    requirement_text TEXT NOT NULL,
+    is_mandatory BOOLEAN DEFAULT true,
+    sort_order INTEGER DEFAULT 0,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+PURPOSE: Define what clients must do in each phase
+EXAMPLES: Sign agreement, approve designs, make payment
 ```
 
 ### **WORKFLOW MANAGEMENT**
 
-#### 6. 🎯 **PROJECT_PHASE_TRACKING** (8-Phase System)
+#### 7. 🔄 **PROJECT_PHASE_TRACKING** (Phase Management)
 ```sql
-PRIMARY: Detailed tracking of 8-phase workflow
-COLUMNS: 12 fields with phase status and approval tracking
-PURPOSE: Track each project through the complete workflow
-8_PHASES: Planning → In Progress → Review → Approved → Production → Payment → Sign-off → Completed
+CREATE TABLE project_phase_tracking (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    project_id UUID REFERENCES projects(id) ON DELETE CASCADE,
+    phase_number INTEGER NOT NULL CHECK (phase_number BETWEEN 1 AND 8),
+    phase_name VARCHAR(100) NOT NULL,
+    status VARCHAR(50) DEFAULT 'pending',
+    started_at TIMESTAMP WITH TIME ZONE,
+    completed_at TIMESTAMP WITH TIME ZONE,
+    estimated_completion DATE,
+    actual_duration_hours INTEGER,
+    notes TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(project_id, phase_number)
+);
+
+PHASES:
+1. Onboarding
+2. Ideation  
+3. Design
+4. Review & Feedback
+5. Production/Build
+6. Payment
+7. Sign-off & Docs
+8. Launch/Delivery
 ```
 
-#### 7. ⚙️ **PHASE_AUTOMATION_RULES** (Business Logic)
+#### 8. 🤖 **PHASE_AUTOMATION_RULES** (Workflow Automation)
 ```sql
-PRIMARY: Automated workflow rules and triggers
-COLUMNS: 8 fields with JSON conditions and actions
+CREATE TABLE phase_automation_rules (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    rule_name VARCHAR(255) NOT NULL,
+    description TEXT,
+    trigger_phase INTEGER,
+    trigger_condition JSONB NOT NULL,
+    action_type VARCHAR(100) NOT NULL,
+    action_config JSONB NOT NULL,
+    is_active BOOLEAN DEFAULT true,
+    priority INTEGER DEFAULT 0,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
 PURPOSE: Automate phase transitions and notifications
-DEFAULT_RULES: 3 automation rules for common workflows
+EXAMPLES: Auto-advance on payment, send reminders
 ```
 
-#### 8. ✅ **CLIENT_ACTIONS** (Client Requirements)
+### **COMMUNICATION & FILES**
+
+#### 9. 📎 **FILES** (Asset Management)
 ```sql
-PRIMARY: Actions required from clients during phases
-COLUMNS: 11 fields with due dates and completion tracking
-PURPOSE: Track client deliverables and requirements
-RELATIONSHIPS: → projects (many:1), → project_phase_tracking (many:1)
+CREATE TABLE files (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    project_id UUID REFERENCES projects(id) ON DELETE CASCADE,
+    uploaded_by UUID REFERENCES users(id),
+    file_name VARCHAR(255) NOT NULL,
+    file_type VARCHAR(100),
+    file_size BIGINT,
+    storage_url TEXT NOT NULL,
+    category VARCHAR(100),
+    tags TEXT[],
+    is_active BOOLEAN DEFAULT true,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
 ```
 
-### **FILE MANAGEMENT SYSTEM**
-
-#### 9. 📁 **FILES** (Enhanced Asset Management)
+#### 10. 💬 **MESSAGES** (Communication)
 ```sql
-PRIMARY: File storage with versioning and categories
-COLUMNS: 17 fields + category_id for organization
-PURPOSE: Complete file management with version control
-RELATIONSHIPS: → projects (many:1), → users (many:1), → file_categories (many:1)
+CREATE TABLE messages (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    project_id UUID REFERENCES projects(id) ON DELETE CASCADE,
+    sender_id UUID REFERENCES users(id),
+    recipient_id UUID REFERENCES users(id),
+    subject VARCHAR(255),
+    content TEXT NOT NULL,
+    is_read BOOLEAN DEFAULT false,
+    read_at TIMESTAMP WITH TIME ZONE,
+    thread_id UUID,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
 ```
 
-#### 10. 📂 **FILE_CATEGORIES** (File Organization)
+### **BILLING & PAYMENTS**
+
+#### 11. 💰 **INVOICES** (Billing)
 ```sql
-PRIMARY: File type categorization with restrictions
-COLUMNS: 8 fields including allowed extensions and size limits
-PURPOSE: Organize files by type with upload validation
-DEFAULT_DATA: 6 categories (Images, Documents, Design Files, etc.)
+CREATE TABLE invoices (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    invoice_number VARCHAR(50) UNIQUE NOT NULL,
+    project_id UUID REFERENCES projects(id) ON DELETE CASCADE,
+    client_id UUID REFERENCES users(id),
+    status VARCHAR(50) DEFAULT 'draft',
+    issue_date DATE NOT NULL,
+    due_date DATE NOT NULL,
+    subtotal NUMERIC(10,2) NOT NULL,
+    tax_rate NUMERIC(5,2) DEFAULT 0,
+    tax_amount NUMERIC(10,2) DEFAULT 0,
+    discount_amount NUMERIC(10,2) DEFAULT 0,
+    total_amount NUMERIC(10,2) NOT NULL,
+    currency VARCHAR(3) DEFAULT 'USD',
+    payment_terms TEXT,
+    notes TEXT,
+    stripe_invoice_id VARCHAR(255),
+    stripe_payment_intent_id VARCHAR(255),
+    paid_date TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
 ```
 
-#### 11. 🏷️ **FILE_TAGS** & **FILE_TAG_ASSIGNMENTS** (File Tagging)
+### **TRACKING & AUDIT**
+
+#### 12. 📊 **ACTIVITY_LOG** (Audit Trail)
 ```sql
-PRIMARY: Flexible file tagging system
-COLUMNS: Tags (4 fields), Assignments (4 fields)
-PURPOSE: Tag files with multiple labels (Final, Draft, Approved, etc.)
-DEFAULT_DATA: 7 common tags with color coding
+CREATE TABLE activity_log (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID REFERENCES users(id),
+    project_id UUID REFERENCES projects(id),
+    entity_type VARCHAR(50) NOT NULL,
+    entity_id UUID,
+    action VARCHAR(100) NOT NULL,
+    description TEXT,
+    metadata JSONB,
+    ip_address INET,
+    user_agent TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
 ```
 
-### **COMMUNICATION SYSTEM**
+### **NOTIFICATION SYSTEM**
 
-#### 12. 💬 **MESSAGES** (Enhanced Messaging)
+#### 13. 🔔 **NOTIFICATIONS** (In-App Alerts)
 ```sql
-PRIMARY: Project-based messaging with threading
-COLUMNS: 11 fields including thread_id, attachments, reactions
-PURPOSE: Structured communication with reply threading
-RELATIONSHIPS: → projects (many:1), → users (many:1), → message_threads (many:1)
+CREATE TABLE notifications (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    type VARCHAR(50) NOT NULL,
+    title VARCHAR(255) NOT NULL,
+    message TEXT NOT NULL,
+    data JSONB,
+    is_read BOOLEAN DEFAULT false,
+    read_at TIMESTAMP WITH TIME ZONE,
+    action_url VARCHAR(500),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
 ```
 
-#### 13. 🧵 **MESSAGE_THREADS** (Conversation Organization)
+#### 14. 📧 **EMAIL_QUEUE** (Email Management)
 ```sql
-PRIMARY: Organized conversation threads
-COLUMNS: 10 fields with thread types and participant counts
-PURPOSE: Group related messages into organized discussions
-THREAD_TYPES: general, feedback, approval, issue, announcement
-```
-
-#### 14. 👥 **MESSAGE_PARTICIPANTS** (Thread Management)
-```sql
-PRIMARY: Track users in message threads
-COLUMNS: 7 fields with read status and notification preferences
-PURPOSE: Manage thread participants and notification settings
-```
-
-### **NOTIFICATION & EMAIL SYSTEM**
-
-#### 15. 📧 **EMAIL_TEMPLATES** (Template Management)
-```sql
-PRIMARY: Customizable email templates with variables
-COLUMNS: 10 fields with HTML/text content and variables
-PURPOSE: Manage email templates for automated communications
-DEFAULT_DATA: 3 system templates (welcome, phase completion, invoicing)
-```
-
-#### 16. 📤 **EMAIL_QUEUE** (Email Delivery)
-```sql
-PRIMARY: Queued email processing with retry logic
-COLUMNS: 18 fields with priority, status, and error tracking
-PURPOSE: Reliable email delivery with scheduling and retries
-FEATURES: Priority queuing, retry logic, template integration
-```
-
-#### 17. 🔔 **NOTIFICATIONS** (In-App Notifications)
-```sql
-PRIMARY: User notifications within the application
-COLUMNS: 16 fields with priority, read status, and actions
-PURPOSE: Real-time user notifications with action links
-RELATIONSHIPS: → users (many:1), → projects (many:1)
-```
-
-### **FINANCIAL MANAGEMENT**
-
-#### 18. 💰 **INVOICES** (Enhanced Billing)
-```sql
-PRIMARY: Complete invoicing system with Stripe integration
-COLUMNS: 17 fields with tax, currency, and payment tracking
-PURPOSE: Professional invoicing with payment processing
-RELATIONSHIPS: → clients (many:1), → projects (many:1)
-```
-
-#### 19. 📋 **INVOICE_ITEMS** (Detailed Line Items)
-```sql
-PRIMARY: Individual invoice line items with pricing
-COLUMNS: 9 fields with quantity, pricing, tax, and discounts
-PURPOSE: Detailed invoice breakdowns with flexible pricing
-RELATIONSHIPS: → invoices (many:1), → projects (many:1)
-```
-
-#### 20. 💳 **PAYMENTS** (Payment Tracking)
-```sql
-PRIMARY: Payment history and transaction tracking
-COLUMNS: 10 fields with payment methods and Stripe integration
-PURPOSE: Track all payments against invoices
-RELATIONSHIPS: → invoices (many:1), → users (many:1)
-```
-
-### **TIME TRACKING & COLLABORATION**
-
-#### 21. ⏰ **TIME_ENTRIES** (Time Management)
-```sql
-PRIMARY: Project time tracking for billing
-COLUMNS: 12 fields with hours, rates, and billable status
-PURPOSE: Track time spent on projects for accurate billing
-RELATIONSHIPS: → projects (many:1), → users (many:1), → invoices (many:1)
-```
-
-#### 22. 👥 **PROJECT_TEAM_MEMBERS** (Team Collaboration)
-```sql
-PRIMARY: Project-specific team member assignments
-COLUMNS: 8 fields with roles, permissions, and rates
-PURPOSE: Assign team members to projects with specific roles
-RELATIONSHIPS: → projects (many:1), → users (many:1)
-```
-
-### **AUDIT & SECURITY**
-
-#### 23. 📝 **ACTIVITY_LOG** (Enhanced Audit Trail)
-```sql
-PRIMARY: Complete audit trail with IP tracking
-COLUMNS: 10 fields including IP address and user agent
-PURPOSE: Security compliance and user activity tracking
-RELATIONSHIPS: → users (many:1), → projects (many:1)
-```
-
-#### 24. 🔐 **USER_SESSIONS** (Session Management)
-```sql
-PRIMARY: JWT session management with device tracking
-COLUMNS: 9 fields with token management and security info
-PURPOSE: Secure multi-device authentication
-RELATIONSHIPS: → users (many:1)
-```
-
-### **AUTOMATION & SYSTEM**
-
-#### 25. 🤖 **AUTOMATION_EXECUTIONS** (Automation Tracking)
-```sql
-PRIMARY: Track automation rule executions
-COLUMNS: 9 fields with execution results and error tracking
-PURPOSE: Monitor and debug automation system performance
-RELATIONSHIPS: → phase_automation_rules (many:1), → projects (many:1)
-```
-
-#### 26. 🔔 **AUTOMATION_NOTIFICATIONS** (System Notifications)
-```sql
-PRIMARY: Track automated system notifications
-COLUMNS: 8 fields with processing status and metadata
-PURPOSE: Prevent duplicate notifications and track delivery
-RELATIONSHIPS: → users (many:1), → projects (many:1)
-```
-
-#### 27. ⚙️ **SYSTEM_SETTINGS** (Configuration Management)
-```sql
-PRIMARY: System-wide configuration settings
-COLUMNS: 9 fields with typed values and categories
-PURPOSE: Centralized application configuration
-DEFAULT_DATA: 9 essential settings (company info, defaults, features)
-```
-
-#### 28. 🏷️ **PROJECT_MILESTONES** (Progress Tracking)
-```sql
-PRIMARY: Project milestone and deliverable tracking
-COLUMNS: 10 fields with due dates and completion status
-PURPOSE: Track project progress beyond phases
-RELATIONSHIPS: → projects (many:1)
+CREATE TABLE email_queue (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    to_email VARCHAR(255) NOT NULL,
+    from_email VARCHAR(255),
+    subject VARCHAR(500) NOT NULL,
+    html_content TEXT,
+    text_content TEXT,
+    template_id VARCHAR(100),
+    template_data JSONB,
+    status VARCHAR(50) DEFAULT 'pending',
+    priority INTEGER DEFAULT 0,
+    attempts INTEGER DEFAULT 0,
+    last_attempt_at TIMESTAMP WITH TIME ZONE,
+    sent_at TIMESTAMP WITH TIME ZONE,
+    error_message TEXT,
+    scheduled_for TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
 ```
 
 ---
 
-## 🔗 Complete Relationship Matrix
+## 🔑 Key Relationships
 
-### **Primary Entity Relationships:**
-```
-CLIENTS (1) ──→ (∞) USERS ──→ (∞) PROJECTS ──→ (∞) FILES
-   │               │              │              │
-   │               │              │              └──→ FILE_CATEGORIES
-   │               │              │              └──→ FILE_TAGS
-   │               │              │
-   │               │              ├──→ PROJECT_PHASE_TRACKING
-   │               │              ├──→ CLIENT_ACTIONS
-   │               │              ├──→ PROJECT_MILESTONES
-   │               │              ├──→ TIME_ENTRIES
-   │               │              ├──→ PROJECT_TEAM_MEMBERS
-   │               │              └──→ MESSAGE_THREADS ──→ MESSAGES
-   │               │
-   │               ├──→ USER_SESSIONS
-   │               ├──→ ACTIVITY_LOG
-   │               ├──→ NOTIFICATIONS
-   │               └──→ EMAIL_QUEUE
-   │
-   └──→ INVOICES ──→ INVOICE_ITEMS
-          │
-          └──→ PAYMENTS
-```
+### Primary Foreign Keys
+- **projects.client_id** → users.id (client user)
+- **forms_submissions.project_id** → projects.id
+- **forms_submissions.client_id** → users.id
+- **documents.project_id** → projects.id
+- **sign_events.document_id** → documents.id
+- **sign_events.project_id** → projects.id
+- **files.project_id** → projects.id
+- **messages.project_id** → projects.id
+- **invoices.project_id** → projects.id
+- **invoices.client_id** → users.id
 
-### **System Integration Relationships:**
-```
-PHASE_AUTOMATION_RULES ──→ AUTOMATION_EXECUTIONS
-EMAIL_TEMPLATES ──→ EMAIL_QUEUE
-PROJECT_CATEGORIES ──→ PROJECT_TYPES ──→ PROJECTS
-SYSTEM_SETTINGS (Global Configuration)
-```
+### User Roles
+- **admin**: Internal staff, full system access
+- **client**: Client companies, limited to their projects
+
+### Phase Flow
+Projects progress through 8 phases:
+1. **ONB** - Onboarding (intake, agreement, deposit)
+2. **IDEA** - Ideation (creative brief, concept)
+3. **DSGN** - Design (drafts, iterations)
+4. **REV** - Review & Feedback (approval)
+5. **PROD** - Production/Build (execution)
+6. **PAY** - Payment (final invoice)
+7. **SIGN** - Sign-off & Docs (completion)
+8. **LAUNCH** - Launch/Delivery (handoff)
 
 ---
 
-## 🎯 Business Logic Implementation
+## 🚀 Recent Changes (v4.0)
 
-### **Complete 8-Phase Workflow:**
-1. **Planning** - Initial setup, requirements gathering
-2. **In Progress** - Active design and development work
-3. **Review** - Client review and feedback phase
-4. **Approved** - Client approval received, ready for production
-5. **Production** - Final production, printing, or deployment
-6. **Payment** - Invoice sent and payment processing
-7. **Sign-off** - Final approvals and documentation
-8. **Completed** - Project delivered and closed
+### Structural Changes
+- ✅ Removed separate `clients` table - users with role='client' serve as clients
+- ✅ Added `forms_submissions` table for dynamic intake forms
+- ✅ Added `documents` table for PDF generation tracking
+- ✅ Added `sign_events` table for electronic signatures
+- ✅ Added `phase_requirements` table for client action tracking
+- ✅ Added `current_phase_key` and `phase_metadata` to projects table
 
-### **Automation Engine Features:**
-- **Trigger Conditions**: Phase completion, client actions, time-based
-- **Actions**: Email notifications, phase advancement, task creation
-- **Retry Logic**: Automatic retry with exponential backoff
-- **Error Handling**: Comprehensive error logging and recovery
-
-### **Role-Based Access Control:**
-- **Admin**: Full system access, all projects and settings
-- **Client**: Limited to assigned projects and related data
-- **Team Member**: Project-specific access based on assignments
+### Integration Points
+- **Stripe Webhooks**: Auto-advance PAY→SIGN on payment
+- **PDF Generation**: Puppeteer + Handlebars templates
+- **Form System**: JSON Schema-based dynamic forms
+- **E-Signatures**: In-portal signature capture
 
 ---
 
-## 📊 Performance & Optimization
+## 📈 Database Statistics
 
-### **Indexes Implemented (45+ indexes):**
+- **Total Tables**: 37
+- **Core Business Tables**: 6
+- **8-Step Flow Tables**: 6
+- **Communication Tables**: 4
+- **Workflow Tables**: 8
+- **Audit/Tracking Tables**: 3
+- **System Tables**: 10
 
-#### **Core Entity Indexes:**
-- Primary keys (UUID) on all tables
-- Unique constraints on emails and critical identifiers
-- Foreign key indexes for all relationships
+## 🔐 Security Features
 
-#### **Search & Filter Indexes:**
-- Full-text search on projects, clients, messages
-- Date range indexes for created_at, due_dates, completion dates
-- Status indexes for projects, invoices, notifications
-- Category and type indexes for organization
-
-#### **Performance Indexes:**
-- Composite indexes for common query patterns
-- Partial indexes for active/inactive records
-- GIN indexes for JSONB and full-text search
-
-### **Query Optimization:**
-- Parameterized queries prevent SQL injection
-- Connection pooling for scalability
-- Proper JOIN strategies with foreign keys
-- VACUUM ANALYZE for optimal query plans
+- UUID primary keys for security
+- Row-level security via client_id checks
+- Audit logging on all sensitive operations
+- Encrypted password storage (bcryptjs)
+- JWT token authentication
+- Parameterized queries (SQL injection prevention)
+- File upload validation and sanitization
 
 ---
 
-## 🔒 Security Features
-
-### **Authentication & Authorization:**
-- JWT tokens with refresh token rotation
-- bcrypt password hashing with salt
-- IP address and device tracking
-- Session timeout and management
-
-### **Data Protection:**
-- Complete audit trail for compliance
-- Soft deletes with is_active flags
-- Role-based access controls
-- Input validation and sanitization
-
-### **Privacy & Compliance:**
-- Activity logging for audit requirements
-- Data retention policies through automation
-- Client data isolation and security
-- GDPR-ready data structures
-
----
-
-## ⚙️ System Configuration
-
-### **Default Data Included:**
-- **8 Project Categories** with visual styling
-- **6 Project Types** with pricing templates  
-- **6 File Categories** with upload restrictions
-- **7 File Tags** with color coding
-- **3 Email Templates** for key workflows
-- **9 System Settings** for core configuration
-- **3 Automation Rules** for common workflows
-
-### **Extensions Enabled:**
-- **uuid-ossp**: UUID generation
-- **pg_trgm**: Full-text search capabilities
-- **btree_gin**: Advanced indexing for JSONB
-
----
-
-## 🚀 Usage Patterns
-
-### **Common API Endpoint Patterns:**
-```javascript
-// Complete project data with relationships
-GET /api/projects/:id/complete
-→ projects, files, messages, milestones, team_members, phase_tracking
-
-// Dashboard data aggregation  
-GET /api/dashboard/stats
-→ projects, files, messages, invoices, notifications (aggregated)
-
-// Client communication hub
-GET /api/projects/:id/communications
-→ message_threads, messages, notifications, email_queue
-
-// Financial overview
-GET /api/financial/overview
-→ invoices, invoice_items, payments, time_entries
-```
-
-### **Automation Workflows:**
-```javascript
-// Phase completion automation
-TRIGGER: project_phase_tracking.status = 'completed'
-ACTION: Advance to next phase + client notification
-
-// Payment reminder automation  
-TRIGGER: invoices.due_date < NOW() - INTERVAL '7 days'
-ACTION: Add to email_queue with payment_reminder template
-
-// File approval automation
-TRIGGER: files.status = 'approved' AND client_actions.type = 'file_approval'
-ACTION: Mark client_action as completed + advance workflow
-```
-
----
-
-## 📈 Schema Health Score: **98/100**
-
-### **Strengths:**
-✅ Complete business logic implementation  
-✅ Comprehensive audit and security  
-✅ Scalable architecture with proper relationships  
-✅ Advanced search and filtering capabilities  
-✅ Automated workflow management  
-✅ Professional invoicing and payment tracking  
-✅ Multi-level file organization  
-✅ Threaded communication system  
-✅ Time tracking and team collaboration  
-✅ Extensive performance optimization  
-
-### **Future Enhancements (Optional):**
-⚡ API rate limiting tables  
-⚡ Advanced reporting and analytics tables  
-⚡ Multi-language content support  
-⚡ Advanced approval workflow states  
-
----
-
-## 🛠️ Developer Quick Reference
-
-### **Essential Queries:**
-```sql
--- Complete project overview
-SELECT p.*, pt.phase_number, pt.status as phase_status,
-       COUNT(DISTINCT f.id) as file_count,
-       COUNT(DISTINCT m.id) as message_count,
-       c.company_name
-FROM projects p
-LEFT JOIN project_phase_tracking pt ON p.id = pt.project_id
-LEFT JOIN files f ON p.id = f.project_id
-LEFT JOIN messages m ON p.id = m.project_id
-JOIN clients c ON p.client_id = c.id
-WHERE p.id = $1
-GROUP BY p.id, pt.phase_number, pt.status, c.company_name;
-
--- Client dashboard data
-SELECT 
-  (SELECT COUNT(*) FROM projects WHERE client_id = $1 AND status = 'in_progress') as active_projects,
-  (SELECT COUNT(*) FROM files WHERE project_id IN (SELECT id FROM projects WHERE client_id = $1)) as total_files,
-  (SELECT COUNT(*) FROM invoices WHERE client_id = $1 AND status = 'pending') as pending_invoices,
-  (SELECT COUNT(*) FROM notifications WHERE recipient_id = $1 AND is_read = false) as unread_notifications;
-
--- Automation rule execution
-SELECT ar.rule_name, ae.status, ae.execution_result
-FROM automation_executions ae
-JOIN phase_automation_rules ar ON ae.rule_id = ar.id
-WHERE ae.project_id = $1
-ORDER BY ae.created_at DESC;
-```
-
-### **File Structure:**
-- 📋 **Complete Documentation**: `DATABASE_SCHEMA.md` (this file)
-- 🎨 **Visual ERD**: `DATABASE_ERD.mmd` (updated with all tables)
-- 🔧 **Migration Scripts**: `migrations/002_complete_schema.sql`
-- 📊 **Summary Report**: `DATABASE_FINAL_SUMMARY.md`
-
----
-
-## ✅ **PRODUCTION READY STATUS**
-
-Your database schema is now **100% production-ready** with:
-
-🔥 **28 comprehensive tables** covering all business needs  
-🔥 **45+ performance indexes** for optimal query speed  
-🔥 **Complete 8-phase workflow automation**  
-🔥 **Professional invoicing and payment system**  
-🔥 **Advanced file management with categorization**  
-🔥 **Threaded messaging and notification system**  
-🔥 **Time tracking and team collaboration tools**  
-🔥 **Comprehensive audit trail and security**  
-🔥 **Automated business rule engine**  
-🔥 **Full-text search capabilities**  
-
-**This schema supports a complete client portal system ready for immediate production deployment!** 🚀
+*This documentation reflects the complete production database schema for [RE]Print Studios portal system with full 8-step project flow integration.*

@@ -27,15 +27,13 @@ export class MessagingModule extends BaseModule {
 
   async loadConversations() {
     try {
-      const data = await this.getCachedData('conversations', async () => {
-        const response = await this.apiRequest('/api/messages/conversations');
-        return await response.json();
-      }, 60000); // 1 minute cache
-
+      const data = await this.apiRequest('/api/messages/conversations');
+      
       this.conversations = data.conversations || [];
       this.updateUnreadCount();
     } catch (error) {
       console.error('Failed to load conversations:', error);
+      this.conversations = [];
     }
   }
 
@@ -66,7 +64,7 @@ export class MessagingModule extends BaseModule {
     if (this.conversations.length === 0) {
       return `
         <div class="empty-state">
-          <div class="empty-icon">[MESSAGES]</div>
+          <div class="empty-icon">💬</div>
           <h3>No conversations yet</h3>
           <p>Start a conversation to see it here</p>
         </div>
@@ -82,7 +80,7 @@ export class MessagingModule extends BaseModule {
         </div>
         <div class="conversation-content">
           <div class="conversation-header">
-            <span class="participant-name">${conv.participant?.name || 'Unknown'}</span>
+            <span class="participant-name">${conv.participant?.name || conv.participant_name || 'Support Team'}</span>
             <span class="conversation-time">${this.formatDate(conv.last_message_at)}</span>
           </div>
           <div class="last-message">
@@ -99,7 +97,7 @@ export class MessagingModule extends BaseModule {
       return `
         <div class="no-conversation">
           <div class="no-conversation-content">
-            <div class="no-conversation-icon">[MESSAGES]</div>
+            <div class="no-conversation-icon">💬</div>
             <h3>Select a conversation</h3>
             <p>Choose a conversation from the sidebar to start messaging</p>
           </div>

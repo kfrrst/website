@@ -1,0 +1,43 @@
+# Page snapshot
+
+```yaml
+- banner:
+  - heading "[Admin Dashboard]" [level=1]
+  - navigation:
+    - link "Overview":
+      - /url: "#overview"
+    - link "Clients":
+      - /url: "#clients"
+    - link "Projects":
+      - /url: "#projects"
+    - link "Invoices":
+      - /url: "#invoices"
+    - link "Files":
+      - /url: "#files"
+    - link "Messages":
+      - /url: "#messages"
+    - link "Inquiries":
+      - /url: "#inquiries"
+    - link "Phase Management":
+      - /url: "#phases"
+    - link "Requirements":
+      - /url: "#phase-requirements"
+    - link "Settings":
+      - /url: "#settings"
+  - button "Logout"
+- main:
+  - heading "Admin Dashboard" [level=1]
+  - button "Refresh"
+  - text: "Last updated: August 8, 2025 at 09:15 PM Total Clients 4 Active Projects 5 Monthly Revenue $0.00 Pending Invoices 0 Total Files 26 Recent Activities 138"
+  - heading "Revenue Overview" [level=3]
+  - text: Jan Feb Mar Apr May Jun
+  - heading "Project Status Distribution" [level=3]
+  - text: Active 5 (0.1%) Completed 5 (0.1%) On Hold 0 (0.0%) Cancelled 0 (0.0%)
+  - heading "Recent Activity" [level=3]
+  - paragraph: No recent activity
+  - heading "Quick Actions" [level=3]
+  - button "New Client"
+  - button "New Project"
+  - button "Send Invoice"
+  - button "View Reports"
+```

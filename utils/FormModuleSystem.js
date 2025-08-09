@@ -129,15 +129,15 @@ class FormModuleSystem {
         // Use specific module IDs if provided
         modules = await this.getFormModules(moduleIds);
       } else {
-        // Get all applicable modules for the phase and services
+        // Get all applicable modules for the phase
+        // For now, just get modules that match the phase key
         const result = await query(`
           SELECT fm.* 
           FROM form_modules fm
           WHERE fm.is_active = true
-            AND ($1 = ANY(fm.phase_filters) OR fm.phase_filters IS NULL)
-            AND (fm.service_filters && $2 OR fm.service_filters IS NULL)
+            AND $1 = ANY(fm.phase_filters)
           ORDER BY fm.name
-        `, [phaseKey, projectServices]);
+        `, [phaseKey]);
         
         modules = result.rows;
       }

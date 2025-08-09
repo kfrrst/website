@@ -1,0 +1,88 @@
+# Page snapshot
+
+```yaml
+- banner:
+  - heading "[RE]Print Studios Portal" [level=1]
+  - navigation:
+    - link " Dashboard":
+      - /url: "#dashboard"
+    - link " Projects":
+      - /url: "#projects"
+    - link " Files":
+      - /url: "#files"
+    - link " Messages 8":
+      - /url: "#messages"
+    - link " Documents":
+      - /url: "#documents"
+    - link " Invoices":
+      - /url: "#invoices"
+  - text: JS John Smith
+  - button " 3"
+  - button " Logout"
+- main:
+  - heading "[Your Projects]" [level=2]
+  - paragraph: Track progress, view deliverables, and manage project details.
+  - heading "My Projects" [level=1]
+  - combobox:
+    - option "All Projects" [selected]
+    - option "Active"
+    - option "Completed"
+    - option "On Hold"
+  - heading "Dashboard Test Project 2" [level=3]
+  - text: in_progress
+  - paragraph: Another test project
+  - text: "Current: Review & Feedback 50% 1 Onboarding 2 Ideation 3 Design 4 Review & Feedback 5 Production/Build 6 Payment 7 Sign-off & Docs 8 Launch Created: Aug 7, 2025, 11:24 AM Due: Sep 21, 2025, 12:00 AM"
+  - button "Files"
+  - button "Chat"
+  - heading "Dashboard Test Project 1" [level=3]
+  - text: in_progress
+  - paragraph: Test project for dashboard
+  - text: "Current: Onboarding 13% 1 Onboarding 2 Ideation 3 Design 4 Review & Feedback 5 Production/Build 6 Payment 7 Sign-off & Docs 8 Launch Created: Aug 7, 2025, 11:24 AM Due: Sep 6, 2025, 12:00 AM"
+  - button "Files"
+  - button "Chat"
+  - heading "Dashboard Test Project 4" [level=3]
+  - text: completed
+  - paragraph: Completed project
+  - text: "Current: Launch 100% 1 Onboarding 2 Ideation 3 Design 4 Review & Feedback 5 Production/Build 6 Payment 7 Sign-off & Docs 8 Launch Created: Aug 7, 2025, 11:24 AM Due: Jul 28, 2025, 12:00 AM"
+  - button "Files"
+  - button "Chat"
+  - heading "Dashboard Test Project 3" [level=3]
+  - text: planning
+  - paragraph: Planning phase project
+  - text: "Current: Onboarding 10% 1 Onboarding 2 Ideation 3 Design 4 Review & Feedback 5 Production/Build 6 Payment 7 Sign-off & Docs 8 Launch Created: Aug 7, 2025, 11:24 AM Due: Oct 6, 2025, 12:00 AM"
+  - button "Files"
+  - button "Chat"
+  - heading "Test Direct Insert" [level=3]
+  - text: planning
+  - paragraph: Testing direct insert
+  - text: "Current: Onboarding 0% 1 Onboarding 2 Ideation 3 Design 4 Review & Feedback 5 Production/Build 6 Payment 7 Sign-off & Docs 8 Launch Created: Aug 7, 2025, 11:21 AM"
+  - button "Files"
+  - button "Chat"
+  - heading "Website Redesign" [level=3]
+  - text: planning
+  - paragraph: Modern responsive website design with improved user experience
+  - text: "Current: Onboarding 0% 1 Onboarding 2 Ideation 3 Design 4 Review & Feedback 5 Production/Build 6 Payment 7 Sign-off & Docs 8 Launch Created: Aug 3, 2025, 02:00 PM Due: Oct 2, 2025, 12:00 AM"
+  - button "Files"
+  - button "Chat"
+  - heading "Brand Identity Design" [level=3]
+  - text: in_progress
+  - paragraph: Complete brand identity package including logo, color palette, and brand guidelines
+  - text: "Current: Onboarding 0% 1 Onboarding 2 Ideation 3 Design 4 Review & Feedback 5 Production/Build 6 Payment 7 Sign-off & Docs 8 Launch Created: Aug 3, 2025, 02:00 PM Due: Aug 24, 2025, 12:00 AM"
+  - button "Files"
+  - button "Chat"
+  - heading "Brand Identity Design" [level=3]
+  - text: in_progress
+  - paragraph: Complete brand identity package including logo, color palette, and brand guidelines
+  - text: "Current: Onboarding 0% 1 Onboarding 2 Ideation 3 Design 4 Review & Feedback 5 Production/Build 6 Payment 7 Sign-off & Docs 8 Launch Created: Aug 3, 2025, 02:00 PM Due: Aug 24, 2025, 12:00 AM"
+  - button "Files"
+  - button "Chat"
+  - heading "Website Redesign" [level=3]
+  - text: planning
+  - paragraph: Modern responsive website design with improved user experience
+  - text: "Current: Onboarding 0% 1 Onboarding 2 Ideation 3 Design 4 Review & Feedback 5 Production/Build 6 Payment 7 Sign-off & Docs 8 Launch Created: Aug 3, 2025, 02:00 PM Due: Oct 2, 2025, 12:00 AM"
+  - button "Files"
+  - button "Chat"
+- button "+"
+- button "[MSG] New Message"
+- button "[FILE] Upload File"
+```

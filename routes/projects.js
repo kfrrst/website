@@ -202,6 +202,37 @@ router.get('/',
 );
 
 // =============================================================================
+// GET /api/projects/:projectId/requirements - Get phase requirements completion status
+// =============================================================================
+router.get('/:projectId/requirements', authenticateToken, async (req, res) => {
+  try {
+    const { projectId } = req.params;
+    
+    // Verify user has access to this project
+    const hasAccess = await canAccessProject(projectId, req.user.id, req.user.role);
+    if (!hasAccess) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+    
+    // Get all completed requirements for this project
+    const completedReqs = await dbQuery(`
+      SELECT ppr.*, pr.phase_key, pr.requirement_text, pr.requirement_key
+      FROM project_phase_requirements ppr
+      JOIN phase_requirements pr ON ppr.requirement_id = pr.id
+      WHERE ppr.project_id = $1
+    `, [projectId]);
+    
+    res.json({
+      success: true,
+      completedRequirements: completedReqs.rows
+    });
+  } catch (error) {
+    console.error('Error fetching requirements status:', error);
+    res.status(500).json({ error: 'Failed to fetch requirements status' });
+  }
+});
+
+// =============================================================================
 // GET /api/projects/:id - Get project details with milestones
 // =============================================================================
 router.get('/:id',

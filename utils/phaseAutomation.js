@@ -52,10 +52,10 @@ export class PhaseAutomationService {
       const result = await dbQuery(`
         SELECT 
           id,
-          rule_name,
-          trigger_condition,
+          rule_type as rule_name,
+          trigger_type as trigger_condition,
           action_type,
-          action_config,
+          action_data as action_config,
           is_active
         FROM phase_automation_rules
         WHERE is_active = true
@@ -111,11 +111,12 @@ export class PhaseAutomationService {
           pt.started_at,
           COALESCE(
             (SELECT COUNT(*) 
-             FROM client_actions ca 
-             WHERE ca.project_id = p.id 
-               AND ca.phase_id = pt.id
-               AND ca.status != 'completed'
-               AND ca.is_required = true), 
+             FROM project_phase_requirements ppr
+             JOIN phase_requirements pr ON ppr.requirement_id = pr.id 
+             WHERE ppr.project_id = p.id 
+               AND pr.phase_key = p.current_phase_key
+               AND ppr.completed = false
+               AND pr.is_mandatory = true), 
             0
           ) as pending_required_actions
         FROM projects p
@@ -169,8 +170,7 @@ export class PhaseAutomationService {
           EXTRACT(DAY FROM NOW() - pt.started_at) as days_in_phase
         FROM projects p
         JOIN project_phase_tracking pt ON pt.project_id = p.id
-        JOIN clients c ON p.client_id = c.id
-        JOIN users u ON u.client_id = c.id AND u.role = 'client'
+        JOIN users u ON p.client_id = u.id AND u.role = 'client'
         WHERE pt.status IN ('in_progress', 'waiting_client')
           AND pt.completed_at IS NULL
           AND pt.started_at < NOW() - INTERVAL '${stuckThreshold} days'
@@ -246,20 +246,20 @@ export class PhaseAutomationService {
           pt.started_at,
           u.email as client_email,
           u.first_name as client_name,
-          COUNT(ca.id) as pending_actions
+          COUNT(ppr.id) as pending_actions
         FROM projects p
         JOIN project_phase_tracking pt ON pt.project_id = p.id
-        JOIN client_actions ca ON ca.project_id = p.id AND ca.phase_id = pt.id
-        JOIN clients c ON p.client_id = c.id
-        JOIN users u ON u.client_id = c.id AND u.role = 'client'
+        JOIN project_phase_requirements ppr ON ppr.project_id = p.id
+        JOIN phase_requirements pr ON ppr.requirement_id = pr.id AND pr.phase_key = p.current_phase_key
+        JOIN users u ON p.client_id = u.id AND u.role = 'client'
         WHERE pt.status IN ('waiting_client', 'needs_approval')
           AND pt.completed_at IS NULL
-          AND ca.status != 'completed'
-          AND ca.is_required = true
+          AND ppr.completed = false
+          AND pr.is_mandatory = true
           AND pt.started_at < NOW() - INTERVAL '${reminderThreshold} days'
         GROUP BY p.id, p.name, p.client_id, pt.phase_number, 
                  pt.phase_name, pt.started_at, u.email, u.first_name
-        HAVING COUNT(ca.id) > 0
+        HAVING COUNT(ppr.id) > 0
       `);
       
       for (const project of result.rows) {

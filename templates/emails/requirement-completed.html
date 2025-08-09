@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Requirement Completed</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: 'Montserrat', Arial, sans-serif; background-color: #F9F6F1;">
+    <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #F9F6F1; padding: 40px 20px;">
+        <tr>
+            <td align="center">
+                <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                    <!-- Header -->
+                    <tr>
+                        <td style="padding: 40px 40px 20px; text-align: center; background: linear-gradient(135deg, #0057FF 0%, #0045CC 100%); border-radius: 12px 12px 0 0;">
+                            <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 600;">[RE]PRINT STUDIOS</h1>
+                            <p style="margin: 10px 0 0; color: #ffffff; font-size: 14px; opacity: 0.9;">Task Completed Successfully</p>
+                        </td>
+                    </tr>
+                    
+                    <!-- Content -->
+                    <tr>
+                        <td style="padding: 40px;">
+                            <h2 style="margin: 0 0 20px; color: #333333; font-size: 24px; font-weight: 600;">Great Progress, {{clientName}}!</h2>
+                            
+                            <p style="color: #666666; font-size: 16px; line-height: 1.6; margin-bottom: 30px;">
+                                You've successfully completed a requirement for your project <strong>{{projectName}}</strong>.
+                            </p>
+                            
+                            <!-- Requirement Details -->
+                            <div style="background: #f8f9fa; border-left: 4px solid #27AE60; padding: 20px; border-radius: 6px; margin: 30px 0;">
+                                <p style="margin: 0; color: #27AE60; font-weight: 600; font-size: 14px; text-transform: uppercase; letter-spacing: 1px;">✓ COMPLETED</p>
+                                <p style="margin: 10px 0 0; color: #333333; font-size: 18px; font-weight: 500;">{{requirementText}}</p>
+                                <p style="margin: 10px 0 0; color: #999999; font-size: 14px;">Phase: {{phaseKey}}</p>
+                            </div>
+                            
+                            <p style="color: #666666; font-size: 16px; line-height: 1.6; margin: 30px 0;">
+                                Keep up the excellent work! You're making great progress on your project.
+                            </p>
+                            
+                            <!-- CTA Button -->
+                            <div style="text-align: center; margin: 40px 0;">
+                                <a href="{{baseUrl}}/portal" style="display: inline-block; padding: 14px 32px; background: #0057FF; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px;">View Project Progress</a>
+                            </div>
+                            
+                            <!-- Footer -->
+                            <div style="margin-top: 40px; padding-top: 30px; border-top: 1px solid #e9ecef;">
+                                <p style="color: #999999; font-size: 14px; line-height: 1.6; margin: 0;">
+                                    If you have any questions about your project, please don't hesitate to reach out to your project manager.
+                                </p>
+                            </div>
+                        </td>
+                    </tr>
+                    
+                    <!-- Footer -->
+                    <tr>
+                        <td style="padding: 30px; background-color: #f8f9fa; border-radius: 0 0 12px 12px; text-align: center;">
+                            <p style="margin: 0; color: #999999; font-size: 12px;">
+                                © 2025 [RE]Print Studios. All rights reserved.
+                            </p>
+                            <p style="margin: 10px 0 0; color: #999999; font-size: 12px;">
+                                <a href="{{baseUrl}}/unsubscribe/{{unsubscribeToken}}" style="color: #0057FF; text-decoration: none;">Unsubscribe</a> | 
+                                <a href="{{baseUrl}}/preferences" style="color: #0057FF; text-decoration: none;">Update Preferences</a>
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>

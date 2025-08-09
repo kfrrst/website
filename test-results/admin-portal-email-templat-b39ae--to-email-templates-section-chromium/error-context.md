@@ -1,0 +1,45 @@
+# Page snapshot
+
+```yaml
+- banner:
+  - heading "[Admin Dashboard]" [level=1]
+  - navigation:
+    - link "Overview":
+      - /url: "#overview"
+    - link "Clients":
+      - /url: "#clients"
+    - link "Projects":
+      - /url: "#projects"
+    - link "Invoices":
+      - /url: "#invoices"
+    - link "Files":
+      - /url: "#files"
+    - link "Messages":
+      - /url: "#messages"
+    - link "Inquiries":
+      - /url: "#inquiries"
+    - link "Phase Management":
+      - /url: "#phases"
+    - link "Requirements":
+      - /url: "#phase-requirements"
+    - link "Settings":
+      - /url: "#settings"
+  - button "Logout"
+- main:
+  - heading "[System Settings]" [level=2]
+  - heading "Profile Settings" [level=3]
+  - paragraph: Update admin profile and credentials
+  - button "Edit Profile"
+  - heading "Email Templates" [level=3]
+  - paragraph: Customize automated email messages
+  - button "Manage Templates"
+  - heading "Service Types & Forms" [level=3]
+  - paragraph: Manage services, phases, and dynamic forms
+  - button "Manage Services"
+  - heading "Payment Settings" [level=3]
+  - paragraph: Configure Stripe and payment options
+  - button "Payment Config"
+  - heading "Backup & Export" [level=3]
+  - paragraph: Backup data and export reports
+  - button "Backup Now"
+```

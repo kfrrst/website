@@ -269,14 +269,14 @@ export class DashboardModule extends BaseModule {
    */
   renderProjectProgress(project) {
     const phaseIndex = project.current_phase_index || 0;
-    const phases = ['Onboarding', 'Ideation', 'Design', 'Review', 'Production', 'Payment', 'Sign-off', 'Delivery'];
+    const phases = ['Onboarding', 'Ideation', 'Design', 'Review & Feedback', 'Production/Build', 'Payment', 'Sign-off & Docs', 'Launch'];
     const currentPhase = phases[phaseIndex] || 'Unknown';
-    const progress = Math.round((phaseIndex / (phases.length - 1)) * 100);
+    const progress = project.progress_percentage || Math.round((phaseIndex / (phases.length - 1)) * 100);
 
     return `
       <div class="progress-info">
         <div class="progress-label">
-          <span class="current-phase">${currentPhase}</span>
+          <span class="current-phase">Phase ${phaseIndex + 1}: ${currentPhase}</span>
           <span class="progress-percentage">${progress}%</span>
         </div>
         <div class="progress-bar">

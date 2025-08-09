@@ -254,7 +254,8 @@ export class AdminPortal {
       { name: 'messages', module: AdminMessagesModule, critical: false },
       { name: 'reports', module: AdminReportsModule, critical: false },
       { name: 'settings', module: AdminSettingsModule, critical: false },
-      { name: 'serviceManager', module: ServiceManagementModule, critical: false }
+      { name: 'serviceManager', module: ServiceManagementModule, critical: false },
+      { name: 'phaseRequirements', module: window.AdminPhaseRequirementsModule, critical: false }
     ];
     
     for (const config of authenticatedModules) {
